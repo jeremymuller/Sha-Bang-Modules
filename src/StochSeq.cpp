@@ -228,27 +228,13 @@ struct StochSeqDisplay : Widget {
 	float initY = 0;
 	float dragX = 0;
 	float dragY = 0;
-	float *sliderHeights = new float[NUM_OF_SLIDERS];
-
 	StochSeqDisplay() {}
-
-	~StochSeqDisplay() {
-		delete[] sliderHeights;
-	}
-
-	void initHeights() {
-		if (module == NULL) return;
-
-		for (int i = 0; i < NUM_OF_SLIDERS; i++)
-			updateHeightsFromProbs(i);
-	}
 
 	void onButton(const event::Button &e) override {
 		if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
 			e.consume(this);
 			initX = e.pos.x;
 			initY = e.pos.y;
-			// setSliderHeight(initX, initY);
 			setProbabilities(initX, initY);
 		}
 	}
@@ -261,7 +247,6 @@ struct StochSeqDisplay : Widget {
 	void onDragMove(const event::DragMove &e) override {
 		float newDragX = APP->scene->rack->mousePos.x;
 		float newDragY = APP->scene->rack->mousePos.y;
-		// setSliderHeight(initX + (newDragX - dragX), initY + (newDragY - dragY));
 		setProbabilities(initX + (newDragX - dragX), initY + (newDragY - dragY));
 	}
 
@@ -273,27 +258,9 @@ struct StochSeqDisplay : Widget {
 		module->gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
 	}
 
-	void setSliderHeight(float currentX, float dragY) {
-		int index = (int)(currentX / SLIDER_WIDTH);
-		if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS-1;
-		if (dragY < 0) dragY = 0;
-		else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
-		sliderHeights[index] = dragY;
-		updateProbsFromHeights(index);
-	}
-
 	float getSliderHeight(int index) {
 		float y = box.size.y - SLIDER_TOP;
 		return y - (y * module->gateProbabilities[index]);
-	}
-
-	void updateHeightsFromProbs(int index) {
-		float y = box.size.y - SLIDER_TOP;
-		sliderHeights[index] = y - (y * module->gateProbabilities[index]);
-	}
-
-	void updateProbsFromHeights(int index) {
-		module->gateProbabilities[index] = 1.0 - sliderHeights[index] / (box.size.y - SLIDER_TOP);
 	}
 
 	void draw(const DrawArgs& args) override {
@@ -379,7 +346,6 @@ struct StochSeqWidget : ModuleWidget {
 		display->module = module;
 		display->box.pos = Vec(7.4, 86.7);
 		display->box.size = Vec(480, 102.9);
-		// display->initHeights();
 		addChild(display);
 
 		// addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
