@@ -8,7 +8,8 @@ using namespace rack;
 extern Plugin* pluginInstance;
 
 // Declare each Model, defined in each module source file
-extern Model* modelStochSeq;
+extern Model *modelStochSeq;
+extern Model *modelPolyrhythmClock;
 
 /************************** PORTS **************************/
 
@@ -31,6 +32,15 @@ struct DefaultButton : SvgSwitch {
         momentary = true;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/DefaultButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/DefaultButtonDown.svg")));
+    }
+};
+
+struct ToggleButton : SvgSwitch {
+    ToggleButton() {
+        // momentary = true;
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/ToggleButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/ToggleButtonDown.svg")));
     }
 };
 
@@ -147,4 +157,13 @@ struct JeremyRedLight : ModuleLightWidget {
         firstLightId = 1;
         addBaseColor(nvgRGB(255, 0, 0));
     }
+};
+
+/************************** SCREWS **************************/
+
+struct JeremyScrew : SvgScrew {
+	JeremyScrew() {
+		sw->setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/screw.svg")));
+		box.size = sw->box.size;
+	}
 };

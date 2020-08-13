@@ -348,10 +348,10 @@ struct StochSeqWidget : ModuleWidget {
 		display->box.size = Vec(480, 102.9);
 		addChild(display);
 
-		// addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
-		// addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
-		// addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-		// addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		addChild(createWidget<JeremyScrew>(Vec(25.9, 0)));
+		addChild(createWidget<JeremyScrew>(Vec(25.9, box.size.y-12)));
+		addChild(createWidget<JeremyScrew>(Vec(457.1, 0)));
+		addChild(createWidget<JeremyScrew>(Vec(457.1, box.size.y-12)));
 
 		addParam(createParamCentered<BlueInvertKnob>(Vec(105.9, 237.3), module, StochSeq::LENGTH_PARAM));
 		addParam(createParamCentered<BlueInvertKnob>(Vec(140.5, 237.3), module, StochSeq::PATTERN_PARAM));
@@ -359,6 +359,7 @@ struct StochSeqWidget : ModuleWidget {
 		addParam(createParamCentered<DefaultButton>(Vec(209.5, 237.3), module, StochSeq::INVERT_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(244.1, 237.3), module, StochSeq::DIMINUTION_PARAM));
 		addParam(createParamCentered<BlueKnob>(Vec(437.2, 237.3), module, StochSeq::SPREAD_PARAM));
+
 
 		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 237.3), module, StochSeq::CLOCK_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 237.3), module, StochSeq::RESET_INPUT));
