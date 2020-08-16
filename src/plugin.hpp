@@ -9,6 +9,7 @@ extern Plugin* pluginInstance;
 
 // Declare each Model, defined in each module source file
 extern Model *modelStochSeq;
+extern Model *modelStochSeq4;
 extern Model *modelPolyrhythmClock;
 
 /************************** PORTS **************************/
@@ -38,7 +39,7 @@ struct DefaultButton : SvgSwitch {
 struct ToggleButton : SvgSwitch {
     ToggleButton() {
         // momentary = true;
-        shadow->opacity = 0;
+        // shadow->opacity = 0;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/ToggleButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/ToggleButtonDown.svg")));
     }
@@ -76,6 +77,14 @@ struct RedButton : SvgSwitch {
     }
 };
 
+struct TinyPurpleButton : SvgSwitch {
+    TinyPurpleButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPurpleButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPurpleButtonDown.svg")));
+    }
+};
+
 /************************** KNOBS **************************/
 
 struct PurpleKnob : RoundKnob {
@@ -102,9 +111,9 @@ struct RedKnob : RoundKnob {
     }
 };
 
-struct PurpleSnapKnob : RoundKnob {
-    PurpleSnapKnob() {
-        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleKnob.svg")));
+struct PurpleInvertKnob : RoundKnob {
+    PurpleInvertKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleInvertKnob.svg")));
         snap = true;
     }
 };

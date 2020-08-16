@@ -18,6 +18,11 @@
           "tags": ["Sequencer", "Visual"]
       },
       {
+          "slug": "StochSeq4",
+          "name": "Stochastic Sequencer 4",
+          "tags": ["Sequencer", "Visual"]
+      },
+      {
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
           "tags": ["Clock generator", "Clock modulator"]

@@ -9,6 +9,7 @@ void init(Plugin* p) {
 
 	// Add modules here
 	p->addModel(modelStochSeq);
+	p->addModel(modelStochSeq4);
 	p->addModel(modelPolyrhythmClock);
 
 	// Any other plugin initialization may go here.
