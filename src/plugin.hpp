@@ -20,6 +20,30 @@ struct TinyPJ301M : SvgPort {
     }
 };
 
+struct TinyPJ301MPurple : SvgPort {
+    TinyPJ301MPurple() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPJ301MPurple.svg")));
+    }
+};
+
+struct TinyPJ301MBlue : SvgPort {
+    TinyPJ301MBlue() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPJ301MBlue.svg")));
+    }
+};
+
+struct TinyPJ301MAqua : SvgPort {
+    TinyPJ301MAqua() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPJ301MAqua.svg")));
+    }
+};
+
+struct TinyPJ301MRed : SvgPort {
+    TinyPJ301MRed() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPJ301MRed.svg")));
+    }
+};
+
 struct OrbitPort : SvgPort {
     OrbitPort() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/OrbitPort.svg")));
@@ -85,6 +109,30 @@ struct TinyPurpleButton : SvgSwitch {
     }
 };
 
+struct TinyBlueButton : SvgSwitch {
+    TinyBlueButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyBlueButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyBlueButtonDown.svg")));
+    }
+};
+
+struct TinyAquaButton : SvgSwitch {
+    TinyAquaButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyAquaButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyAquaButtonDown.svg")));
+    }
+};
+
+struct TinyRedButton : SvgSwitch {
+    TinyRedButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyRedButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyRedButtonDown.svg")));
+    }
+};
+
 /************************** KNOBS **************************/
 
 struct PurpleKnob : RoundKnob {
@@ -125,16 +173,41 @@ struct BlueInvertKnob : RoundKnob {
     }
 };
 
-struct AquaSnapKnob : RoundKnob {
-    AquaSnapKnob() {
-        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AquaKnob.svg")));
+struct AquaInvertKnob : RoundKnob {
+    AquaInvertKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AquaInvertKnob.svg")));
         snap = true;
     }
 };
 
-struct RedSnapKnob : RoundKnob {
-    RedSnapKnob() {
-        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/RedKnob.svg")));
+struct RedInvertKnob : RoundKnob {
+    RedInvertKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/RedInvertKnob.svg")));
+        snap = true;
+    }
+};
+
+struct TinyPurpleKnob : RoundKnob {
+    TinyPurpleKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPurpleKnob.svg")));
+    }
+};
+
+struct TinyBlueKnob : RoundKnob {
+    TinyBlueKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyBlueKnob.svg")));
+    }
+};
+
+struct TinyAquaKnob : RoundKnob {
+    TinyAquaKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyAquaKnob.svg")));
+    }
+};
+
+struct TinyRedKnob : RoundKnob {
+    TinyRedKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyRedKnob.svg")));
     }
 };
 
