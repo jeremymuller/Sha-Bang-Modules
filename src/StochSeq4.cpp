@@ -57,9 +57,13 @@ struct StochSeq4 : Module {
 		NUM_PARAMS = SPREAD_PARAM + NUM_SEQS
 	};
 	enum InputIds {
-		CLOCK_INPUT,
-		RESET_INPUT,
-		NUM_INPUTS
+		MASTER_CLOCK_INPUT,
+        CLOCKS_INPUT = MASTER_CLOCK_INPUT + NUM_SEQS,
+		RESET_INPUT = CLOCKS_INPUT + NUM_SEQS,
+        RANDOM_INPUT = RESET_INPUT + NUM_SEQS,
+        INVERT_INPUT = RANDOM_INPUT + NUM_SEQS,
+        DIMINUTION_INPUT = INVERT_INPUT + NUM_SEQS,
+		NUM_INPUTS = DIMINUTION_INPUT + NUM_SEQS
 	};
 	enum OutputIds {
 		GATES_OUTPUT = NUM_SEQS,
@@ -71,6 +75,7 @@ struct StochSeq4 : Module {
 	};
 
     dsp::SchmittTrigger clockTrig;
+    dsp::SchmittTrigger clockTriggers[NUM_SEQS];
     dsp::SchmittTrigger resetTrig;
     bool resetMode = false;
     Sequencer seqs[NUM_SEQS];
@@ -103,12 +108,50 @@ struct StochSeq4 : Module {
         configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 0.0, "blue spread");
         configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 0.0, "aqua spread");
         configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 0.0, "red spread");
+    }
 
-        // for (int i = 0; i < NUM_SEQS; i++) {
-        //     for (int j = 0; j < NUM_OF_SLIDERS; j++) {
-        //         seqs[i].gateProbabilities[j] = random::uniform();
-        //     }
-        // }
+    json_t *dataToJson() override {
+        json_t *rootJ = json_object();
+        json_t *currentPatternsJ = json_array();
+        json_t *seqsProbsJ = json_array();
+        for (int i = 0; i < NUM_SEQS; i++) {
+            json_t *currentPatternJ = json_integer(seqs[i].currentPattern);
+            json_array_append_new(currentPatternsJ, currentPatternJ);
+
+            json_t *probsJ = json_array();
+            for (int j = 0; j < NUM_OF_SLIDERS; j++) {
+                json_t *probJ = json_real(seqs[i].gateProbabilities[j]);
+                json_array_append_new(probsJ, probJ);
+            }
+            json_array_append_new(seqsProbsJ, probsJ);
+        }
+        json_object_set_new(rootJ, "currentPatterns", currentPatternsJ);
+        json_object_set_new(rootJ, "seqsProbs", seqsProbsJ);
+
+        return rootJ;
+    }
+
+    void dataFromJson(json_t *rootJ) override {
+        json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
+        json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
+        if (currentPatternsJ) {
+            for (int i = 0; i < NUM_SEQS; i++) {
+                json_t *currentPatternJ = json_array_get(currentPatternsJ, i);
+                if (currentPatternJ) {
+                    seqs[i].currentPattern = json_integer_value(currentPatternJ);
+                }
+
+                json_t *probsJ = json_array_get(seqsProbsJ, i);
+                if (probsJ) {
+                    for (int j = 0; j < NUM_OF_SLIDERS; j++) {
+                        json_t *probJ = json_array_get(probsJ, j);
+                        if (probJ) {
+                            seqs[i].gateProbabilities[j] = json_real_value(probJ);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     void process(const ProcessArgs& args) override {
@@ -122,23 +165,37 @@ struct StochSeq4 : Module {
                 seqs[i].currentPattern = patt;
                 genPatterns(patt, i);
             }
-            if (seqs[i].randomTrig.process(params[RANDOM_PARAM+i].getValue())) {
+            if (seqs[i].randomTrig.process(params[RANDOM_PARAM+i].getValue() + inputs[RANDOM_INPUT+i].getVoltage())) {
                 genPatterns(100, i);
             }
-            if (seqs[i].invertTrig.process(params[INVERT_PARAM+i].getValue())) {
+            if (seqs[i].invertTrig.process(params[INVERT_PARAM+i].getValue() + inputs[INVERT_INPUT+i].getVoltage())) {
                 invert(i);
             }
-            if (seqs[i].dimTrig.process(params[DIMINUTION_PARAM+i].getValue())) {
+            if (seqs[i].dimTrig.process(params[DIMINUTION_PARAM+i].getValue() + inputs[DIMINUTION_INPUT+i].getVoltage())) {
                 diminish(i);
             }
         }
-        if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage())) {
-            if (resetMode) {
-                resetMode = false;
-                resetSeqToEnd();
-            }
+        if (clockTrig.process(inputs[MASTER_CLOCK_INPUT].getVoltage())) {
             clockStep();
+        } else {
+            for (int i = 0; i < NUM_SEQS; i++) {
+                if (clockTriggers[i].process(inputs[CLOCKS_INPUT+i].getVoltage())) {
+                    clockStep(i);
+                    // int l = (int)params[LENGTH_PARAM + i].getValue();
+                    // float spread = params[SPREAD_PARAM + i].getValue();
+                    // seqs[i].clockStep(l, spread);
+                }
+            }
         }
+
+
+        // if (clockTrig.process(inputs[MASTER_CLOCK_INPUT].getVoltage())) {
+        //     if (resetMode) {
+        //         resetMode = false;
+        //         resetSeqToEnd();
+        //     }
+        //     clockStep();
+        // }
         for (int i = 0; i < NUM_SEQS; i++) {
             bool pulse = seqs[i].gatePulse.process(1 / args.sampleRate);
             float gateVolt = pulse ? 10.0 : 0.0;
@@ -153,7 +210,12 @@ struct StochSeq4 : Module {
             float spread = params[SPREAD_PARAM+i].getValue();
             seqs[i].clockStep(l, spread);
         }
+    }
 
+    void clockStep(int i) {
+        int l = (int)params[LENGTH_PARAM + i].getValue();
+        float spread = params[SPREAD_PARAM + i].getValue();
+        seqs[i].clockStep(l, spread);
     }
 
     void resetSeqToEnd() {
@@ -279,10 +341,10 @@ struct StochSeq4Display : Widget {
         // TODO
 
         //background
-        nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-        nvgBeginPath(args.vg);
-        nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-        nvgFill(args.vg);
+        // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+        // nvgBeginPath(args.vg);
+        // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+        // nvgFill(args.vg);
 
         if (module == NULL) return;
 
@@ -386,75 +448,88 @@ struct StochSeq4Widget : ModuleWidget {
         StochSeq4Display *displayPurple = new StochSeq4Display();
         displayPurple->module = module;
         displayPurple->seqId = StochSeq4::PURPLE_SEQ;
-        displayPurple->box.pos = Vec(189.5, 18.2);
+        displayPurple->box.pos = Vec(211.1, 18.2);
         displayPurple->box.size = Vec(480, 80.7);
         addChild(displayPurple);
 
         StochSeq4Display *displayBlue = new StochSeq4Display();
         displayBlue->module = module;
         displayBlue->seqId = StochSeq4::BLUE_SEQ;
-        displayBlue->box.pos = Vec(189.5, 105.7);
+        displayBlue->box.pos = Vec(211.1, 105.7);
         displayBlue->box.size = Vec(480, 80.7);
         addChild(displayBlue);
 
         StochSeq4Display *displayAqua = new StochSeq4Display();
         displayAqua->module = module;
         displayAqua->seqId = StochSeq4::AQUA_SEQ;
-        displayAqua->box.pos = Vec(189.5, 193.2);
+        displayAqua->box.pos = Vec(211.1, 193.2);
         displayAqua->box.size = Vec(480, 80.7);
         addChild(displayAqua);
 
         StochSeq4Display *displayRed = new StochSeq4Display();
         displayRed->module = module;
         displayRed->seqId = StochSeq4::RED_SEQ;
-        displayRed->box.pos = Vec(189.5, 280.6);
+        displayRed->box.pos = Vec(211.1, 280.6);
         displayRed->box.size = Vec(480, 80.7);
         addChild(displayRed);
 
+        // addChild(createWidget<JeremyScrew>(Vec(47.7, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(47.7, box.size.y - 14)));
+        addChild(createWidget<JeremyScrew>(Vec(660.3, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(660.3, box.size.y - 14)));
+
+        // clock inputs
+        addInput(createInputCentered<TinyPJ301M>(Vec(26.3, 104.8), module, StochSeq4::CLOCKS_INPUT + StochSeq4::PURPLE_SEQ));
+        addInput(createInputCentered<TinyPJ301M>(Vec(26.3, 176.2), module, StochSeq4::CLOCKS_INPUT + StochSeq4::BLUE_SEQ));
+        addInput(createInputCentered<TinyPJ301M>(Vec(26.3, 247.6), module, StochSeq4::CLOCKS_INPUT + StochSeq4::AQUA_SEQ));
+        addInput(createInputCentered<TinyPJ301M>(Vec(26.3, 317.9), module, StochSeq4::CLOCKS_INPUT + StochSeq4::RED_SEQ));
         // lengths
-        addParam(createParamCentered<PurpleInvertKnob>(Vec(24.3, 104.8), module, StochSeq4::LENGTH_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<BlueInvertKnob>(Vec(24.3, 176.1), module, StochSeq4::LENGTH_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<AquaInvertKnob>(Vec(24.3, 247.3), module, StochSeq4::LENGTH_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<RedInvertKnob>(Vec(24.3, 317.9), module, StochSeq4::LENGTH_PARAM + StochSeq4::RED_SEQ));
-
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(54.8, 104.8), module, StochSeq4::LENGTH_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(54.8, 176.1), module, StochSeq4::LENGTH_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(54.8, 247.3), module, StochSeq4::LENGTH_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<RedInvertKnob>(Vec(54.8, 317.9), module, StochSeq4::LENGTH_PARAM + StochSeq4::RED_SEQ));
         // patterns
-        addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 104.8), module, StochSeq4::PATTERN_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<BlueInvertKnob>(Vec(58.8, 176.1), module, StochSeq4::PATTERN_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<AquaInvertKnob>(Vec(58.8, 247.3), module, StochSeq4::PATTERN_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<RedInvertKnob>(Vec(58.8, 317.9), module, StochSeq4::PATTERN_PARAM + StochSeq4::RED_SEQ));
-
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(87.1, 104.8), module, StochSeq4::PATTERN_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(87.1, 176.1), module, StochSeq4::PATTERN_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(87.1, 247.3), module, StochSeq4::PATTERN_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<RedInvertKnob>(Vec(87.1, 317.9), module, StochSeq4::PATTERN_PARAM + StochSeq4::RED_SEQ));
         // randoms
-        addParam(createParamCentered<TinyPurpleButton>(Vec(93.4, 104.8), module, StochSeq4::RANDOM_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<TinyBlueButton>(Vec(93.4, 176.1), module, StochSeq4::RANDOM_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<TinyAquaButton>(Vec(93.4, 247.3), module, StochSeq4::RANDOM_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<TinyRedButton>(Vec(93.4, 317.9), module, StochSeq4::RANDOM_PARAM + StochSeq4::RED_SEQ));
+        addParam(createParamCentered<TinyPurpleButton>(Vec(119.4, 104.8), module, StochSeq4::RANDOM_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<TinyBlueButton>(Vec(119.4, 176.1), module, StochSeq4::RANDOM_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<TinyAquaButton>(Vec(119.4, 247.3), module, StochSeq4::RANDOM_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<TinyRedButton>(Vec(119.4, 317.9), module, StochSeq4::RANDOM_PARAM + StochSeq4::RED_SEQ));
         // inverts
-        addParam(createParamCentered<TinyPurpleButton>(Vec(127.9, 104.8), module, StochSeq4::INVERT_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<TinyBlueButton>(Vec(127.9, 176.1), module, StochSeq4::INVERT_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<TinyAquaButton>(Vec(127.9, 247.3), module, StochSeq4::INVERT_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<TinyRedButton>(Vec(127.9, 317.9), module, StochSeq4::INVERT_PARAM + StochSeq4::RED_SEQ));
+        addParam(createParamCentered<TinyPurpleButton>(Vec(151.7, 104.8), module, StochSeq4::INVERT_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<TinyBlueButton>(Vec(151.7, 176.1), module, StochSeq4::INVERT_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<TinyAquaButton>(Vec(151.7, 247.3), module, StochSeq4::INVERT_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<TinyRedButton>(Vec(151.7, 317.9), module, StochSeq4::INVERT_PARAM + StochSeq4::RED_SEQ));
         // diminish
-        addParam(createParamCentered<TinyPurpleButton>(Vec(162.4, 104.8), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<TinyBlueButton>(Vec(162.4, 176.1), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<TinyAquaButton>(Vec(162.4, 247.3), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<TinyRedButton>(Vec(162.4, 317.9), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::RED_SEQ));
+        addParam(createParamCentered<TinyPurpleButton>(Vec(184, 104.8), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<TinyBlueButton>(Vec(184, 176.1), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<TinyAquaButton>(Vec(184, 247.3), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<TinyRedButton>(Vec(184, 317.9), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::RED_SEQ));
         // spreads
-        addParam(createParamCentered<TinyPurpleKnob>(Vec(705.6, 72.5), module, StochSeq4::SPREAD_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<TinyBlueKnob>(Vec(705.6, 159.9), module, StochSeq4::SPREAD_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<TinyAquaKnob>(Vec(705.6, 247.4), module, StochSeq4::SPREAD_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<TinyRedKnob>(Vec(705.6, 334.9), module, StochSeq4::SPREAD_PARAM + StochSeq4::RED_SEQ));
+        addParam(createParamCentered<TinyPurpleKnob>(Vec(750.6, 66.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<TinyBlueKnob>(Vec(750.6, 153.7), module, StochSeq4::SPREAD_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<TinyAquaKnob>(Vec(750.6, 241.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<TinyRedKnob>(Vec(750.6, 328.6), module, StochSeq4::SPREAD_PARAM + StochSeq4::RED_SEQ));
 
-        addInput(createInputCentered<PJ301MPort>(Vec(126.9, 63.8), module, StochSeq4::CLOCK_INPUT));
-        addInput(createInputCentered<PJ301MPort>(Vec(161.5, 63.8), module, StochSeq4::RESET_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(148.8, 63.8), module, StochSeq4::MASTER_CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(180.1, 63.8), module, StochSeq4::RESET_INPUT));
+        for (int i = 0; i < 4; i++) {
+            addInput(createInputCentered<TinyPJ301M>(Vec(119.4, 124.8 + (i * 71.2)), module, StochSeq4::RANDOM_INPUT + i));
+            addInput(createInputCentered<TinyPJ301M>(Vec(151.7, 124.8 + (i * 71.2)), module, StochSeq4::INVERT_INPUT + i));
+            addInput(createInputCentered<TinyPJ301M>(Vec(184, 124.8 + (i * 71.2)), module, StochSeq4::DIMINUTION_INPUT + i));
+        }
 
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(683.7, 91.3), module, StochSeq4::GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(705.6, 91.3), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(683.7, 178.7), module, StochSeq4::GATES_OUTPUT + StochSeq4::BLUE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(705.6, 178.7), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(683.7, 266.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::AQUA_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(705.6, 266.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(683.7, 353.7), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(705.6, 353.7), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(705.3, 66.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(728.7, 66.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(705.3, 153.7), module, StochSeq4::GATES_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(728.7, 153.7), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(705.3, 241.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(728.7, 241.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(705.3, 328.6), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(728.7, 328.6), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
     }
 };
 

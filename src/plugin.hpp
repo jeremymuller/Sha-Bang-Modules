@@ -12,6 +12,23 @@ extern Model *modelStochSeq;
 extern Model *modelStochSeq4;
 extern Model *modelPolyrhythmClock;
 
+/************************** LABEL **************************/
+
+struct CenteredLabel : Widget {
+	std::string text;
+	int fontSize;
+	CenteredLabel(int _fontSize = 12) {
+		fontSize = _fontSize;
+		box.size.y = BND_WIDGET_HEIGHT;
+	}
+	void draw(const DrawArgs &args) override {
+		nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
+		nvgFillColor(args.vg, nvgRGB(38, 0, 255));
+		nvgFontSize(args.vg, fontSize);
+		nvgText(args.vg, box.pos.x, box.pos.y, text.c_str(), NULL);
+	}
+};
+
 /************************** PORTS **************************/
 
 struct TinyPJ301M : SvgPort {
@@ -208,6 +225,13 @@ struct TinyAquaKnob : RoundKnob {
 struct TinyRedKnob : RoundKnob {
     TinyRedKnob() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyRedKnob.svg")));
+    }
+};
+
+struct TinyBlueInvertKnob : RoundKnob {
+    TinyBlueInvertKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyBlueInvertKnob.svg")));
+        snap = true;
     }
 };
 

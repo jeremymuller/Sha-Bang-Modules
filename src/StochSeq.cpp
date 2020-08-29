@@ -348,10 +348,10 @@ struct StochSeqWidget : ModuleWidget {
 		display->box.size = Vec(480, 102.9);
 		addChild(display);
 
-		addChild(createWidget<JeremyScrew>(Vec(25.9, 0)));
-		addChild(createWidget<JeremyScrew>(Vec(25.9, box.size.y-12)));
-		addChild(createWidget<JeremyScrew>(Vec(457.1, 0)));
-		addChild(createWidget<JeremyScrew>(Vec(457.1, box.size.y-12)));
+		addChild(createWidget<JeremyScrew>(Vec(25.9, 2)));
+		addChild(createWidget<JeremyScrew>(Vec(25.9, box.size.y-14)));
+		addChild(createWidget<JeremyScrew>(Vec(457.1, 2)));
+		addChild(createWidget<JeremyScrew>(Vec(457.1, box.size.y-14)));
 
 		addParam(createParamCentered<BlueInvertKnob>(Vec(105.9, 237.3), module, StochSeq::LENGTH_PARAM));
 		addParam(createParamCentered<BlueInvertKnob>(Vec(140.5, 237.3), module, StochSeq::PATTERN_PARAM));
