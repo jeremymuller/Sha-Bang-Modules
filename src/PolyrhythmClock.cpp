@@ -46,7 +46,8 @@ struct PolyrhythmClock : Module {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
         configParam(RESET_PARAM, 0.0, 1.0, 0.0, "reset");
-        configParam(BPM_PARAM, -2.0, 6.0, 1.0, "bpm");
+        // TODO: fix the mouse hover for bpm
+        configParam(BPM_PARAM, -2.0, 6.0, 1.0);
         configParam(TUPLET1_RHYTHM_PARAM, 1.0, 13.0, 1.0);
         configParam(TUPLET1_DUR_PARAM, 1.0, 13.0, 1.0);
         configParam(TUPLET2_RHYTHM_PARAM, 1.0, 13.0, 1.0);
@@ -171,11 +172,32 @@ struct PolyrhythmClock : Module {
     }
 };
 
+struct BPMDisplay : Widget {
+    std::string text;
+    int fontSize;
+    PolyrhythmClock *module;
+    BPMDisplay(int _fontSize = 15) {
+        fontSize = _fontSize;
+        box.size.y = BND_WIDGET_HEIGHT;
+    }
+    void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+
+        int bpm = int(std::pow(2.0, module->params[PolyrhythmClock::BPM_PARAM].getValue()) * 60);
+        text = std::to_string(bpm) + " BPM";
+        nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
+        // nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
+        nvgFillColor(args.vg, nvgRGB(128, 0, 219));
+        nvgFontSize(args.vg, fontSize);
+        nvgText(args.vg, 0, 0, text.c_str(), NULL);
+    }
+};
+
 struct RatioDisplay : Widget {
     std::string text1, text2, text3;
 	int fontSize;
     PolyrhythmClock *module;
-	RatioDisplay(int _fontSize = 14) {
+	RatioDisplay(int _fontSize = 13) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
 	}
@@ -193,7 +215,8 @@ struct RatioDisplay : Widget {
         float xPos1 = num1 < 10 ? 7.6 : 0.0;
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT + NVG_ALIGN_TOP);
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(38, 0, 255));
+        // nvgFillColor(args.vg, nvgRGB(38, 0, 255));
+        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
         nvgFontSize(args.vg, fontSize);
 		nvgText(args.vg, xPos1, 0, text1.c_str(), NULL);
 
@@ -203,7 +226,7 @@ struct RatioDisplay : Widget {
         float xPos2 = num2 < 10 ? 7.6 : 0.0;
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
         // nvgTextAlign(args.vg, NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(0, 238, 255));
+        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
         nvgFontSize(args.vg, fontSize);
         // nvgText(args.vg, 5, 5, text2.c_str(), NULL);
         nvgText(args.vg, xPos2, 75.4, text2.c_str(), NULL);
@@ -214,7 +237,7 @@ struct RatioDisplay : Widget {
         float xPos3 = num3 < 10 ? 7.6 : 0.0;
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
         // nvgTextAlign(args.vg, NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(255, 0, 0));
+        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, xPos3, 148.5, text3.c_str(), NULL);
     }
@@ -229,10 +252,15 @@ struct PolyrhythmClockWidget : ModuleWidget {
         // ratioLabel->box.pos = Vec(60.9, 203.5);
         // ratioLabel->text = "5:4";
         // addChild(ratioLabel);
+        BPMDisplay *bpmLabel = new BPMDisplay();
+        bpmLabel->module = module;
+        bpmLabel->box.pos = Vec(45, 92.8);
+        addChild(bpmLabel);
+
         RatioDisplay *ratioLabel1 = new RatioDisplay();
         ratioLabel1->module = module;
         // ratioLabel1->box.pos = Vec(36, 175.5);
-        ratioLabel1->box.pos = Vec(29, 157.9);
+        ratioLabel1->box.pos = Vec(29, 151.6);
         // ratioLabel1->box.pos = Vec(45, 175.5);
         ratioLabel1->box.size.x = 30; // 10
         ratioLabel1->text2 = "5:4";
@@ -244,29 +272,34 @@ struct PolyrhythmClockWidget : ModuleWidget {
         // ratioLabel2->text = "5:4";
         // addChild(ratioLabel2);
 
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(29.8-3.75, 50.6-3.75), module, PolyrhythmClock::TOGGLE_LIGHT));
+        addChild(createWidget<JeremyScrew>(Vec(12, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(12, box.size.y - 14)));
+        addChild(createWidget<JeremyScrew>(Vec(box.size.x-12-12, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(box.size.x-12-12, box.size.y - 14)));
 
-        addParam(createParamCentered<TinyPurpleButton>(Vec(45, 50.6), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
-        addParam(createParamCentered<PurpleKnob>(Vec(45, 80.8), module, PolyrhythmClock::BPM_PARAM));
-        addParam(createParamCentered<TinyBlueButton>(Vec(19.9, 119.8), module, PolyrhythmClock::RESET_PARAM));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(29.8-3.75, 54-3.75), module, PolyrhythmClock::TOGGLE_LIGHT));
+
+        addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
+        addParam(createParamCentered<PurpleKnob>(Vec(45, 76.7), module, PolyrhythmClock::BPM_PARAM));
+        // addParam(createParamCentered<TinyBlueButton>(Vec(19.9, 119.8), module, PolyrhythmClock::RESET_PARAM));
 
         // tuplet 1
-        addParam(createParamCentered<BlueInvertKnob>(Vec(19.9, 182.1), module, PolyrhythmClock::TUPLET1_RHYTHM_PARAM));
-        addParam(createParamCentered<BlueInvertKnob>(Vec(70.1, 182.1), module, PolyrhythmClock::TUPLET1_DUR_PARAM));
-        addParam(createParamCentered<TinyBlueKnob>(Vec(45, 182.8), module, PolyrhythmClock::TUPLETS_RAND_PARAM));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(19.9, 173.6), module, PolyrhythmClock::TUPLET1_RHYTHM_PARAM));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(70.1, 173.6), module, PolyrhythmClock::TUPLET1_DUR_PARAM));
+        addParam(createParamCentered<TinyBlueKnob>(Vec(45, 174.2), module, PolyrhythmClock::TUPLETS_RAND_PARAM));
         // tuplet 2
-        addParam(createParamCentered<AquaInvertKnob>(Vec(19.9, 257.5), module, PolyrhythmClock::TUPLET2_RHYTHM_PARAM));
-        addParam(createParamCentered<AquaInvertKnob>(Vec(70.1, 257.5), module, PolyrhythmClock::TUPLET2_DUR_PARAM));
-        addParam(createParamCentered<TinyAquaKnob>(Vec(45, 258.2), module, PolyrhythmClock::TUPLETS_RAND_PARAM+1));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(19.9, 249), module, PolyrhythmClock::TUPLET2_RHYTHM_PARAM));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(70.1, 249), module, PolyrhythmClock::TUPLET2_DUR_PARAM));
+        addParam(createParamCentered<TinyAquaKnob>(Vec(45, 249.6), module, PolyrhythmClock::TUPLETS_RAND_PARAM+1));
         // tuplet 3
-        addParam(createParamCentered<RedInvertKnob>(Vec(19.9, 330.6), module, PolyrhythmClock::TUPLET3_RHYTHM_PARAM));
-        addParam(createParamCentered<RedInvertKnob>(Vec(70.1, 330.6), module, PolyrhythmClock::TUPLET3_DUR_PARAM));
-        addParam(createParamCentered<TinyRedKnob>(Vec(45, 331.3), module, PolyrhythmClock::TUPLETS_RAND_PARAM+2));
+        addParam(createParamCentered<RedInvertKnob>(Vec(19.9, 322.1), module, PolyrhythmClock::TUPLET3_RHYTHM_PARAM));
+        addParam(createParamCentered<RedInvertKnob>(Vec(70.1, 322.1), module, PolyrhythmClock::TUPLET3_DUR_PARAM));
+        addParam(createParamCentered<TinyRedKnob>(Vec(45, 322.7), module, PolyrhythmClock::TUPLETS_RAND_PARAM+2));
 
         addOutput(createOutputCentered<PJ301MPort>(Vec(45, 119.8), module, PolyrhythmClock::MASTER_PULSE_OUTPUT));
-        addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 204.3), module, PolyrhythmClock::TUPLET1_OUTPUT));
-        addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 279.7), module, PolyrhythmClock::TUPLET2_OUTPUT));
-        addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 352.8), module, PolyrhythmClock::TUPLET3_OUTPUT));
+        addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 195.8), module, PolyrhythmClock::TUPLET1_OUTPUT));
+        addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 271.1), module, PolyrhythmClock::TUPLET2_OUTPUT));
+        addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 344.3), module, PolyrhythmClock::TUPLET3_OUTPUT));
     }
 };
 
