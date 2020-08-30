@@ -4,7 +4,6 @@ struct PolyrhythmClock : Module {
     enum ParamIds {
         CLOCK_TOGGLE_PARAM,
         BPM_PARAM,
-        RESET_PARAM,
         TUPLET1_RHYTHM_PARAM,
         TUPLET1_DUR_PARAM,
         TUPLET2_RHYTHM_PARAM,
@@ -29,9 +28,8 @@ struct PolyrhythmClock : Module {
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger toggleTrig, resetTrig;
+    dsp::SchmittTrigger toggleTrig;
     dsp::PulseGenerator masterPulse;
-    dsp::PulseGenerator embed1Pulse, embed2Pulse, embed3Pulse;
     bool clockOn = false;
     float phases[4] = {};
     float randoms[4];
@@ -45,7 +43,6 @@ struct PolyrhythmClock : Module {
     PolyrhythmClock() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
-        configParam(RESET_PARAM, 0.0, 1.0, 0.0, "reset");
         // TODO: fix the mouse hover for bpm
         configParam(BPM_PARAM, -2.0, 6.0, 1.0);
         configParam(TUPLET1_RHYTHM_PARAM, 1.0, 13.0, 1.0);
@@ -90,9 +87,6 @@ struct PolyrhythmClock : Module {
 
     void process(const ProcessArgs& args) override {
 
-        if (resetTrig.process(params[RESET_PARAM].getValue())) {
-            resetPhases();
-        }
         if (toggleTrig.process(params[CLOCK_TOGGLE_PARAM].getValue())) {
             clockOn = !clockOn;
         }
@@ -135,32 +129,6 @@ struct PolyrhythmClock : Module {
 
             checkPhases();
 
-            // if (phase == 0.0) {
-            //     masterPulse.trigger(1e-3);
-            // } else if (phase >= 1.0) {
-            //     phase -= 1.0;
-            // }
-            // phase += time / args.sampleRate;
-
-
-            // phase += time / args.sampleRate;
-            // if (phase >= 1.0) {
-            //     phase -= 1.0;
-            //     masterPulse.trigger(1e-3);
-            // }
-
-            // time *= params[TUPLET1_RHYTHM_PARAM].getValue() / params[TUPLET1_DUR_PARAM].getValue();
-            // phaseEmbed1 += time / args.sampleRate;
-            // if (phaseEmbed1 >= 1.0) {
-            //     phaseEmbed1 -= 1.0;
-            //     embed1Pulse.trigger(1e-3);
-            // }
-            // time *= params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
-            // phaseEmbed2 += time / args.sampleRate;
-            // if (phaseEmbed2 >= 1.0) {
-            //     phaseEmbed2 -= 1.0;
-            //     embed2Pulse.trigger(1e-3);
-            // }
         } else {
             resetPhases();
         }
@@ -281,7 +249,6 @@ struct PolyrhythmClockWidget : ModuleWidget {
 
         addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
         addParam(createParamCentered<PurpleKnob>(Vec(45, 76.7), module, PolyrhythmClock::BPM_PARAM));
-        // addParam(createParamCentered<TinyBlueButton>(Vec(19.9, 119.8), module, PolyrhythmClock::RESET_PARAM));
 
         // tuplet 1
         addParam(createParamCentered<BlueInvertKnob>(Vec(19.9, 173.6), module, PolyrhythmClock::TUPLET1_RHYTHM_PARAM));

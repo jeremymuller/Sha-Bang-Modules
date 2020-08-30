@@ -11,6 +11,7 @@ extern Plugin* pluginInstance;
 extern Model *modelStochSeq;
 extern Model *modelStochSeq4;
 extern Model *modelPolyrhythmClock;
+extern Model *modelRandGates;
 
 /************************** LABEL **************************/
 

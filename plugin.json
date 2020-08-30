@@ -26,6 +26,11 @@
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
           "tags": ["Clock generator", "Clock modulator"]
+      },
+      {
+          "slug": "RandGates",
+          "name": "Random Gate Switch",
+          "tags": ["Switch"]
       }
   ]
 }
