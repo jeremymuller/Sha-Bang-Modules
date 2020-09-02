@@ -25,7 +25,7 @@ struct RandGates : Module {
 
     RandGates() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(WEIGHTING_PARAM, 0.0, 4.0, 4.0);
+        configParam(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "weight");
 
         
         setCurrentGate();
@@ -34,7 +34,8 @@ struct RandGates : Module {
     void setCurrentGate() {
         if (params[WEIGHTING_PARAM].getValue() < 4) {
             int weight = (int)params[WEIGHTING_PARAM].getValue();
-            // TODO
+            int r = static_cast<int>(random::uniform() * (NUM_OF_INPUTS+1));
+            currentGate = (r > 3) ? weight : r; // 40% chance of weighted choice
         } else {
             currentGate = static_cast<int>(random::uniform() * NUM_OF_INPUTS);
         }
