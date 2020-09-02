@@ -35,5 +35,5 @@ TODO: See the image below if this is confusing.
 - inputs:
   - `TRG` randomizes the output
   - `INS` (purple, blue, aqua, red) are any type of input, i.e. gates or ±5 volts.
-- knob gives a higher probability to the chosen input. All the way to the right is uniform randomness.
-- outputs either the chosen gate or ±5 volts.
+- **Weight Knob** gives a higher probability to the chosen input. All the way to the right is uniform randomness.
+- `OUT` outputs either the chosen gate or ±5 volts.
