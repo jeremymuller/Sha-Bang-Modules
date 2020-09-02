@@ -9,6 +9,8 @@ A collection of experimental, innovative, & probabilistic modules for [VCVRack](
 * [PolyrhythmClock](#polyrhythm-clock)
 * [RandGates](#randgates)
 
+---
+
 ### Polyrhythm Clock
 
 *A clock featuring three layers of embedded rhythms. It's easy to multiply and/or divide the clock with virtually any rhythm you want using this clock.*
@@ -27,8 +29,10 @@ A collection of experimental, innovative, & probabilistic modules for [VCVRack](
   
 TODO: See the image below if this is confusing.
 
-
+---
 ### RandGates
+
+![RandGates](/docs/RandGates.png)
 
 *Randomly outputs one of the 4 inputs.*
 
@@ -37,3 +41,5 @@ TODO: See the image below if this is confusing.
   - `INS` (purple, blue, aqua, red) are any type of input, i.e. gates or ±5 volts.
 - **Weight Knob** gives a higher probability to the chosen input. All the way to the right is uniform randomness.
 - `OUT` outputs either the chosen gate or ±5 volts.
+
+---
