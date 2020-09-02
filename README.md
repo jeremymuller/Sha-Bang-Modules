@@ -13,6 +13,8 @@ A collection of experimental, innovative, & probabilistic modules for [VCVRack](
 
 ### Polyrhythm Clock
 
+![PolyrhythmClock](/docs/PolyrhythmClock.png)
+
 *A clock featuring three layers of embedded rhythms. It's easy to multiply and/or divide the clock with virtually any rhythm you want using this clock.*
 
 - button turns it on
