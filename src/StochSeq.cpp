@@ -43,6 +43,7 @@ struct StochSeq : Module {
 	int currentPattern = 0;
 	bool resetMode = false;
 	bool lightBlink = false;
+	int randLight;
 	float pitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
 
@@ -58,6 +59,8 @@ struct StochSeq : Module {
 		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 			gateProbabilities[i] = random::uniform();
 		}
+
+		randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 	}
 
 	~StochSeq() {
@@ -124,12 +127,17 @@ struct StochSeq : Module {
 
 		bool pulse = gatePulse.process(1 / args.sampleRate);
 		float gateVolt = pulse ? 10.0 : 0.0;
-		float blink = lightBlink ? 1.0 : 0.0;
+		// float blink = lightBlink ? 1.0 : 0.0;
 		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt);
 		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt);
 		outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
-		int randLight = int(random::uniform() * NUM_OF_LIGHTS);
-		lights[LIGHTS + (gateIndex%NUM_OF_LIGHTS)].setBrightness(blink);
+		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
+		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
+			if (randLight == i)
+				lights[LIGHTS + i].setBrightness(lightBlink ? 1.0 : 0.0);
+			else
+				lights[LIGHTS + i].setBrightness(0.0);
+		}
 	}
 
 	 void clockStep() {
@@ -142,6 +150,7 @@ struct StochSeq : Module {
 			gatePulse.trigger(1e-3f);
 			currentGateOut = gateIndex;
 			lightBlink = true;
+			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 		}
 
 		float spread = params[SPREAD_PARAM].getValue();
@@ -369,8 +378,9 @@ struct StochSeqWidget : ModuleWidget {
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
-			float x = random::uniform() * 336 + 5;
-			float y = random::uniform() * 8 + 16;
+			// TODO: a sine wave instead?
+			float x = random::uniform() * 260 + 1;
+			float y = random::uniform() * 50 + 15;
 			int light = int(random::uniform() * 4);
 			switch(light) {
 				case 0:
