@@ -4,10 +4,42 @@ A collection of experimental, innovative, & probabilistic modules for [VCVRack](
 
 ## Contents:
 
-* StochSeq
-* StochSeq4
+* [StochSeq](#stochseq)
+* [StochSeq4](#stochseq4)
 * [PolyrhythmClock](#polyrhythm-clock)
 * [RandGates](#randgates)
+
+---
+
+### StochSeq
+
+*A sequencer that uses stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
+
+Click and/or drag to draw your own patterns!
+
+##### INPUTS:
+- `CLK` controls timing.
+- `RST` resets sequence to beginning of timeline.
+##### KNOBS:
+- `LEN` length of the sequence.
+- `PATT` selects from preset patterns.
+- `SPREAD` determines the pitch spread of the `V/OCT` output. 
+  - Center will always be the same pitch. 
+  - Right of center: 100% = higher pitch, 0% = lower pitch. 
+  - Left of center: 100% = lower pitch, 0% = higher pitch.
+##### BUTTONS:
+- `RND` randomizes all probabilities.
+- `INV` inverts all probabilities.
+- `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
+##### OUTPUTS:
+- `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
+- `V/OCT` outputs TODO..........
+
+---
+
+### StochSeq4
+
+*TODO*
 
 ---
 
