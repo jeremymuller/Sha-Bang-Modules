@@ -39,6 +39,10 @@ Click and/or drag to draw your own patterns!
 
 ### StochSeq4
 
+![StochSeq4](/docs/StochSeq4.png)
+
+*A sequencer that uses four independent stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
+
 *TODO*
 
 ---
