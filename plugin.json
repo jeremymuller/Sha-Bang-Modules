@@ -1,6 +1,6 @@
 {
-  "slug": "Jeremy-Modules",
-  "name": "Jeremy's Modules",
+  "slug": "Sha-Bang-Modules",
+  "name": "Sha#Bang! Modules",
   "version": "1.0.0",
   "license": "proprietary",
   "author": "Jeremy Muller",
@@ -31,6 +31,11 @@
           "slug": "RandGates",
           "name": "Random Gate Switch",
           "tags": ["Switch"]
+      },
+      {
+          "slug": "Nodes",
+          "name": "Nodes",
+          "tags": ["Visual", "Sequencer"]
       }
   ]
 }

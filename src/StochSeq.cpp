@@ -3,7 +3,7 @@
 #define SLIDER_WIDTH 15
 #define SLIDER_TOP 4
 #define NUM_OF_SLIDERS 32
-#define NUM_OF_LIGHTS 20
+#define NUM_OF_LIGHTS 32
 
 struct StochSeq : Module {
 	enum ParamIds {
@@ -123,8 +123,6 @@ struct StochSeq : Module {
 			clockStep();
 		}
 
-
-
 		bool pulse = gatePulse.process(1 / args.sampleRate);
 		float gateVolt = pulse ? 10.0 : 0.0;
 		// float blink = lightBlink ? 1.0 : 0.0;
@@ -133,7 +131,7 @@ struct StochSeq : Module {
 		outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
 		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
-			if (randLight == i)
+			if (currentGateOut == i)
 				lights[LIGHTS + i].setBrightness(lightBlink ? 1.0 : 0.0);
 			else
 				lights[LIGHTS + i].setBrightness(0.0);
@@ -379,8 +377,11 @@ struct StochSeqWidget : ModuleWidget {
 
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
 			// TODO: a sine wave instead?
-			float x = random::uniform() * 260 + 1;
-			float y = random::uniform() * 50 + 15;
+			float x = 196 * i / NUM_OF_LIGHTS + 5;
+			
+			float y = ((-std::sin(2.0 * M_PI * i / NUM_OF_LIGHTS) * 0.5 + 0.5) * 50 + 15);
+			// float x = random::uniform() * 260 + 1;
+			// float y = random::uniform() * 50 + 15;
 			int light = int(random::uniform() * 4);
 			switch(light) {
 				case 0:
