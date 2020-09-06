@@ -4,44 +4,15 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 
 ## Contents:
 
-* [StochSeq](#stochseq)
-* [StochSeq4](#stochseq4)
+* [Neutrinode](#neutrinode)
 * [PolyrhythmClock](#polyrhythm-clock)
 * [RandGates](#randgates)
+* [StochSeq](#stochseq)
+* [StochSeq4](#stochseq4)
 
 ---
 
-### StochSeq
-
-*A sequencer that uses stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
-
-Click and/or drag to draw your own patterns!
-
-##### INPUTS:
-- `CLK` controls timing.
-- `RST` resets sequence to beginning of timeline.
-##### KNOBS:
-- `LEN` length of the sequence.
-- `PATT` selects from preset patterns.
-- `SPREAD` determines the pitch spread of the `V/OCT` output. 
-  - Center will always be the same pitch. 
-  - Right of center: 100% = higher pitch, 0% = lower pitch. 
-  - Left of center: 100% = lower pitch, 0% = higher pitch.
-##### BUTTONS:
-- `RND` randomizes all probabilities.
-- `INV` inverts all probabilities.
-- `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
-##### OUTPUTS:
-- `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
-- `V/OCT` outputs TODO..........
-
----
-
-### StochSeq4
-
-![StochSeq4](/docs/StochSeq4.png)
-
-*A sequencer that uses four independent stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
+### Neutrinode
 
 *TODO*
 
@@ -81,5 +52,41 @@ TODO: See the image below if this is confusing.
 - Gives a higher probability weight to the chosen input. All the way to the right is uniform randomness.
 ##### OUTPUT:
 - `OUT` outputs either the randomly chosen input as either a pulse or ±5 volts.
+
+---
+
+### StochSeq
+
+*A sequencer that uses stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
+
+Click and/or drag to draw your own patterns!
+
+##### INPUTS:
+- `CLK` controls timing.
+- `RST` resets sequence to beginning of timeline.
+##### KNOBS:
+- `LEN` length of the sequence.
+- `PATT` selects from preset patterns.
+- `SPREAD` determines the pitch spread of the `V/OCT` output. 
+  - Center will always be the same pitch. 
+  - Right of center: 100% = higher pitch, 0% = lower pitch. 
+  - Left of center: 100% = lower pitch, 0% = higher pitch.
+##### BUTTONS:
+- `RND` randomizes all probabilities.
+- `INV` inverts all probabilities.
+- `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
+##### OUTPUTS:
+- `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
+- `V/OCT` outputs TODO..........
+
+---
+
+### StochSeq4
+
+![StochSeq4](/docs/StochSeq4.png)
+
+*A sequencer that uses four independent stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
+
+*TODO*
 
 ---
