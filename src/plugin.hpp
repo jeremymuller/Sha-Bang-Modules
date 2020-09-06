@@ -12,7 +12,7 @@ extern Model *modelStochSeq;
 extern Model *modelStochSeq4;
 extern Model *modelPolyrhythmClock;
 extern Model *modelRandGates;
-extern Model *modelNodes;
+extern Model *modelNeutrinode;
 
 /************************** LABEL **************************/
 
