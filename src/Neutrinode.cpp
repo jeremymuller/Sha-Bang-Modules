@@ -147,15 +147,12 @@ struct NeutrinodeDisplay : Widget {
 
                     nvgFillColor(args.vg, module->nodes[i].color);
                     nvgBeginPath(args.vg);
-                    // nvgEllipse(args.vg, box.size.x / 2, box.size.y / 2, 8, 8);
                     nvgCircle(args.vg, pos.x, pos.y, 8);
                     nvgFill(args.vg);
                 }
             }
 
         }
-
-
 
     }
 
