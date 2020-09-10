@@ -13,11 +13,12 @@ extern Model *modelStochSeq4;
 extern Model *modelPolyrhythmClock;
 extern Model *modelRandGates;
 extern Model *modelNeutrinode;
+extern Model *modelJeremyBlankPanel;
 
 /************************** LABEL **************************/
 
 struct CenteredLabel : Widget {
-	std::string text;
+    std::string text;
 	int fontSize;
 	CenteredLabel(int _fontSize = 12) {
 		fontSize = _fontSize;
@@ -275,3 +276,13 @@ struct JeremyScrew : SvgScrew {
 		box.size = sw->box.size;
 	}
 };
+
+/************************** INLINE FUNCTIONS **************************/
+
+inline float dist(Vec a, Vec b) { // returns distance between two points
+    return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
+}
+
+inline float mag(Vec a) { // returns magnitude of vector
+    return std::sqrt(a.x * a.x + a.y * a.y);
+}

@@ -36,6 +36,11 @@
           "slug": "Neutrinode",
           "name": "Neutrinode",
           "tags": ["Visual", "Sequencer"]
+      },
+      {
+          "slug": "JeremyBlankPanel",
+          "name": "Blank Panel of Jeremy",
+          "tags": ["Blank", "Visual"]
       }
   ]
 }
