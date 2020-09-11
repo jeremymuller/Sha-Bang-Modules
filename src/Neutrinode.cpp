@@ -1,16 +1,7 @@
 #include "plugin.hpp"
 
 #define NUM_OF_NODES 4
-
-Vec setMag(Vec a, float newMag) {
-    float magnitude = std::sqrt(a.x * a.x + a.y * a.y);
-    if (magnitude != 0) {
-        float x = a.x * newMag / magnitude;
-        float y = a.y * newMag / magnitude;
-        return Vec(x, y);
-    } 
-    return Vec(0, 0);
-}
+#define MAX_PARTICLES 20
 
 struct Particle {
     Rect box;
@@ -28,8 +19,8 @@ struct Particle {
 
 struct Pulse {
     Rect box;
-    // float radius = 3;
-    float radius = 6;
+    float radius = 3;
+    // float radius = 6;
     bool visible = false;
     bool isConnected = false;
     float inc = 0.0;
@@ -40,13 +31,16 @@ struct Pulse {
 struct Node {
     Rect box;
     NVGcolor color;
+    NVGcolor particleColor;
     std::vector<Pulse> pulses;
     float lineAlpha;
+    float lineWidth;
     int maxConnectedDist = 150;
     int currentConnects = 0;
-    int tempoTime;
-    int nodeTempo = 300;
-    float pulseSpeed = 1.0;
+    float phase;
+    float tempoTime;
+    int nodeTempo = maxConnectedDist * 2;
+    float pulseSpeed = 1.0 / 44100 * 60;
     bool locked = true;
     bool visible = true;
     bool start = true;
@@ -63,6 +57,7 @@ struct Node {
 
         // tempoTime = 0;
         tempoTime = static_cast<int>(random::uniform() * maxConnectedDist);
+        phase = static_cast<int>(random::uniform() * maxConnectedDist);
     }
 
     bool connected(Vec p, int index) {
@@ -70,17 +65,28 @@ struct Node {
         if (d < maxConnectedDist) {
             pulses[index].isConnected = true;
             lineAlpha = rescale(d, 0, maxConnectedDist, 255, 25);
+            lineWidth = rescale(d, 0, maxConnectedDist, 3.0, 1.5);
             return true;
         } else {
             pulses[index].isConnected = false;
+            pulses[index].visible = false;
+            pulses[index].box.pos.x = box.pos.x;
+            pulses[index].box.pos.y = box.pos.y;
             return false;
         }
     }
 
-    bool sendPulse(Vec particle, int index) {
+    void sendPulse(Vec particle, int index) {
         if (start) {
             Pulse *pulse = &pulses[index];
-            if (pulse == NULL) return false;
+            if (pulse == NULL) return;
+
+            // if (triggered) {
+            //     triggered = false;
+
+            //     pulse->visible = true;
+            //     pulse->inc = dist(particle, box.pos);
+            // }
 
             if (tempoTime == 0) {
                 triggered = true;
@@ -97,8 +103,6 @@ struct Node {
             Vec dirNormal = dir.normalize();
             Vec dirMagSet = dirNormal.mult(pulse->inc);
             pulse->box.pos = dirMagSet.plus(pulse->box.pos);
-            // Vec newDir = setMag(dir, pulse->inc);
-            // pulse->box.pos.plus(newDir);
 
             pulse->inc -= pulseSpeed;
             float d = dist(box.pos, particle);
@@ -107,15 +111,13 @@ struct Node {
                 pulse->visible = false;
             }
 
-            return true;
-        } else {
-            return false;
         }
     }
 };
 
 struct Neutrinode : Module {
     enum ParamIds {
+        BPM_PARAM,
         NUM_PARAMS
     };
     enum InputIds {
@@ -133,6 +135,7 @@ struct Neutrinode : Module {
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+        configParam(BPM_PARAM, -2.0, 6.0, 0.0, "Tempo", " bpm", 2.0, 60.0);
 
         nodes[0].color = nvgRGBA(128, 0, 219, 255);
         nodes[1].color = nvgRGBA(38, 0, 255, 255);
@@ -153,7 +156,41 @@ struct Neutrinode : Module {
     // }
 
     void process(const ProcessArgs &args) override {
-        // TODO
+        // TODO: gotta put all the vector logic here...framerate messes everything up
+
+
+        // float clockTime = std::pow(2.0, params[BPM_PARAM].getValue());
+        // float clockTime = 1;
+        // clockTime /= 2.0;
+        // // phase += clockTime * 0.5 * args.sampleTime;
+
+        // // reset stuff here
+        // for (int i = 0; i < NUM_OF_NODES; i++) {
+        //     nodes[i].phase += clockTime * args.sampleTime;
+
+        //     if (nodes[i].phase >= 1.0) {
+        //         nodes[i].phase = 0;
+        //         nodes[i].triggered = true;
+        //     }
+
+        // }
+
+        // TODO: figure out how to calculatepulsespeed
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            if (nodes[i].visible) {
+                for (unsigned int j = 0; j < particles.size(); j++) {
+                    Vec p = particles[j].box.getCenter();
+                    nodes[i].sendPulse(p, j);
+                }
+
+                if (nodes[i].start) {
+                    nodes[i].tempoTime += nodes[i].pulseSpeed;
+                    if (nodes[i].tempoTime > nodes[i].nodeTempo)
+                        nodes[i].tempoTime = 0;
+                }
+            }
+        }
     }
 
 };
@@ -206,12 +243,14 @@ struct NeutrinodeDisplay : Widget {
             }
 
             if (!clickedOnObj) {
-                Particle p(initX, initY);
-                p.locked = false;
-                module->particles.push_back(p);
-                for (int i = 0; i < NUM_OF_NODES; i++) {
-                    Pulse pulse;
-                    module->nodes[i].pulses.push_back(pulse);
+                if (module->particles.size() < MAX_PARTICLES) {
+                    Particle p(initX, initY);
+                    p.locked = false;
+                    module->particles.push_back(p);
+                    for (int i = 0; i < NUM_OF_NODES; i++) {
+                        Pulse pulse;
+                        module->nodes[i].pulses.push_back(pulse);
+                    }
                 }
             }
         } 
@@ -334,14 +373,14 @@ struct NeutrinodeDisplay : Widget {
                         Vec p = module->particles[j].box.getCenter();
                         if (module->nodes[i].connected(p, j)) {
                             nvgStrokeColor(args.vg, nvgTransRGBA(module->nodes[i].color, module->nodes[i].lineAlpha));
-                            nvgStrokeWidth(args.vg, 2);
+                            nvgStrokeWidth(args.vg, module->nodes[i].lineWidth);
                             nvgBeginPath(args.vg);
                             nvgMoveTo(args.vg, module->nodes[i].box.pos.x, module->nodes[i].box.pos.y);
                             nvgLineTo(args.vg, p.x, p.y);
                             nvgStroke(args.vg);
                         }
 
-                        if (module->nodes[i].sendPulse(p, j)) {
+                        if (module->nodes[i].start) {
                             Pulse p = module->nodes[i].pulses[j];
                             if (p.visible && p.isConnected) {
                                 nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].color, 200));
@@ -353,12 +392,12 @@ struct NeutrinodeDisplay : Widget {
                         }
                     }
 
-                    if (module->nodes[i].start) {
-                        module->nodes[i].tempoTime++;
-                        module->nodes[i].tempoTime = module->nodes[i].tempoTime % module->nodes[i].nodeTempo;
-                    }
+                    // if (module->nodes[i].start) {
+                    //     module->nodes[i].tempoTime += module->nodes[i].pulseSpeed;
+                    //     if (module->nodes[i].tempoTime > module->nodes[i].nodeTempo)
+                    //         module->nodes[i].tempoTime = 0;
+                    // }
                 }
-                // checkEdges(i);
             }
 
 
