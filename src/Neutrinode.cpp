@@ -30,6 +30,7 @@ struct Pulse {
 
 struct Node {
     Rect box;
+    float radius = 15.5;
     NVGcolor color;
     NVGcolor particleColor;
     std::vector<Pulse> pulses;
@@ -40,11 +41,14 @@ struct Node {
     float phase;
     float tempoTime;
     int nodeTempo = maxConnectedDist * 2;
-    float pulseSpeed = 1.0 / 44100 * 60;
+    // float pulseSpeed = 1.0 / 44100 * 60;
     bool locked = true;
     bool visible = true;
     bool start = true;
     bool triggered = false;
+    int haloTime = 0;
+    float haloRadius = 15.5;
+    float haloAlpha = 0;
 
     Node() {
         box.pos.x = 30;
@@ -57,7 +61,7 @@ struct Node {
 
         // tempoTime = 0;
         tempoTime = static_cast<int>(random::uniform() * maxConnectedDist);
-        phase = static_cast<int>(random::uniform() * maxConnectedDist);
+        phase = random::uniform();
     }
 
     bool connected(Vec p, int index) {
@@ -76,20 +80,13 @@ struct Node {
         }
     }
 
-    void sendPulse(Vec particle, int index) {
+    void sendPulse(Vec particle, int index, float pulseSpeed) {
         if (start) {
             Pulse *pulse = &pulses[index];
             if (pulse == NULL) return;
 
-            // if (triggered) {
-            //     triggered = false;
-
-            //     pulse->visible = true;
-            //     pulse->inc = dist(particle, box.pos);
-            // }
-
-            if (tempoTime == 0) {
-                triggered = true;
+            if (phase == 0) {
+                // triggered = true;
 
                 pulse->visible = true;
                 pulse->inc = dist(particle, box.pos);
@@ -110,8 +107,22 @@ struct Node {
             if (pulse->inc < 0) {
                 pulse->visible = false;
             }
-
         }
+    }
+
+    void blip() {
+        if (haloTime > 22000) {
+            haloTime = 0;
+            haloRadius = radius;
+            triggered = false;
+        }
+
+        haloAlpha = rescale(haloTime, 0, 22000, 200, 0);
+        // haloAlpha = 255;
+
+        haloRadius += 18.0 / 44100; // TODO: figure out using sample rate
+        haloTime++;
+
     }
 };
 
@@ -132,6 +143,10 @@ struct Neutrinode : Module {
 
     Node *nodes = new Node[NUM_OF_NODES];
     std::vector<Particle> particles;
+    float clockStep;
+    float maxConnectedDist = 150;
+    float pulseSpeed = 1.0 / 44100 * maxConnectedDist;
+    int checkBPMParam = 0;
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -151,43 +166,33 @@ struct Neutrinode : Module {
         delete[] nodes;
     }
 
-    // void addParticle(float x, float y) {
-    //     Particle 
-    // }
-
     void process(const ProcessArgs &args) override {
-        // TODO: gotta put all the vector logic here...framerate messes everything up
 
+        // checks BPM param knob every 4th sample
+        if (checkBPMParam == 0) {
+            clockStep = std::pow(2.0, params[BPM_PARAM].getValue());
+            clockStep = (clockStep / args.sampleRate) / 2;
+            pulseSpeed = clockStep * maxConnectedDist * 2;
+        }
+        checkBPMParam = (checkBPMParam+1) % 4;
 
-        // float clockTime = std::pow(2.0, params[BPM_PARAM].getValue());
-        // float clockTime = 1;
-        // clockTime /= 2.0;
-        // // phase += clockTime * 0.5 * args.sampleTime;
-
-        // // reset stuff here
-        // for (int i = 0; i < NUM_OF_NODES; i++) {
-        //     nodes[i].phase += clockTime * args.sampleTime;
-
-        //     if (nodes[i].phase >= 1.0) {
-        //         nodes[i].phase = 0;
-        //         nodes[i].triggered = true;
-        //     }
-
-        // }
-
-        // TODO: figure out how to calculatepulsespeed
+        // TODO: This doesn't need to happen every sample, might try every few samples
 
         for (int i = 0; i < NUM_OF_NODES; i++) {
             if (nodes[i].visible) {
+
                 for (unsigned int j = 0; j < particles.size(); j++) {
                     Vec p = particles[j].box.getCenter();
-                    nodes[i].sendPulse(p, j);
+                    nodes[i].sendPulse(p, j, pulseSpeed);
                 }
 
                 if (nodes[i].start) {
-                    nodes[i].tempoTime += nodes[i].pulseSpeed;
-                    if (nodes[i].tempoTime > nodes[i].nodeTempo)
-                        nodes[i].tempoTime = 0;
+                    nodes[i].phase += clockStep;
+                    if (nodes[i].triggered) nodes[i].blip();
+                    if (nodes[i].phase > 1.0) {
+                        nodes[i].phase = 0;
+                        nodes[i].triggered = true;
+                    }
                 }
             }
         }
@@ -353,18 +358,27 @@ struct NeutrinodeDisplay : Widget {
             // draw nodes
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
+                    Vec pos = module->nodes[i].box.getCenter();
+
+                    // display halo
+                    if (module->nodes[i].triggered) {
+                        nvgStrokeColor(args.vg, nvgTransRGBA(module->nodes[i].color, module->nodes[i].haloAlpha));
+                        nvgStrokeWidth(args.vg, 2);
+                        nvgBeginPath(args.vg);
+                        nvgCircle(args.vg, pos.x, pos.y, module->nodes[i].haloRadius);
+                        nvgStroke(args.vg);
+                    }
 
                     // display node
                     nvgStrokeColor(args.vg, module->nodes[i].color);
                     nvgStrokeWidth(args.vg, 2);
                     nvgBeginPath(args.vg);
-                    Vec pos = module->nodes[i].box.getCenter();
-                    nvgCircle(args.vg, pos.x, pos.y, 15.5);
+                    nvgCircle(args.vg, pos.x, pos.y, module->nodes[i].radius);
                     nvgStroke(args.vg);
 
                     nvgFillColor(args.vg, module->nodes[i].color);
                     nvgBeginPath(args.vg);
-                    nvgCircle(args.vg, pos.x, pos.y, 12);
+                    nvgCircle(args.vg, pos.x, pos.y, module->nodes[i].radius-3.5);
                     nvgFill(args.vg);
 
 
@@ -414,10 +428,16 @@ struct NeutrinodeWidget : ModuleWidget {
 
         NeutrinodeDisplay *display = new NeutrinodeDisplay();
         display->module = module;
-        display->box.pos = Vec(125.4, 8.8);
-        display->box.size = Vec(362, 362);
+        display->box.pos = Vec(132.9, 16.3);
+        display->box.size = Vec(347, 347);
         addChild(display);
 
+        addParam(createParamCentered<PurpleKnob>(Vec(64.3, 87.4), module, Neutrinode::BPM_PARAM));
+
+        addChild(createWidget<JeremyScrew>(Vec(52, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(52, box.size.y - 14)));
+        addChild(createWidget<JeremyScrew>(Vec(431, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
     }
 };
 
