@@ -4,7 +4,7 @@
 - create button to clear all particles
 - create movement for nodes and particles (perlin noise?)
 
-##### Cosmos:
+##### Cosmosis:
 - create it
 
 ##### JeremyBlankPanel
