@@ -80,6 +80,14 @@ struct DefaultButton : SvgSwitch {
     }
 };
 
+struct PauseButton : SvgSwitch {
+    PauseButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PauseButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PauseButtonDown.svg")));
+    }
+};
+
 struct ToggleButton : SvgSwitch {
     ToggleButton() {
         // momentary = true;
@@ -285,4 +293,12 @@ inline float dist(Vec a, Vec b) { // returns distance between two points
 
 inline float mag(Vec a) { // returns magnitude of vector
     return std::sqrt(a.x * a.x + a.y * a.y);
+}
+
+inline float randRange(float max) { // returns random float up to max
+    return random::uniform() * max;
+}
+
+inline float randRange(float min, float max) { // returns random float within min/max range
+    return random::uniform() * fabs(max-min) + min;
 }
