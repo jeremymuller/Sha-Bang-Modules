@@ -1,5 +1,6 @@
 #pragma once
 #include <rack.hpp>
+#include "Quantize.cpp"
 
 
 using namespace rack;
@@ -14,6 +15,24 @@ extern Model *modelPolyrhythmClock;
 extern Model *modelRandGates;
 extern Model *modelNeutrinode;
 extern Model *modelJeremyBlankPanel;
+
+/************************** INLINE FUNCTIONS **************************/
+
+inline float dist(Vec a, Vec b) { // returns distance between two points
+    return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
+}
+
+inline float mag(Vec a) { // returns magnitude of vector
+    return std::sqrt(a.x * a.x + a.y * a.y);
+}
+
+inline float randRange(float max) { // returns random float up to max
+    return random::uniform() * max;
+}
+
+inline float randRange(float min, float max) { // returns random float within min/max range
+    return random::uniform() * fabs(max-min) + min;
+}
 
 /************************** LABEL **************************/
 
@@ -61,6 +80,30 @@ struct TinyPJ301MAqua : SvgPort {
 struct TinyPJ301MRed : SvgPort {
     TinyPJ301MRed() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPJ301MRed.svg")));
+    }
+};
+
+struct PJ301MPurple : SvgPort {
+    PJ301MPurple() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PJ301MPurple.svg")));
+    }
+};
+
+struct PJ301MBlue : SvgPort {
+    PJ301MBlue() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PJ301MBlue.svg")));
+    }
+};
+
+struct PJ301MAqua : SvgPort {
+    PJ301MAqua() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PJ301MAqua.svg")));
+    }
+};
+
+struct PJ301MRed : SvgPort {
+    PJ301MRed() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PJ301MRed.svg")));
     }
 };
 
@@ -284,21 +327,3 @@ struct JeremyScrew : SvgScrew {
 		box.size = sw->box.size;
 	}
 };
-
-/************************** INLINE FUNCTIONS **************************/
-
-inline float dist(Vec a, Vec b) { // returns distance between two points
-    return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
-}
-
-inline float mag(Vec a) { // returns magnitude of vector
-    return std::sqrt(a.x * a.x + a.y * a.y);
-}
-
-inline float randRange(float max) { // returns random float up to max
-    return random::uniform() * max;
-}
-
-inline float randRange(float min, float max) { // returns random float within min/max range
-    return random::uniform() * fabs(max-min) + min;
-}
