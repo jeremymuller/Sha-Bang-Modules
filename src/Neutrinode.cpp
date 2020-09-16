@@ -1,7 +1,7 @@
 #include "plugin.hpp"
 
 #define NUM_OF_NODES 4
-#define MAX_PARTICLES 20
+#define MAX_PARTICLES 16
 #define DISPLAY_SIZE 378
 
 struct Particle {
@@ -34,7 +34,6 @@ struct Pulse {
 
     Pulse() {}
 
-    // TODO
     void blip() {
         if (haloTime > 22000) {
             haloTime = 0;
@@ -43,7 +42,6 @@ struct Pulse {
         }
 
         haloAlpha = rescale(haloTime, 0, 22000, 200, 0);
-        // haloAlpha = 255;
 
         haloRadius += 18.0 / APP->engine->getSampleRate();
         haloTime++;
@@ -52,6 +50,8 @@ struct Pulse {
 
 struct Node {
     Rect box;
+    Vec vel;
+    Vec acc;
     float radius = 15.5;
     NVGcolor color;
     NVGcolor lineColor;
@@ -71,9 +71,9 @@ struct Node {
     int haloTime = 0;
     float haloRadius = 15.5;
     float haloAlpha = 0;
-    float pitchVoltage = 0.0;
+    float pitchVoltage[16];
     dsp::SchmittTrigger toggleTrig;
-    dsp::PulseGenerator gatePulse;
+    dsp::PulseGenerator gatePulse[16];
 
     Node() {
         box.pos.x = 30;
@@ -156,7 +156,7 @@ struct Node {
     }
 };
 
-struct Neutrinode : Module {
+struct Neutrinode : Module, Quantize {
     enum NodeIds {
         PURPLE_NODE,
         BLUE_NODE,
@@ -167,39 +167,54 @@ struct Neutrinode : Module {
     enum ParamIds {
         BPM_PARAM,
         PAUSE_PARAM,
+        MOVE_PARAM,
         CLEAR_PARTICLES_PARAM,
         ON_PARAM = NUM_OF_NODES,
-        NUM_PARAMS = ON_PARAM + NUM_OF_NODES
+        OCTAVE_PARAMS = ON_PARAM + NUM_OF_NODES,
+        NUM_PARAMS = OCTAVE_PARAMS + NUM_OF_NODES
     };
     enum InputIds {
         NUM_INPUTS
     };
     enum OutputIds {
+        GATES_ALL_OUTPUTS,
+        VOLTS_ALL_OUTPUTS,
         GATE_OUTPUTS = NUM_OF_NODES,
         VOLT_OUTPUTS = GATE_OUTPUTS + NUM_OF_NODES,
         NUM_OUTPUTS = VOLT_OUTPUTS + NUM_OF_NODES
     };
     enum LightIds {
+        PAUSE_LIGHT,
+        MOVE_LIGHT,
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger clearTrig;
+    dsp::SchmittTrigger clearTrig, pauseTrig, moveTrig;
     Node *nodes = new Node[NUM_OF_NODES];
     std::vector<Particle> particles;
+    int channels = 1;
+    bool movement = false;
+    bool toggleStart = true;
     float clockStep;
     float maxConnectedDist = 150;
     float pulseSpeed = 1.0 / APP->engine->getSampleRate() * maxConnectedDist;
     int checkParams = 0;
+    int moveNodes = 0;
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(BPM_PARAM, -2.0, 6.0, 0.0, "Tempo", " bpm", 2.0, 60.0);
-        configParam(PAUSE_PARAM, 0.0, 1.0, 1.0);
+        configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
+        configParam(PAUSE_PARAM, 0.0, 1.0, 0.0);
+        configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
         configParam(ON_PARAM + PURPLE_NODE, 0.0, 1.0, 0.0, "toggle purple node");
         configParam(ON_PARAM + BLUE_NODE, 0.0, 1.0, 0.0, "toggle blue node");
         configParam(ON_PARAM + AQUA_NODE, 0.0, 1.0, 0.0, "toggle aqua node");
         configParam(ON_PARAM + RED_NODE, 0.0, 1.0, 0.0, "toggle red node");
+        configParam(OCTAVE_PARAMS + PURPLE_NODE, -5.0, 5.0, 0.0, "octave purple node");
+        configParam(OCTAVE_PARAMS + BLUE_NODE, -5.0, 5.0, 0.0, "octave blue node");
+        configParam(OCTAVE_PARAMS + AQUA_NODE, -5.0, 5.0, 0.0, "octave aqua node");
+        configParam(OCTAVE_PARAMS + RED_NODE, -5.0, 5.0, 0.0, "octave red node");
 
         nodes[0].color = nvgRGBA(128, 0, 219, 255);
         nodes[1].color = nvgRGBA(38, 0, 255, 255);
@@ -226,8 +241,17 @@ struct Neutrinode : Module {
             if (clearTrig.process(params[CLEAR_PARTICLES_PARAM].getValue())) {
                 clearParticles();
             }
+            if (pauseTrig.process(params[PAUSE_PARAM].getValue())) {
+                toggleStart = !toggleStart;
+            }
+            if (moveTrig.process(params[MOVE_PARAM].getValue())) {
+                movement = !movement;
+            }
+            
 
-            clockStep = std::pow(2.0, params[BPM_PARAM].getValue());
+
+            // clockStep = std::pow(2.0, params[BPM_PARAM].getValue());
+            clockStep = params[BPM_PARAM].getValue() / 60.0;
             clockStep = (clockStep / args.sampleRate) / 2;
             pulseSpeed = clockStep * maxConnectedDist * 2;
         }
@@ -235,9 +259,18 @@ struct Neutrinode : Module {
 
         // TODO: This doesn't need to happen every sample, might try every few samples
 
+        lights[PAUSE_LIGHT].value = toggleStart ? 1.0 : 0.0;
+        lights[MOVE_LIGHT].value = movement ? 1.0 : 0.0;
+
+        if (movement) {
+            if (moveNodes == 0) {
+                updateNodePos();
+            }
+            moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0); // check 60 hz
+        }
+
         for (int i = 0; i < NUM_OF_NODES; i++) {
-            bool s = params[PAUSE_PARAM].getValue();
-            nodes[i].start = s;
+            nodes[i].start = toggleStart;
 
 
             if (nodes[i].toggleTrig.process(params[ON_PARAM+i].getValue())) {
@@ -245,7 +278,6 @@ struct Neutrinode : Module {
                 nodes[i].visible = !nodes[i].visible;
             }
 
-            // TODO: clean this up
             if (nodes[i].visible && nodes[i].start) {
 
                 for (unsigned int j = 0; j < particles.size(); j++) {
@@ -253,8 +285,9 @@ struct Neutrinode : Module {
                     nodes[i].sendPulse(p, j, pulseSpeed);
                     if (nodes[i].pulses[j].triggered) {
                         nodes[i].pulses[j].triggered = false;
-                        nodes[i].gatePulse.trigger(1e-3f);
-                        nodes[i].pitchVoltage = rescale(particles[j].radius, 5, 10, 5, -5);
+                        nodes[i].gatePulse[j % channels].trigger(1e-3f);
+                        // TODO: figure out octave stuff and pitch here
+                        nodes[i].pitchVoltage[j % channels] = rescale(particles[j].radius, 5, 10, 1, 0);
                     }
                     if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
                 }
@@ -266,11 +299,31 @@ struct Neutrinode : Module {
                     nodes[i].triggered = true;
                 }
 
-                bool pulse = nodes[i].gatePulse.process(1.0 / args.sampleRate);
-                outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0);
-                outputs[VOLT_OUTPUTS + i].setVoltage(nodes[i].pitchVoltage);
             }
+            outputs[GATE_OUTPUTS + i].setChannels(channels);
+            outputs[VOLT_OUTPUTS + i].setChannels(channels);
         }
+        // loop all channels
+        for (int c = 0; c < channels; c++) {
+            bool pulse = nodes[PURPLE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+            outputs[VOLT_OUTPUTS + PURPLE_NODE].setVoltage(nodes[PURPLE_NODE].pitchVoltage[c], c);
+            outputs[GATE_OUTPUTS + PURPLE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+
+            pulse = nodes[BLUE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+            outputs[VOLT_OUTPUTS + BLUE_NODE].setVoltage(nodes[BLUE_NODE].pitchVoltage[c], c);
+            outputs[GATE_OUTPUTS + BLUE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+
+            pulse = nodes[AQUA_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+            outputs[VOLT_OUTPUTS + AQUA_NODE].setVoltage(nodes[AQUA_NODE].pitchVoltage[c], c);
+            outputs[GATE_OUTPUTS + AQUA_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+
+            pulse = nodes[RED_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+            outputs[VOLT_OUTPUTS + RED_NODE].setVoltage(nodes[RED_NODE].pitchVoltage[c], c);
+            outputs[GATE_OUTPUTS + RED_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+        }
+
+        outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+        outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
     }
 
     void clearParticles() {
@@ -279,6 +332,49 @@ struct Neutrinode : Module {
             nodes[i].pulses.clear();
     }
 
+    void updateNodePos() {
+        // TODO
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].acc.x = randRange(-0.075, 0.075);
+            nodes[i].acc.y = randRange(-0.075, 0.075);
+
+            nodes[i].vel = nodes[i].vel.plus(nodes[i].acc);
+            float magSq = nodes[i].vel.x * nodes[i].vel.x + nodes[i].vel.y * nodes[i].vel.y;
+            if (magSq > 1) {
+                nodes[i].vel = nodes[i].vel.normalize();
+                // nodes[i].vel = nodes[i].vel.mult(1);
+            }
+            nodes[i].box.pos = nodes[i].box.pos.plus(nodes[i].vel);
+        }
+    }
+
+};
+
+struct ChannelValueItem : MenuItem {
+    Neutrinode *module;
+    int channels;
+    void onAction(const event::Action &e) override {
+        module->channels = channels;
+    }
+};
+
+struct ChannelItem : MenuItem {
+    Neutrinode *module;
+    	Menu *createChildMenu() override {
+		Menu *menu = new Menu;
+		for (int channels = 1; channels <= 16; channels++) {
+			ChannelValueItem *item = new ChannelValueItem;
+			if (channels == 1)
+				item->text = "Monophonic";
+			else
+				item->text = string::f("%d", channels);
+			item->rightText = CHECKMARK(module->channels == channels);
+			item->module = module;
+			item->channels = channels;
+			menu->addChild(item);
+		}
+		return menu;
+	}
 };
 
 struct NeutrinodeDisplay : Widget {
@@ -387,15 +483,21 @@ struct NeutrinodeDisplay : Widget {
     void checkEdges(int index) {
         if (module != NULL) {
             // x's
-            if (module->nodes[index].box.pos.x < 16) 
+            if (module->nodes[index].box.pos.x < 16) {
                 module->nodes[index].box.pos.x = 16;
-            else if (module->nodes[index].box.pos.x > box.size.x-16) 
+                module->nodes[index].vel.x *= -1;
+            } else if (module->nodes[index].box.pos.x > box.size.x-16) {
                 module->nodes[index].box.pos.x = box.size.x-16;
+                module->nodes[index].vel.x *= -1;
+            }
             // y's
-            if (module->nodes[index].box.pos.y < 16)
+            if (module->nodes[index].box.pos.y < 16) {
                 module->nodes[index].box.pos.y = 16;
-            else if (module->nodes[index].box.pos.y > box.size.y - 16)
+                module->nodes[index].vel.y *= -1;
+            } else if (module->nodes[index].box.pos.y > box.size.y - 16) {
                 module->nodes[index].box.pos.y = box.size.y - 16;
+                module->nodes[index].vel.y *= -1;
+            }
         }
     }
 
@@ -409,7 +511,6 @@ struct NeutrinodeDisplay : Widget {
             else if (module->particles[index].box.pos.y < r) eraseParticle = true;
             else if (module->particles[index].box.pos.y > box.size.y - r) eraseParticle = true;
 
-            // TODO: erase pulses?
             if (eraseParticle) {
                 module->particles.erase(module->particles.begin()+index);
                 for (int i = 0; i < NUM_OF_NODES; i++) 
@@ -456,9 +557,9 @@ struct NeutrinodeDisplay : Widget {
                             }
                             if (pulse->blipTrigger) {
                                 // pulse blip
-                                nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].color, pulse->haloAlpha));
+                                nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].lineColor, pulse->haloAlpha));
                                 nvgBeginPath(args.vg);
-                                nvgCircle(args.vg, pulse->box.pos.x, pulse->box.pos.y, pulse->haloRadius);
+                                nvgCircle(args.vg, particle.x, particle.y, pulse->haloRadius);
                                 nvgFill(args.vg);
                             }
                         }
@@ -484,6 +585,8 @@ struct NeutrinodeDisplay : Widget {
                     nvgBeginPath(args.vg);
                     nvgCircle(args.vg, pos.x, pos.y, module->nodes[i].radius-3.5);
                     nvgFill(args.vg);
+
+                    checkEdges(i);
                 }
             }
 
@@ -524,28 +627,48 @@ struct NeutrinodeWidget : ModuleWidget {
         // addChild(createWidget<JeremyScrew>(Vec(431, 2)));
         // addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
 
-        // TODO: make bpm knob a snap knob
-        addParam(createParamCentered<PurpleKnob>(Vec(32.1, 65.3), module, Neutrinode::BPM_PARAM));
-        addParam(createParamCentered<PauseButton>(Vec(64.4, 65.3), module, Neutrinode::PAUSE_PARAM));
-        addParam(createParamCentered<RedButton>(Vec(129.1, 65.3), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(32.1, 65.3), module, Neutrinode::BPM_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(64.4, 65.3), module, Neutrinode::PAUSE_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(96.8, 65.3), module, Neutrinode::MOVE_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(129.1, 65.3), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3.21, 24.3 - 3.21), module, Neutrinode::PAUSE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(96.8 - 3.21, 65.3 - 3.21), module, Neutrinode::MOVE_LIGHT));
 
         // toggles
-        addParam(createParamCentered<TinyPurpleButton>(Vec(41.6, 252.), module, Neutrinode::ON_PARAM + Neutrinode::PURPLE_NODE));
-        addParam(createParamCentered<TinyBlueButton>(Vec(73.9, 252.2), module, Neutrinode::ON_PARAM + Neutrinode::BLUE_NODE));
-        addParam(createParamCentered<TinyAquaButton>(Vec(106.2, 252.2), module, Neutrinode::ON_PARAM + Neutrinode::AQUA_NODE));
-        addParam(createParamCentered<TinyRedButton>(Vec(138.5, 252.2), module, Neutrinode::ON_PARAM + Neutrinode::RED_NODE));
-
-        // TODO: big outputs?
+        addParam(createParamCentered<TinyPurpleButton>(Vec(96.8, 201.8), module, Neutrinode::ON_PARAM + Neutrinode::PURPLE_NODE));
+        addParam(createParamCentered<TinyBlueButton>(Vec(96.8, 233.8), module, Neutrinode::ON_PARAM + Neutrinode::BLUE_NODE));
+        addParam(createParamCentered<TinyAquaButton>(Vec(96.8, 265.8), module, Neutrinode::ON_PARAM + Neutrinode::AQUA_NODE));
+        addParam(createParamCentered<TinyRedButton>(Vec(96.8, 297.8), module, Neutrinode::ON_PARAM + Neutrinode::RED_NODE));
+        // octaves
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(129.1, 201.8), module, Neutrinode::OCTAVE_PARAMS + Neutrinode::PURPLE_NODE));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(129.1, 233.8), module, Neutrinode::OCTAVE_PARAMS + Neutrinode::BLUE_NODE));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(129.1, 265.8), module, Neutrinode::OCTAVE_PARAMS + Neutrinode::AQUA_NODE));
+        addParam(createParamCentered<RedInvertKnob>(Vec(129.1, 297.8), module, Neutrinode::OCTAVE_PARAMS + Neutrinode::RED_NODE));
         // gate outputs
-        addOutput(createOutputCentered<PJ301MPurple>(Vec(32.1, 292.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::PURPLE_NODE));
-        addOutput(createOutputCentered<PJ301MBlue>(Vec(64.4, 292.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::BLUE_NODE));
-        addOutput(createOutputCentered<PJ301MAqua>(Vec(96.8, 292.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::AQUA_NODE));
-        addOutput(createOutputCentered<PJ301MRed>(Vec(129.1, 292.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::RED_NODE));
+        addOutput(createOutputCentered<PJ301MPurple>(Vec(32.1, 201.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::PURPLE_NODE));
+        addOutput(createOutputCentered<PJ301MBlue>(Vec(32.1, 233.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::BLUE_NODE));
+        addOutput(createOutputCentered<PJ301MAqua>(Vec(32.1, 265.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::AQUA_NODE));
+        addOutput(createOutputCentered<PJ301MRed>(Vec(32.1, 297.8), module, Neutrinode::GATE_OUTPUTS + Neutrinode::RED_NODE));
+        // all
+        addOutput(createOutputCentered<PJ301MPort>(Vec(32.1, 343.2), module, Neutrinode::GATES_ALL_OUTPUTS));
         // volt outputs
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(41.6, 314.1), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::PURPLE_NODE));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(73.9, 314.1), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::BLUE_NODE));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(106.2, 314.1), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::AQUA_NODE));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(138.5, 314.1), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::RED_NODE));
+        addOutput(createOutputCentered<PJ301MPurple>(Vec(64.4, 201.8), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::PURPLE_NODE));
+        addOutput(createOutputCentered<PJ301MBlue>(Vec(64.4, 233.8), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::BLUE_NODE));
+        addOutput(createOutputCentered<PJ301MAqua>(Vec(64.4, 265.8), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::AQUA_NODE));
+        addOutput(createOutputCentered<PJ301MRed>(Vec(64.4, 297.8), module, Neutrinode::VOLT_OUTPUTS + Neutrinode::RED_NODE));
+        // all volts
+        addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Neutrinode::VOLTS_ALL_OUTPUTS));
+    }
+
+    void appendContextMenu(Menu *menu) override {
+        Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
+
+        ChannelItem *channelItem = new ChannelItem;
+        channelItem->text = "Polyphony channels";
+        channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
+        channelItem->module = module;
+        menu->addChild(channelItem);
     }
 };
 

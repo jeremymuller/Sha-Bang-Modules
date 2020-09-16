@@ -54,7 +54,7 @@ struct StochSeq : Module {
 		configParam(RANDOM_PARAM, 0.0, 1.0, 0.0, "randomize pattern");
 		configParam(DIMINUTION_PARAM, 0.0, 1.0, 0.0, "diminish pattern");
 		configParam(LENGTH_PARAM, 1.0, 32.0, 32.0, "seq length");
-		configParam(SPREAD_PARAM, -4.0, 4.0, 0.0, "spread");
+		configParam(SPREAD_PARAM, -4.0, 4.0, 1.0, "spread");
 
 		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 			gateProbabilities[i] = random::uniform();

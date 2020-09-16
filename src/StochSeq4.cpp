@@ -104,10 +104,10 @@ struct StochSeq4 : Module {
         configParam(DIMINUTION_PARAM + AQUA_SEQ, 0.0, 1.0, 0.0, "diminish aqua pattern");
         configParam(DIMINUTION_PARAM + RED_SEQ, 0.0, 1.0, 0.0, "diminish red pattern");
 
-        configParam(SPREAD_PARAM + PURPLE_SEQ, -4.0, 4.0, 0.0, "purple spread");
-        configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 0.0, "blue spread");
-        configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 0.0, "aqua spread");
-        configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 0.0, "red spread");
+        configParam(SPREAD_PARAM + PURPLE_SEQ, -4.0, 4.0, 1.0, "purple spread");
+        configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 1.0, "blue spread");
+        configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 1.0, "aqua spread");
+        configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 1.0, "red spread");
     }
 
     json_t *dataToJson() override {
