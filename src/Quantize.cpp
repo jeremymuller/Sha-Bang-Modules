@@ -55,12 +55,36 @@ struct Quantize {
         MESSIAEN4,
         MESSIAEN5,
         MESSIAEN6,
-        MESSIAEN7
+        MESSIAEN7,
+        NUM_OF_SCALES
     };
 
     float quantizeRawVoltage(float voltsIn, int root, int scale) {
         // todo
-        
-        return 0;
+        int *chosenScale;
+        int scaleLength = 0;
+        switch (scale) {
+            case MAJOR:     chosenScale = SCALE_MAJOR;      scaleLength = LENGTHOF(SCALE_MAJOR);        break;
+            case MINOR:     chosenScale = SCALE_MINOR;      scaleLength = LENGTHOF(SCALE_MINOR);        break;
+            case DORIAN:    chosenScale = SCALE_DORIAN;     scaleLength = LENGTHOF(SCALE_DORIAN);       break;
+        }
+
+        // int octave = static_cast<int>(floorf(voltsIn));
+        float distanceToNote = 10.0;
+        int chosenNote = 0;
+        for (int i = 0; i < scaleLength; i++) {
+            float dist = fabs(voltsIn - (chosenScale[i] / 12.0));
+            if (dist < distanceToNote) {
+                distanceToNote = dist;
+                chosenNote = i;
+            } else {
+                break;
+            }
+
+        }
+
+        float quantizedVoltage = chosenScale[chosenNote] / 12.0 + (root / 12.0);
+
+        return quantizedVoltage;
     }
 };

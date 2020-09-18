@@ -166,10 +166,12 @@ struct Neutrinode : Module, Quantize {
     };
     enum ParamIds {
         BPM_PARAM,
-        PAUSE_PARAM,
+        PLAY_PARAM,
         MOVE_PARAM,
+        PITCH_PARAM,
+        RND_PARTICLES_PARAM,
         CLEAR_PARTICLES_PARAM,
-        ON_PARAM = NUM_OF_NODES,
+        ON_PARAM = CLEAR_PARTICLES_PARAM + NUM_OF_NODES,
         OCTAVE_PARAMS = ON_PARAM + NUM_OF_NODES,
         NUM_PARAMS = OCTAVE_PARAMS + NUM_OF_NODES
     };
@@ -185,15 +187,15 @@ struct Neutrinode : Module, Quantize {
     };
     enum LightIds {
         PAUSE_LIGHT,
-        MOVE_LIGHT,
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger clearTrig, pauseTrig, moveTrig;
+    dsp::SchmittTrigger rndTrig, clearTrig, pauseTrig;
     Node *nodes = new Node[NUM_OF_NODES];
     std::vector<Particle> particles;
     int channels = 1;
     bool movement = false;
+    bool pitchChoice = false;
     bool toggleStart = true;
     float clockStep;
     float maxConnectedDist = 150;
@@ -201,11 +203,14 @@ struct Neutrinode : Module, Quantize {
     int checkParams = 0;
     int moveNodes = 0;
 
+
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
-        configParam(PAUSE_PARAM, 0.0, 1.0, 0.0);
+        configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Start nodes");
         configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
+        configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
+        configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
         configParam(ON_PARAM + PURPLE_NODE, 0.0, 1.0, 0.0, "toggle purple node");
         configParam(ON_PARAM + BLUE_NODE, 0.0, 1.0, 0.0, "toggle blue node");
@@ -238,15 +243,17 @@ struct Neutrinode : Module, Quantize {
     void process(const ProcessArgs &args) override {
         // checks BPM param knob every 4th sample
         if (checkParams == 0) {
+            if (rndTrig.process(params[RND_PARTICLES_PARAM].getValue())) {
+                randomizeParticles();
+            }
             if (clearTrig.process(params[CLEAR_PARTICLES_PARAM].getValue())) {
                 clearParticles();
             }
-            if (pauseTrig.process(params[PAUSE_PARAM].getValue())) {
+            if (pauseTrig.process(params[PLAY_PARAM].getValue())) {
                 toggleStart = !toggleStart;
             }
-            if (moveTrig.process(params[MOVE_PARAM].getValue())) {
-                movement = !movement;
-            }
+            movement = params[MOVE_PARAM].getValue();
+            pitchChoice = params[PITCH_PARAM].getValue();
             
 
 
@@ -257,10 +264,9 @@ struct Neutrinode : Module, Quantize {
         }
         checkParams = (checkParams+1) % 4;
 
-        // TODO: This doesn't need to happen every sample, might try every few samples
+        // TODO: This doesn't need to happen every sample, might try every 700 samples
 
         lights[PAUSE_LIGHT].value = toggleStart ? 1.0 : 0.0;
-        lights[MOVE_LIGHT].value = movement ? 1.0 : 0.0;
 
         if (movement) {
             if (moveNodes == 0) {
@@ -269,6 +275,7 @@ struct Neutrinode : Module, Quantize {
             moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0); // check 60 hz
         }
 
+        int polyIndex = 0;
         for (int i = 0; i < NUM_OF_NODES; i++) {
             nodes[i].start = toggleStart;
 
@@ -279,6 +286,7 @@ struct Neutrinode : Module, Quantize {
             }
 
             if (nodes[i].visible && nodes[i].start) {
+                int oct = params[OCTAVE_PARAMS + i].getValue();
 
                 for (unsigned int j = 0; j < particles.size(); j++) {
                     Vec p = particles[j].box.getCenter();
@@ -286,10 +294,22 @@ struct Neutrinode : Module, Quantize {
                     if (nodes[i].pulses[j].triggered) {
                         nodes[i].pulses[j].triggered = false;
                         nodes[i].gatePulse[j % channels].trigger(1e-3f);
+
                         // TODO: figure out octave stuff and pitch here
-                        nodes[i].pitchVoltage[j % channels] = rescale(particles[j].radius, 5, 10, 1, 0);
+                        // nodes[i].pitchVoltage[j % channels] = rescale(particles[j].radius, 5, 10, 1, 0);
+                        float volts;
+                        if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0, 0, 1);
+                        else volts = rescale(particles[j].radius, 5, 10, 1, 0);
+                        float pitch = Quantize::quantizeRawVoltage(volts, 0, 0) + oct;
+                        outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
+                        // outputs[VOLTS_ALL_OUTPUTS].setVoltage(volts, polyIndex);
                     }
                     if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
+
+                    bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
+                    outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
+                    outputs[GATES_ALL_OUTPUTS].setVoltage(pulse ? 10.0 : 0.0, polyIndex);
+                    polyIndex = (polyIndex + 1) % channels;
                 }
 
                 nodes[i].phase += clockStep;
@@ -304,26 +324,38 @@ struct Neutrinode : Module, Quantize {
             outputs[VOLT_OUTPUTS + i].setChannels(channels);
         }
         // loop all channels
-        for (int c = 0; c < channels; c++) {
-            bool pulse = nodes[PURPLE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-            outputs[VOLT_OUTPUTS + PURPLE_NODE].setVoltage(nodes[PURPLE_NODE].pitchVoltage[c], c);
-            outputs[GATE_OUTPUTS + PURPLE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+        // for (int c = 0; c < channels; c++) {
+        //     bool pulse = nodes[PURPLE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+        //     outputs[VOLT_OUTPUTS + PURPLE_NODE].setVoltage(nodes[PURPLE_NODE].pitchVoltage[c], c);
+        //     outputs[GATE_OUTPUTS + PURPLE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
 
-            pulse = nodes[BLUE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-            outputs[VOLT_OUTPUTS + BLUE_NODE].setVoltage(nodes[BLUE_NODE].pitchVoltage[c], c);
-            outputs[GATE_OUTPUTS + BLUE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+        //     pulse = nodes[BLUE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+        //     outputs[VOLT_OUTPUTS + BLUE_NODE].setVoltage(nodes[BLUE_NODE].pitchVoltage[c], c);
+        //     outputs[GATE_OUTPUTS + BLUE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
 
-            pulse = nodes[AQUA_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-            outputs[VOLT_OUTPUTS + AQUA_NODE].setVoltage(nodes[AQUA_NODE].pitchVoltage[c], c);
-            outputs[GATE_OUTPUTS + AQUA_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+        //     pulse = nodes[AQUA_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+        //     outputs[VOLT_OUTPUTS + AQUA_NODE].setVoltage(nodes[AQUA_NODE].pitchVoltage[c], c);
+        //     outputs[GATE_OUTPUTS + AQUA_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
 
-            pulse = nodes[RED_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-            outputs[VOLT_OUTPUTS + RED_NODE].setVoltage(nodes[RED_NODE].pitchVoltage[c], c);
-            outputs[GATE_OUTPUTS + RED_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-        }
+        //     pulse = nodes[RED_NODE].gatePulse[c].process(1.0 / args.sampleRate);
+        //     outputs[VOLT_OUTPUTS + RED_NODE].setVoltage(nodes[RED_NODE].pitchVoltage[c], c);
+        //     outputs[GATE_OUTPUTS + RED_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
+        // }
 
         outputs[GATES_ALL_OUTPUTS].setChannels(channels);
         outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
+    }
+
+    void randomizeParticles() {
+        if (particles.size() < 1) {
+            Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
+            particles.push_back(p);
+        } else {
+            for (unsigned int i = 0; i < particles.size(); i++) {
+                particles[i].box.pos.x = randRange(15, DISPLAY_SIZE - 15);
+                particles[i].box.pos.y = randRange(15, DISPLAY_SIZE - 15);
+            }
+        }
     }
 
     void clearParticles() {
@@ -627,13 +659,17 @@ struct NeutrinodeWidget : ModuleWidget {
         // addChild(createWidget<JeremyScrew>(Vec(431, 2)));
         // addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
 
-        addParam(createParamCentered<PurpleInvertKnob>(Vec(32.1, 65.3), module, Neutrinode::BPM_PARAM));
-        addParam(createParamCentered<PurpleButton>(Vec(64.4, 65.3), module, Neutrinode::PAUSE_PARAM));
-        addParam(createParamCentered<PurpleButton>(Vec(96.8, 65.3), module, Neutrinode::MOVE_PARAM));
-        addParam(createParamCentered<PurpleButton>(Vec(129.1, 65.3), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(26.4, 78.1), module, Neutrinode::PLAY_PARAM));
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 78.1), module, Neutrinode::BPM_PARAM));
+        addParam(createParam<Jeremy_HSwitch>(Vec(79.6, 71.1), module, Neutrinode::MOVE_PARAM));
+        addParam(createParam<Jeremy_HSwitch>(Vec(79.6, 129.7), module, Neutrinode::PITCH_PARAM));
+
+        addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+
+        // addParam(createParam<Jeremy_HSwitch>(Vec(79.6, 129.7), module, Neutrinode::MOVE_PARAM));
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3.21, 24.3 - 3.21), module, Neutrinode::PAUSE_LIGHT));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(96.8 - 3.21, 65.3 - 3.21), module, Neutrinode::MOVE_LIGHT));
 
         // toggles
         addParam(createParamCentered<TinyPurpleButton>(Vec(96.8, 201.8), module, Neutrinode::ON_PARAM + Neutrinode::PURPLE_NODE));

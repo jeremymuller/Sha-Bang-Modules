@@ -113,6 +113,16 @@ struct OrbitPort : SvgPort {
     }
 };
 
+/************************** SWITCHES **************************/
+
+struct Jeremy_HSwitch : SvgSwitch {
+    Jeremy_HSwitch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Switch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Switch_1.svg")));
+    }
+};
+
 /************************** BUTTONS **************************/
 
 struct DefaultButton : SvgSwitch {
