@@ -4,11 +4,18 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 
 ## Contents:
 
+* [Cosmosis](#cosmosis)
 * [Neutrinode](#neutrinode)
 * [PolyrhythmClock](#polyrhythm-clock)
 * [RandGates](#randgates)
 * [StochSeq](#stochseq)
 * [StochSeq4](#stochseq4)
+
+---
+
+### Cosmosis
+
+*TODO*
 
 ---
 
