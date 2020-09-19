@@ -14,7 +14,6 @@ struct Particle {
     Particle(float _x, float _y) {
         box.pos.x = _x;
         box.pos.y = _y;
-        // radius = random::uniform() * 5 + 5;
         radius = randRange(5, 10);
     }
 };
@@ -168,6 +167,7 @@ struct Neutrinode : Module, Quantize {
         BPM_PARAM,
         PLAY_PARAM,
         MOVE_PARAM,
+        SPEED_PARAM,
         ROOT_NOTE_PARAM,
         SCALE_PARAM,
         PITCH_PARAM,
@@ -211,6 +211,7 @@ struct Neutrinode : Module, Quantize {
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
         configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Start nodes");
         configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
+        configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES-1, 0.0, "Scale");
         configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
@@ -375,7 +376,10 @@ struct Neutrinode : Module, Quantize {
 
     void updateNodePos() {
         // TODO
+        float speed = std::pow(2.0, params[SPEED_PARAM].getValue());
         for (int i = 0; i < NUM_OF_NODES; i++) {
+            // nodes[i].acc.x = randRange(-speed, speed);
+            // nodes[i].acc.y = randRange(-speed, speed);
             nodes[i].acc.x = randRange(-0.075, 0.075);
             nodes[i].acc.y = randRange(-0.075, 0.075);
 
@@ -383,7 +387,7 @@ struct Neutrinode : Module, Quantize {
             float magSq = nodes[i].vel.x * nodes[i].vel.x + nodes[i].vel.y * nodes[i].vel.y;
             if (magSq > 1) {
                 nodes[i].vel = nodes[i].vel.normalize();
-                // nodes[i].vel = nodes[i].vel.mult(1);
+                nodes[i].vel = nodes[i].vel.mult(speed);
             }
             nodes[i].box.pos = nodes[i].box.pos.plus(nodes[i].vel);
         }
@@ -671,6 +675,7 @@ struct NeutrinodeWidget : ModuleWidget {
         addParam(createParamCentered<PurpleButton>(Vec(26.4, 78.1), module, Neutrinode::PLAY_PARAM));
         addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 78.1), module, Neutrinode::BPM_PARAM));
         addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 78.1), module, Neutrinode::MOVE_PARAM));
+        addParam(createParamCentered<PurpleKnob>(Vec(130.7, 78.1), module, Neutrinode::SPEED_PARAM));
 
         // note and scale knobs
         NoteKnob *noteKnob = dynamic_cast<NoteKnob *>(createParamCentered<NoteKnob>(Vec(26.4, 117.5), module, Neutrinode::ROOT_NOTE_PARAM));
@@ -691,9 +696,9 @@ struct NeutrinodeWidget : ModuleWidget {
 
         // addParam(createParamCentered<PurpleInvertKnob>(Vec(26.4, 136.7), module, Neutrinode::ROOT_NOTE_PARAM));
         // addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 136.7), module, Neutrinode::SCALE_PARAM));
-        addParam(createParamCentered<Jeremy_HSwitch>(Vec(111.7, 125.6), module, Neutrinode::PITCH_PARAM));
+        addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 130.7), module, Neutrinode::PITCH_PARAM));
 
-        addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(130.7, 130.7), module, Neutrinode::CLEAR_PARTICLES_PARAM));
         // addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
         // addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
 

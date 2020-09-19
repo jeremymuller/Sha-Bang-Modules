@@ -76,30 +76,30 @@ struct Quantize {
         int *chosenScale;
         int scaleLength = 0;
         switch (scale) {
-            case MAJOR:             chosenScale = SCALE_MAJOR;      scaleLength = LENGTHOF(SCALE_MAJOR);        break;
-            case MINOR:             chosenScale = SCALE_MINOR;      scaleLength = LENGTHOF(SCALE_MINOR);        break;
-            case DORIAN:            chosenScale = SCALE_DORIAN;     scaleLength = LENGTHOF(SCALE_DORIAN);       break;
-            case PHRYGIAN:          chosenScale = SCALE_PHRYGIAN;   scaleLength = LENGTHOF(SCALE_PHRYGIAN);     break;
-            case LYDIAN:            
-            case MIXOLYDIAN:
-            case LOCRIAN:
-            case MAJ_PENTATONIC:
-            case MIN_PENTATONIC:
-            case OCTATONIC:
-            case WHOLE_TONE:
-            case ACOUSTIC:
-            case BLUES:
-            case MAJ_MAJ_7:
-            case MAJ_MIN_7:
-            case MIN_MIN_7:
-            case MAJ_ADD_9:
-            case MAJ_MIN_SUS_4:
-            case MIN_ADD_6:
-            case MESSIAEN3:
-            case MESSIAEN4:
-            case MESSIAEN5:
-            case MESSIAEN6:
-            case MESSIAEN7:
+            case MAJOR:             chosenScale = SCALE_MAJOR;          scaleLength = LENGTHOF(SCALE_MAJOR);            break;
+            case MINOR:             chosenScale = SCALE_MINOR;          scaleLength = LENGTHOF(SCALE_MINOR);            break;
+            case DORIAN:            chosenScale = SCALE_DORIAN;         scaleLength = LENGTHOF(SCALE_DORIAN);           break;
+            case PHRYGIAN:          chosenScale = SCALE_PHRYGIAN;       scaleLength = LENGTHOF(SCALE_PHRYGIAN);         break;
+            case LYDIAN:            chosenScale = SCALE_LYDIAN;         scaleLength = LENGTHOF(SCALE_LYDIAN);           break;
+            case MIXOLYDIAN:        chosenScale = SCALE_MIXOLYDIAN;     scaleLength = LENGTHOF(SCALE_MIXOLYDIAN);       break;
+            case LOCRIAN:           chosenScale = SCALE_LOCRIAN;        scaleLength = LENGTHOF(SCALE_LOCRIAN);          break;
+            case MAJ_PENTATONIC:    chosenScale = SCALE_MAJ_PENTATONIC; scaleLength = LENGTHOF(SCALE_MAJ_PENTATONIC);   break;
+            case MIN_PENTATONIC:    chosenScale = SCALE_MIN_PENTATONIC; scaleLength = LENGTHOF(SCALE_MIN_PENTATONIC);   break;
+            case OCTATONIC:         chosenScale = SCALE_OCTATONIC;      scaleLength = LENGTHOF(SCALE_OCTATONIC);        break;
+            case WHOLE_TONE:        chosenScale = SCALE_WHOLE_TONE;     scaleLength = LENGTHOF(SCALE_WHOLE_TONE);       break;
+            case ACOUSTIC:          chosenScale = SCALE_ACOUSTIC;       scaleLength = LENGTHOF(SCALE_ACOUSTIC);         break;
+            case BLUES:             chosenScale = SCALE_BLUES;          scaleLength = LENGTHOF(SCALE_BLUES);            break;
+            case MAJ_MAJ_7:         chosenScale = SCALE_MAJ_MAJ_7;      scaleLength = LENGTHOF(SCALE_MAJ_MAJ_7);        break;
+            case MAJ_MIN_7:         chosenScale = SCALE_MAJ_MIN_7;      scaleLength = LENGTHOF(SCALE_MAJ_MIN_7);        break;
+            case MIN_MIN_7:         chosenScale = SCALE_MIN_MIN_7;      scaleLength = LENGTHOF(SCALE_MIN_MIN_7);        break;
+            case MAJ_ADD_9:         chosenScale = SCALE_MAJ_ADD_9;      scaleLength = LENGTHOF(SCALE_MAJ_ADD_9);        break;
+            case MAJ_MIN_SUS_4:     chosenScale = SCALE_MAJ_MIN_SUS_4;  scaleLength = LENGTHOF(SCALE_MAJ_MIN_SUS_4);    break;
+            case MIN_ADD_6:         chosenScale = SCALE_MIN_ADD_6;      scaleLength = LENGTHOF(SCALE_MIN_ADD_6);        break;
+            case MESSIAEN3:         chosenScale = SCALE_MESSIAEN3;      scaleLength = LENGTHOF(SCALE_MESSIAEN3);        break;
+            case MESSIAEN4:         chosenScale = SCALE_MESSIAEN4;      scaleLength = LENGTHOF(SCALE_MESSIAEN4);        break;
+            case MESSIAEN5:         chosenScale = SCALE_MESSIAEN5;      scaleLength = LENGTHOF(SCALE_MESSIAEN5);        break;
+            case MESSIAEN6:         chosenScale = SCALE_MESSIAEN6;      scaleLength = LENGTHOF(SCALE_MESSIAEN6);        break;
+            case MESSIAEN7:         chosenScale = SCALE_MESSIAEN7;      scaleLength = LENGTHOF(SCALE_MESSIAEN7);        break;
             default: return voltsIn;
         }
 
@@ -167,7 +167,7 @@ struct Quantize {
             case MESSIAEN5:       return "Messiaen 5";
             case MESSIAEN6:       return "Messiaen 6";
             case MESSIAEN7:       return "Messiaen 7";
-            default:              return "";
+            default:              return "Raw Volts";
         }
     }
 };

@@ -40,7 +40,7 @@ inline float randRange(float min, float max) { // returns random float within mi
 struct LeftAlignedLabel : Widget {
     std::string text;
 	int fontSize;
-	LeftAlignedLabel(int _fontSize = 12) {
+	LeftAlignedLabel(int _fontSize = 13) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
 	}
