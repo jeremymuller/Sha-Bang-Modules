@@ -375,7 +375,6 @@ struct Neutrinode : Module, Quantize {
     }
 
     void updateNodePos() {
-        // TODO
         float speed = std::pow(2.0, params[SPEED_PARAM].getValue());
         for (int i = 0; i < NUM_OF_NODES; i++) {
             // nodes[i].acc.x = randRange(-speed, speed);
