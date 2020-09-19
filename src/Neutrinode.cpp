@@ -168,6 +168,8 @@ struct Neutrinode : Module, Quantize {
         BPM_PARAM,
         PLAY_PARAM,
         MOVE_PARAM,
+        ROOT_NOTE_PARAM,
+        SCALE_PARAM,
         PITCH_PARAM,
         RND_PARTICLES_PARAM,
         CLEAR_PARTICLES_PARAM,
@@ -209,6 +211,8 @@ struct Neutrinode : Module, Quantize {
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
         configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Start nodes");
         configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
+        configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
+        configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES-1, 0.0, "Scale");
         configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
         configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
@@ -229,7 +233,6 @@ struct Neutrinode : Module, Quantize {
         nodes[1].lineColor = nvgRGB(165, 152, 255);
         nodes[2].lineColor = nvgRGB(104, 245, 255);
         nodes[3].lineColor = nvgRGB(255, 101, 101);
-        // TODO: this is not that great?
         nodes[0].box.pos = Vec(randRange(16, DISPLAY_SIZE/2.0-16), randRange(16, DISPLAY_SIZE/2.0-16));
         nodes[1].box.pos = Vec(randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE-16), randRange(16, DISPLAY_SIZE/2.0-16));
         nodes[2].box.pos = Vec(randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE/2.0-16), randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE/2.0-16));
@@ -275,7 +278,11 @@ struct Neutrinode : Module, Quantize {
             moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0); // check 60 hz
         }
 
-        int polyIndex = 0;
+        int polyChannelIndex = 0;
+        int rootNote = params[ROOT_NOTE_PARAM].getValue();
+        int scale = params[SCALE_PARAM].getValue();
+        outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+        outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
         for (int i = 0; i < NUM_OF_NODES; i++) {
             nodes[i].start = toggleStart;
 
@@ -295,21 +302,20 @@ struct Neutrinode : Module, Quantize {
                         nodes[i].pulses[j].triggered = false;
                         nodes[i].gatePulse[j % channels].trigger(1e-3f);
 
-                        // TODO: figure out octave stuff and pitch here
-                        // nodes[i].pitchVoltage[j % channels] = rescale(particles[j].radius, 5, 10, 1, 0);
                         float volts;
                         if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0, 0, 1);
                         else volts = rescale(particles[j].radius, 5, 10, 1, 0);
-                        float pitch = Quantize::quantizeRawVoltage(volts, 0, 0) + oct;
+                        float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
+                        // outs
                         outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
-                        // outputs[VOLTS_ALL_OUTPUTS].setVoltage(volts, polyIndex);
+                        outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
                     }
                     if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
 
                     bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
                     outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
-                    outputs[GATES_ALL_OUTPUTS].setVoltage(pulse ? 10.0 : 0.0, polyIndex);
-                    polyIndex = (polyIndex + 1) % channels;
+                    outputs[GATES_ALL_OUTPUTS].setVoltage(pulse ? 10.0 : 0.0, polyChannelIndex);
+                    polyChannelIndex = (polyChannelIndex+1) % channels;
                 }
 
                 nodes[i].phase += clockStep;
@@ -341,15 +347,18 @@ struct Neutrinode : Module, Quantize {
         //     outputs[VOLT_OUTPUTS + RED_NODE].setVoltage(nodes[RED_NODE].pitchVoltage[c], c);
         //     outputs[GATE_OUTPUTS + RED_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
         // }
-
-        outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-        outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
     }
 
     void randomizeParticles() {
         if (particles.size() < 1) {
-            Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
-            particles.push_back(p);
+            for (int i = 0; i < 4; i++) {
+                Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
+                particles.push_back(p);
+                for (int i = 0; i < NUM_OF_NODES; i++) {
+                    Pulse pulse;
+                    nodes[i].pulses.push_back(pulse);
+                }
+            }
         } else {
             for (unsigned int i = 0; i < particles.size(); i++) {
                 particles[i].box.pos.x = randRange(15, DISPLAY_SIZE - 15);
@@ -433,7 +442,7 @@ struct NeutrinodeDisplay : Widget {
                 if (module->nodes[i].visible) {
                     Vec nodePos = module->nodes[i].box.getCenter();
                     float d = dist(inits, nodePos);
-                    if (d < 16) {
+                    if (d < 16 && !clickedOnObj) {
                         module->nodes[i].box.pos.x = initX;
                         module->nodes[i].box.pos.y = initY;
                         module->nodes[i].locked = false;
@@ -661,13 +670,33 @@ struct NeutrinodeWidget : ModuleWidget {
 
         addParam(createParamCentered<PurpleButton>(Vec(26.4, 78.1), module, Neutrinode::PLAY_PARAM));
         addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 78.1), module, Neutrinode::BPM_PARAM));
-        addParam(createParam<Jeremy_HSwitch>(Vec(79.6, 71.1), module, Neutrinode::MOVE_PARAM));
-        addParam(createParam<Jeremy_HSwitch>(Vec(79.6, 129.7), module, Neutrinode::PITCH_PARAM));
+        addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 78.1), module, Neutrinode::MOVE_PARAM));
 
-        addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
-        addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        // note and scale knobs
+        NoteKnob *noteKnob = dynamic_cast<NoteKnob *>(createParamCentered<NoteKnob>(Vec(26.4, 117.5), module, Neutrinode::ROOT_NOTE_PARAM));
+        LeftAlignedLabel* const noteLabel = new LeftAlignedLabel;
+        noteLabel->box.pos = Vec(42.6, 121);
+        noteLabel->text = "";
+        noteKnob->connectLabel(noteLabel, module);
+        addChild(noteLabel);
+        addParam(noteKnob);
 
-        // addParam(createParam<Jeremy_HSwitch>(Vec(79.6, 129.7), module, Neutrinode::MOVE_PARAM));
+        ScaleKnob *scaleKnob = dynamic_cast<ScaleKnob *>(createParamCentered<ScaleKnob>(Vec(26.4, 146), module, Neutrinode::SCALE_PARAM));
+        LeftAlignedLabel* const scaleLabel = new LeftAlignedLabel;
+        scaleLabel->box.pos = Vec(42.6, 149.5);
+        scaleLabel->text = "";
+        scaleKnob->connectLabel(scaleLabel, module);
+        addChild(scaleLabel);
+        addParam(scaleKnob);
+
+        // addParam(createParamCentered<PurpleInvertKnob>(Vec(26.4, 136.7), module, Neutrinode::ROOT_NOTE_PARAM));
+        // addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 136.7), module, Neutrinode::SCALE_PARAM));
+        addParam(createParamCentered<Jeremy_HSwitch>(Vec(111.7, 125.6), module, Neutrinode::PITCH_PARAM));
+
+        addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        // addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
+        // addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3.21, 24.3 - 3.21), module, Neutrinode::PAUSE_LIGHT));
 

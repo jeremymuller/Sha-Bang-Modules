@@ -13,6 +13,7 @@ void init(Plugin* p) {
 	p->addModel(modelPolyrhythmClock);
 	p->addModel(modelRandGates);
 	p->addModel(modelNeutrinode);
+	p->addModel(modelCosmosis);
 	p->addModel(modelJeremyBlankPanel);
 
 	// Any other plugin initialization may go here.

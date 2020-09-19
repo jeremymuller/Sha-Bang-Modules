@@ -28,7 +28,19 @@ struct Quantize {
     // TODO: Webern? Schoenberg? Berg? anything else?
 
     enum NoteNames {
-        // TODO
+        NOTE_C,
+        NOTE_C_SHARP,
+        NOTE_D,
+        NOTE_E_FLAT,
+        NOTE_E,
+        NOTE_F,
+        NOTE_F_SHARP,
+        NOTE_G,
+        NOTE_A_FLAT,
+        NOTE_A,
+        NOTE_B_FLAT,
+        NOTE_B,
+        NUM_OF_NOTES
     };
 
     enum ScaleNames {
@@ -64,9 +76,31 @@ struct Quantize {
         int *chosenScale;
         int scaleLength = 0;
         switch (scale) {
-            case MAJOR:     chosenScale = SCALE_MAJOR;      scaleLength = LENGTHOF(SCALE_MAJOR);        break;
-            case MINOR:     chosenScale = SCALE_MINOR;      scaleLength = LENGTHOF(SCALE_MINOR);        break;
-            case DORIAN:    chosenScale = SCALE_DORIAN;     scaleLength = LENGTHOF(SCALE_DORIAN);       break;
+            case MAJOR:             chosenScale = SCALE_MAJOR;      scaleLength = LENGTHOF(SCALE_MAJOR);        break;
+            case MINOR:             chosenScale = SCALE_MINOR;      scaleLength = LENGTHOF(SCALE_MINOR);        break;
+            case DORIAN:            chosenScale = SCALE_DORIAN;     scaleLength = LENGTHOF(SCALE_DORIAN);       break;
+            case PHRYGIAN:          chosenScale = SCALE_PHRYGIAN;   scaleLength = LENGTHOF(SCALE_PHRYGIAN);     break;
+            case LYDIAN:            
+            case MIXOLYDIAN:
+            case LOCRIAN:
+            case MAJ_PENTATONIC:
+            case MIN_PENTATONIC:
+            case OCTATONIC:
+            case WHOLE_TONE:
+            case ACOUSTIC:
+            case BLUES:
+            case MAJ_MAJ_7:
+            case MAJ_MIN_7:
+            case MIN_MIN_7:
+            case MAJ_ADD_9:
+            case MAJ_MIN_SUS_4:
+            case MIN_ADD_6:
+            case MESSIAEN3:
+            case MESSIAEN4:
+            case MESSIAEN5:
+            case MESSIAEN6:
+            case MESSIAEN7:
+            default: return voltsIn;
         }
 
         // int octave = static_cast<int>(floorf(voltsIn));
@@ -86,5 +120,54 @@ struct Quantize {
         float quantizedVoltage = chosenScale[chosenNote] / 12.0 + (root / 12.0);
 
         return quantizedVoltage;
+    }
+
+    std::string noteName(int note) {
+        switch (note) {
+            case NOTE_C:        return "C";
+            case NOTE_C_SHARP:  return "C#";
+            case NOTE_D:        return "D";
+            case NOTE_E_FLAT:   return "Eb";
+            case NOTE_E:        return "E";
+            case NOTE_F:        return "F";
+            case NOTE_F_SHARP:  return "F#";
+            case NOTE_G:        return "G";
+            case NOTE_A_FLAT:   return "Ab";
+            case NOTE_A:        return "A";
+            case NOTE_B_FLAT:   return "Bb";
+            case NOTE_B:        return "B";
+            default:            return "";
+        }
+    }
+
+    std::string scaleName(int scale) {
+        // TODO
+        switch (scale) {
+            case MAJOR:           return "Major";
+            case MINOR:           return "Minor";
+            case DORIAN:          return "Dorian";
+            case PHRYGIAN:        return "Phrygian";
+            case LYDIAN:          return "Lydian";
+            case MIXOLYDIAN:      return "Mixolydian";
+            case LOCRIAN:         return "Locrian";
+            case MAJ_PENTATONIC:  return "Maj Pentatonic";
+            case MIN_PENTATONIC:  return "Min Pentatonic";
+            case OCTATONIC:       return "Octatonic";
+            case WHOLE_TONE:      return "Whole Tone";
+            case ACOUSTIC:        return "Acoustic";
+            case BLUES:           return "Blues";
+            case MAJ_MAJ_7:       return "MM7";
+            case MAJ_MIN_7:       return "Mm7";
+            case MIN_MIN_7:       return "mm7";
+            case MAJ_ADD_9:       return "Maj add9";
+            case MAJ_MIN_SUS_4:   return "MmSus4";
+            case MIN_ADD_6:       return "Min add6";
+            case MESSIAEN3:       return "Messiaen 3";
+            case MESSIAEN4:       return "Messiaen 4";
+            case MESSIAEN5:       return "Messiaen 5";
+            case MESSIAEN6:       return "Messiaen 6";
+            case MESSIAEN7:       return "Messiaen 7";
+            default:              return "";
+        }
     }
 };

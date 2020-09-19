@@ -38,6 +38,11 @@
           "tags": ["Visual", "Sequencer", "Polyphonic"]
       },
       {
+          "slug": "Cosmosis",
+          "name": "Cosmosis",
+          "tags": ["Visual", "Sequencer", "Polyphonic"]
+      },
+      {
           "slug": "JeremyBlankPanel",
           "name": "Blank Panel of Jeremy",
           "tags": ["Blank", "Visual"]

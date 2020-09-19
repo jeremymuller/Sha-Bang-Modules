@@ -14,6 +14,7 @@ extern Model *modelStochSeq4;
 extern Model *modelPolyrhythmClock;
 extern Model *modelRandGates;
 extern Model *modelNeutrinode;
+extern Model *modelCosmosis;
 extern Model *modelJeremyBlankPanel;
 
 /************************** INLINE FUNCTIONS **************************/
@@ -36,18 +37,18 @@ inline float randRange(float min, float max) { // returns random float within mi
 
 /************************** LABEL **************************/
 
-struct CenteredLabel : Widget {
+struct LeftAlignedLabel : Widget {
     std::string text;
 	int fontSize;
-	CenteredLabel(int _fontSize = 12) {
+	LeftAlignedLabel(int _fontSize = 12) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
 	}
 	void draw(const DrawArgs &args) override {
-		nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
-		nvgFillColor(args.vg, nvgRGB(38, 0, 255));
+		nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
+		nvgFillColor(args.vg, nvgRGB(128, 0, 219));
 		nvgFontSize(args.vg, fontSize);
-		nvgText(args.vg, box.pos.x, box.pos.y, text.c_str(), NULL);
+		nvgText(args.vg, 0, 0, text.c_str(), NULL);
 	}
 };
 
@@ -296,6 +297,62 @@ struct TinyBlueInvertKnob : RoundKnob {
     TinyBlueInvertKnob() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyBlueInvertKnob.svg")));
         snap = true;
+    }
+};
+
+/************************** KNOBS with LABELS **************************/
+// code help from https://github.com/jeremywen/JW-Modules/blob/master/src/JWModules.hpp
+
+struct PurpleInvertKnobLabel : PurpleInvertKnob {
+    LeftAlignedLabel *linkedLabel = NULL;
+    Module *linkedModule = NULL;
+
+    PurpleInvertKnobLabel() {}
+
+    void connectLabel(LeftAlignedLabel *label, Module *module) {
+        linkedLabel = label;
+        linkedModule = module;
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+        }
+    }
+
+    void onChange(const event::Change &e) override {
+        RoundKnob::onChange(e);
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+        }
+    }
+
+    virtual std::string formatCurrentValue() {
+        if (paramQuantity != NULL) {
+            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct NoteKnob : PurpleInvertKnobLabel {
+    Quantize *quantize;
+    NoteKnob() {}
+
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct ScaleKnob : PurpleInvertKnobLabel {
+    Quantize *quantize;
+    ScaleKnob() {}  
+    
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
     }
 };
 
