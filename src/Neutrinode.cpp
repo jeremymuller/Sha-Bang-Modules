@@ -193,6 +193,8 @@ struct Neutrinode : Module, Quantize {
     };
 
     dsp::SchmittTrigger rndTrig, clearTrig, pauseTrig;
+    dsp::PulseGenerator gatePulsesAll[16];
+    float allPitches[16] = {};
     Node *nodes = new Node[NUM_OF_NODES];
     std::vector<Particle> particles;
     int channels = 1;
@@ -270,7 +272,7 @@ struct Neutrinode : Module, Quantize {
 
         // TODO: This doesn't need to happen every sample, might try every 700 samples
 
-        lights[PAUSE_LIGHT].value = toggleStart ? 1.0 : 0.0;
+        lights[PAUSE_LIGHT].setBrightness(toggleStart ? 1.0 : 0.0);
 
         if (movement) {
             if (moveNodes == 0) {
@@ -302,11 +304,13 @@ struct Neutrinode : Module, Quantize {
                     if (nodes[i].pulses[j].triggered) {
                         nodes[i].pulses[j].triggered = false;
                         nodes[i].gatePulse[j % channels].trigger(1e-3f);
+                        gatePulsesAll[j % channels].trigger(1e-3f);
 
                         float volts;
-                        if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0, 0, 1);
-                        else volts = rescale(particles[j].radius, 5, 10, 1, 0);
+                        if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0.0, 0.0, 1.0);
+                        else volts = rescale(particles[j].radius, 5.0, 10.0, 1.0, 0.0);
                         float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
+                        // allPitches[polyChannelIndex] = pitch;
                         // outs
                         outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
                         outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
@@ -315,7 +319,8 @@ struct Neutrinode : Module, Quantize {
 
                     bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
                     outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
-                    outputs[GATES_ALL_OUTPUTS].setVoltage(pulse ? 10.0 : 0.0, polyChannelIndex);
+                    bool pulseAll = gatePulsesAll[polyChannelIndex].process(1.0 / args.sampleRate);
+                    outputs[GATES_ALL_OUTPUTS].setVoltage(pulseAll ? 10.0 : 0.0, polyChannelIndex);
                     polyChannelIndex = (polyChannelIndex+1) % channels;
                 }
 
@@ -350,6 +355,7 @@ struct Neutrinode : Module, Quantize {
         // }
     }
 
+    // TODO: probably won't use this
     void randomizeParticles() {
         if (particles.size() < 1) {
             for (int i = 0; i < 4; i++) {

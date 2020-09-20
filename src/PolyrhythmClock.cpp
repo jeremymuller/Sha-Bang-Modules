@@ -94,7 +94,7 @@ struct PolyrhythmClock : Module {
         // clockOn = (params[CLOCK_TOGGLE_PARAM].getValue() == 1) ? true : false;
         // bool gateIn = false;
         // bool tupletGates[4] = {};
-        lights[TOGGLE_LIGHT].value = clockOn ? 1.0 : 0.0;
+        lights[TOGGLE_LIGHT].setBrightness(clockOn ? 1.0 : 0.0);
 
         for (int i = 0; i < 4; i++) {
             tupletGates[i] = false;

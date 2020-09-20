@@ -132,7 +132,7 @@ struct StochSeq : Module {
 		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
 			if (currentGateOut == i)
-				lights[LIGHTS + i].setBrightness(lightBlink ? 1.0 : 0.0);
+				lights[LIGHTS + i].setSmoothBrightness(lightBlink ? 1.0 : 0.0, args.sampleTime * 30);
 			else
 				lights[LIGHTS + i].setBrightness(0.0);
 		}
