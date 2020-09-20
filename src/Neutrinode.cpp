@@ -213,7 +213,7 @@ struct Neutrinode : Module, Quantize {
         configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
         configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
-        configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES-1, 0.0, "Scale");
+        configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
         configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
@@ -677,17 +677,17 @@ struct NeutrinodeWidget : ModuleWidget {
         addParam(createParamCentered<PurpleKnob>(Vec(130.7, 78.1), module, Neutrinode::SPEED_PARAM));
 
         // note and scale knobs
-        NoteKnob *noteKnob = dynamic_cast<NoteKnob *>(createParamCentered<NoteKnob>(Vec(26.4, 117.5), module, Neutrinode::ROOT_NOTE_PARAM));
+        NoteKnob *noteKnob = dynamic_cast<NoteKnob *>(createParamCentered<NoteKnob>(Vec(26.4, 122.3), module, Neutrinode::ROOT_NOTE_PARAM));
         LeftAlignedLabel* const noteLabel = new LeftAlignedLabel;
-        noteLabel->box.pos = Vec(42.6, 121);
+        noteLabel->box.pos = Vec(42.6, 125.8);
         noteLabel->text = "";
         noteKnob->connectLabel(noteLabel, module);
         addChild(noteLabel);
         addParam(noteKnob);
 
-        ScaleKnob *scaleKnob = dynamic_cast<ScaleKnob *>(createParamCentered<ScaleKnob>(Vec(26.4, 146), module, Neutrinode::SCALE_PARAM));
+        ScaleKnob *scaleKnob = dynamic_cast<ScaleKnob *>(createParamCentered<ScaleKnob>(Vec(26.4, 153.4), module, Neutrinode::SCALE_PARAM));
         LeftAlignedLabel* const scaleLabel = new LeftAlignedLabel;
-        scaleLabel->box.pos = Vec(42.6, 149.5);
+        scaleLabel->box.pos = Vec(42.6, 157.7);
         scaleLabel->text = "";
         scaleKnob->connectLabel(scaleLabel, module);
         addChild(scaleLabel);
@@ -695,9 +695,9 @@ struct NeutrinodeWidget : ModuleWidget {
 
         // addParam(createParamCentered<PurpleInvertKnob>(Vec(26.4, 136.7), module, Neutrinode::ROOT_NOTE_PARAM));
         // addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 136.7), module, Neutrinode::SCALE_PARAM));
-        addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 130.7), module, Neutrinode::PITCH_PARAM));
+        addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 122.8), module, Neutrinode::PITCH_PARAM));
 
-        addParam(createParamCentered<PurpleButton>(Vec(130.7, 130.7), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(130.7, 122.3), module, Neutrinode::CLEAR_PARTICLES_PARAM));
         // addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
         // addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
 

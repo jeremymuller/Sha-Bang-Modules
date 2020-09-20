@@ -13,6 +13,8 @@ struct JeremyBlankPanel : Module {
 
     void process(const ProcessArgs &args) override {
         // TODO
+        lights[LEFTEYE].value = 1.0;
+        lights[RIGHTEYE].value = 1.0;
     }
 
 };
@@ -22,26 +24,26 @@ struct JeremyBlankPanelWidget : ModuleWidget {
         setModule(module);
         setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/JeremyBlankPanel.svg")));
 
-        addChild(createWidget<JeremyScrew>(Vec(16, 2)));
-        addChild(createWidget<JeremyScrew>(Vec(16, box.size.y - 14)));
+        addChild(createWidget<JeremyScrew>(Vec(24, 2)));
+        addChild(createWidget<JeremyScrew>(Vec(24, box.size.y - 14)));
 
         int randColor = static_cast<int>(random::uniform() * 4);
         switch(randColor) {
             case 0:
-                addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(13.7, 187.8), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(19.8, 187.8), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<TinyLight<JeremyPurpleLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<TinyLight<JeremyPurpleLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
             case 1:
-                addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(13.7, 187.8), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(19.8, 187.8), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<TinyLight<JeremyBlueLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<TinyLight<JeremyBlueLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
             case 2:
-                addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(13.7, 187.8), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(19.8, 187.8), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<TinyLight<JeremyAquaLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<TinyLight<JeremyAquaLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
             case 3:
-                addChild(createLight<SmallLight<JeremyRedLight>>(Vec(13.7, 187.8), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyRedLight>>(Vec(19.8, 187.8), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<TinyLight<JeremyRedLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<TinyLight<JeremyRedLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
         }
     }
