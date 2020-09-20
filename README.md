@@ -21,7 +21,28 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 
 ### Neutrinode
 
-*TODO*
+![Neutrinode](/docs/Neutrinode.png)
+
+*A unique visual-based sequencer where time moves from the center of the 4 independent nodes out to the connected particles. Can generate interesting rhythmic textures and can be animated so that the textures change over time.*
+
+Click on nodes to position them. Click anywhere else to add/drag new particles. To remove particles click/drag them out of the dark display area.
+
+##### BUTTONS:
+- `PLAY` turns on/off all nodes.
+- `CLR` removes all particles.
+- `ON` turns on/off individual nodes.
+##### KNOBS:
+- `BPM` tempo of all nodes.
+- `SPEED` is the velocity of movement of nodes when `MOVE` is switched on.
+- Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
+  - Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
+- `OCT` controls the octaves of individual nodes.
+##### SWITCHES:
+- `MOVE` each node will randomly move around the dispay area. 
+- `PITCH` left side will take pitch from the radius of particles. The right side will take pitch based on the Y position (height) in the display. The left switch is good if you'd like to generate randomness in the pitches, however, if you want more control over the pitch then select the right switch.
+##### OUTPUTS:
+- 
+
 
 ---
 
