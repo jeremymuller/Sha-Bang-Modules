@@ -313,7 +313,8 @@ struct Neutrinode : Module, Quantize {
                         // allPitches[polyChannelIndex] = pitch;
                         // outs
                         outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
-                        outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
+                        // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
+                        outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
                     }
                     if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
 

@@ -9,7 +9,7 @@
 - create it
 
 ##### JeremyBlankPanel
-- fix
+- [x] fix
 
 ##### BlankPanelSpectrum
 - create it

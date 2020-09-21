@@ -1,5 +1,8 @@
 #include "plugin.hpp"
 
+float blinkPhase = 0.0;
+float hz = 0.25;
+
 struct JeremyBlankPanel : Module {
     enum LightIds {
         LEFTEYE,
@@ -13,8 +16,16 @@ struct JeremyBlankPanel : Module {
 
     void process(const ProcessArgs &args) override {
         // TODO
-        lights[LEFTEYE].setBrightness(1.0);
-        lights[RIGHTEYE].setBrightness(1.0);
+        blinkPhase += args.sampleTime * hz;
+        if (blinkPhase >= 1.0) {
+            blinkPhase -= 1.0;
+        }
+        // if (blinkPhase >= 1.0 || blinkPhase <= 0) {
+        //     // blinkPhase -= 1.0;
+        //     hz *= -1;
+        // }
+        lights[LEFTEYE].setSmoothBrightness(blinkPhase < 0.5 ? 1.0 : 0.0, args.sampleTime * 0.25);
+        lights[RIGHTEYE].setSmoothBrightness(blinkPhase < 0.5 ? 1.0 : 0.0, args.sampleTime * 0.25);
     }
 
 };
@@ -28,22 +39,22 @@ struct JeremyBlankPanelWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(24, box.size.y - 14)));
 
         int randColor = static_cast<int>(random::uniform() * 4);
-        switch(randColor) {
+        switch(randColor) { // 1.606
             case 0:
-                addChild(createLight<TinyLight<JeremyPurpleLight>>(Vec(19.8 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<TinyLight<JeremyPurpleLight>>(Vec(28.1 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
             case 1:
-                addChild(createLight<TinyLight<JeremyBlueLight>>(Vec(19.8 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<TinyLight<JeremyBlueLight>>(Vec(28.1 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
             case 2:
-                addChild(createLight<TinyLight<JeremyAquaLight>>(Vec(19.8 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<TinyLight<JeremyAquaLight>>(Vec(28.1 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
             case 3:
-                addChild(createLight<TinyLight<JeremyRedLight>>(Vec(19.8 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<TinyLight<JeremyRedLight>>(Vec(28.1 - 1.606, 180.9 - 1.606), module, JeremyBlankPanel::RIGHTEYE));
+                addChild(createLight<SmallLight<JeremyRedLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+                addChild(createLight<SmallLight<JeremyRedLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
                 break;
         }
     }
