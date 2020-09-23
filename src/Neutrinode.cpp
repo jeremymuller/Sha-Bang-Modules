@@ -17,6 +17,11 @@ struct Particle {
         box.pos.y = _y;
         radius = randRange(5, 12);
     }
+
+    void setPos(Vec pos) {
+        box.pos.x = pos.x;
+        box.pos.y = pos.y;
+    }
 };
 
 struct Pulse {
@@ -194,9 +199,11 @@ struct Neutrinode : Module, Quantize {
 
     dsp::SchmittTrigger rndTrig, clearTrig, pauseTrig;
     dsp::PulseGenerator gatePulsesAll[16];
-    float allPitches[16] = {};
+    float allPitches[16] = {}; // <-- this is weird when two nodes collide on one particle
     Node *nodes = new Node[NUM_OF_NODES];
-    std::vector<Particle> particles;
+    Particle particles[MAX_PARTICLES];
+    int visibleParticles = 0;
+    // std::vector<Particle> particles;
     int channels = 1;
     bool movement = false;
     bool pitchChoice = false;
@@ -429,8 +436,27 @@ struct Neutrinode : Module, Quantize {
     //     }
     // }
 
+    void addParticle(Vec pos, int index) {
+        visibleParticles++;
+        particles[index].setPos(pos);
+        particles[index].radius = randRange(5, 12);
+        particles[index].visible = true;
+        particles[index].locked = false;
+    }
+
+    void removeParticle(int index) {
+        visibleParticles--;
+        particles[index].visible = false;
+        particles[index].locked = true;
+    }
+
     void clearParticles() {
-        particles.clear();
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            particles[i].visible = false;
+            particles[i].locked = true;
+        }
+        visibleParticles = 0;
+        // particles.clear();
         for (int i = 0; i < NUM_OF_NODES; i++) 
             nodes[i].pulses.clear();
     }
@@ -502,6 +528,7 @@ struct NeutrinodeDisplay : Widget {
 			initY = e.pos.y;
             Vec inits = Vec(initX, initY);
             bool clickedOnObj = false;
+            int nextAvailableIndex = 0;
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
                     Vec nodePos = module->nodes[i].box.getCenter();
@@ -518,26 +545,33 @@ struct NeutrinodeDisplay : Widget {
                     module->nodes[i].locked = true;
                 }
             }
-            for (unsigned int i = 0; i < module->particles.size(); i++) {
-                Vec partPos = module->particles[i].box.getCenter();
-                float d = dist(inits, partPos);
-                float r = module->particles[i].radius;
-                if (d < r) {
-                    // module->particles.erase(module->particles.begin()+i);
-                    module->particles[i].box.pos.x = initX;
-                    module->particles[i].box.pos.y = initY;
-                    module->particles[i].locked = false;
-                    clickedOnObj = true;
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                if (module->particles[i].visible) {
+                    Vec partPos = module->particles[i].box.getCenter();
+                    float d = dist(inits, partPos);
+                    float r = module->particles[i].radius;
+                    if (d < r && !clickedOnObj) {
+                        // module->particles.erase(module->particles.begin()+i);
+                        module->particles[i].box.pos.x = initX;
+                        module->particles[i].box.pos.y = initY;
+                        module->particles[i].locked = false;
+                        clickedOnObj = true;
+                    } else {
+                        module->particles[i].locked = true;
+                    }
                 } else {
-                    module->particles[i].locked = true;
+                    nextAvailableIndex = i;
                 }
             }
 
             if (!clickedOnObj) {
-                if (module->particles.size() < MAX_PARTICLES) {
+                if (module->visibleParticles < MAX_PARTICLES) {
+                    module->addParticle(inits, nextAvailableIndex);
+                    
                     Particle p(initX, initY);
                     p.locked = false;
                     module->particles.push_back(p);
+
                     for (int i = 0; i < NUM_OF_NODES; i++) {
                         Pulse pulse;
                         module->nodes[i].pulses.push_back(pulse);
