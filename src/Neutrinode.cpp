@@ -10,7 +10,7 @@ struct Particle {
     NVGcolor color = nvgRGB(255, 255, 255);
     float radius;
     bool locked = true;
-    bool visible = true;
+    bool visible = false;
 
     Particle() {
         box.pos.x = 0;
@@ -18,11 +18,11 @@ struct Particle {
         radius = randRange(5, 12);
     }
 
-    Particle(float _x, float _y) {
-        box.pos.x = _x;
-        box.pos.y = _y;
-        radius = randRange(5, 12);
-    }
+    // Particle(float _x, float _y) {
+    //     box.pos.x = _x;
+    //     box.pos.y = _y;
+    //     radius = randRange(5, 12);
+    // }
 
     void setPos(Vec pos) {
         box.pos.x = pos.x;
@@ -43,6 +43,11 @@ struct Pulse {
     float inc = 0.0;
 
     Pulse() {}
+
+    void setPos(Vec pos) {
+        box.pos.x = pos.x;
+        box.pos.y = pos.y;
+    }
 
     void blip() {
         if (haloTime > 22000) {
@@ -65,7 +70,8 @@ struct Node {
     float radius = 15.5;
     NVGcolor color;
     NVGcolor lineColor;
-    std::vector<Pulse> pulses;
+    Pulse *pulses = new Pulse[MAX_PARTICLES];
+    // std::vector<Pulse> pulses;
     float lineAlpha;
     float lineWidth;
     int maxConnectedDist = 150;
@@ -97,6 +103,10 @@ struct Node {
         // tempoTime = 0;
         tempoTime = static_cast<int>(random::uniform() * maxConnectedDist);
         phase = random::uniform();
+    }
+
+    ~Node() {
+        delete[] pulses;
     }
 
     bool connected(Vec p, int index) {
@@ -451,23 +461,38 @@ struct Neutrinode : Module, Quantize {
         particles[index].radius = randRange(5, 12);
         particles[index].visible = true;
         particles[index].locked = false;
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
+            nodes[i].pulses[index].visible = true;
+            // Pulse pulse;
+            // nodes[i].pulses.push_back(pulse);
+        }
     }
 
     void removeParticle(int index) {
         visibleParticles--;
         particles[index].visible = false;
         particles[index].locked = true;
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].pulses[index].visible = false;
+
+            // nodes[i].pulses.erase(nodes[i].pulses.begin() + index);
+        }
     }
 
     void clearParticles() {
         for (int i = 0; i < MAX_PARTICLES; i++) {
             particles[i].visible = false;
             particles[i].locked = true;
+            for (int j = 0; j < NUM_OF_NODES; j++) {
+                nodes[j].pulses[i].visible = false;
+            }
         }
         visibleParticles = 0;
         // particles.clear();
-        for (int i = 0; i < NUM_OF_NODES; i++) 
-            nodes[i].pulses.clear();
+        // nodes[i].pulses.clear();
     }
 
     void updateNodePos() {
@@ -576,10 +601,13 @@ struct NeutrinodeDisplay : Widget {
             if (!clickedOnObj && (module->visibleParticles < MAX_PARTICLES)) {
                 module->addParticle(inits, nextAvailableIndex);
 
-                for (int i = 0; i < NUM_OF_NODES; i++) {
-                    Pulse pulse;
-                    module->nodes[i].pulses.push_back(pulse);
-                }
+                // for (int i = 0; i < NUM_OF_NODES; i++) {
+                //     module->nodes[i].pulses[nextAvailableIndex].setPos(module->nodes[i].box.getCenter());
+                //     module->nodes[i].pulses[nextAvailableIndex].visible = true;
+
+                //     // Pulse pulse;
+                //     // module->nodes[i].pulses.push_back(pulse);
+                // }
 
             }
         } 
@@ -656,8 +684,10 @@ struct NeutrinodeDisplay : Widget {
 
             if (eraseParticle) {
                 module->removeParticle(index);
-                for (int i = 0; i < NUM_OF_NODES; i++) 
-                    module->nodes[i].pulses.erase(module->nodes[i].pulses.begin() + index);
+                // for (int i = 0; i < NUM_OF_NODES; i++) {
+                //     // module->nodes[i].pulses[index].visible = false;
+                //     // module->nodes[i].pulses.erase(module->nodes[i].pulses.begin() + index);
+                // }
             }
         }
     }
