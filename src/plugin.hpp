@@ -1,6 +1,7 @@
 #pragma once
 #include <rack.hpp>
 #include "Quantize.cpp"
+#include "Constellations.cpp"
 
 
 using namespace rack;

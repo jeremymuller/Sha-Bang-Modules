@@ -1,5 +1,7 @@
 #include "rack.hpp"
 
+// code modified from https://github.com/jeremywen/JW-Modules
+
 struct Quantize {
     int SCALE_MAJOR[8] = {0, 2, 4, 5, 7, 9, 11, 12};
     int SCALE_MINOR[8] = {0, 2, 3, 5, 7, 8, 10, 12};
@@ -72,7 +74,6 @@ struct Quantize {
     };
 
     float quantizeRawVoltage(float voltsIn, int root, int scale) {
-        // todo
         int *chosenScale;
         int scaleLength = 0;
         switch (scale) {
@@ -103,7 +104,9 @@ struct Quantize {
             default: return voltsIn;
         }
 
-        // int octave = static_cast<int>(floorf(voltsIn));
+        // TODO: make a 2-octave version of this...so volts can range from 0-2?
+        int octave = static_cast<int>(floorf(voltsIn));
+        voltsIn = voltsIn - octave;
         float distanceToNote = 10.0;
         int chosenNote = 0;
         for (int i = 0; i < scaleLength; i++) {
@@ -117,8 +120,7 @@ struct Quantize {
 
         }
 
-        float quantizedVoltage = chosenScale[chosenNote] / 12.0 + (root / 12.0);
-
+        float quantizedVoltage = octave + (chosenScale[chosenNote] / 12.0) + (root / 12.0);
         return quantizedVoltage;
     }
 
@@ -141,7 +143,6 @@ struct Quantize {
     }
 
     std::string scaleName(int scale) {
-        // TODO
         switch (scale) {
             case MAJOR:           return "Major";
             case MINOR:           return "Minor";

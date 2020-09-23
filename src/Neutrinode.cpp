@@ -3,6 +3,7 @@
 #define NUM_OF_NODES 4
 #define MAX_PARTICLES 16
 #define DISPLAY_SIZE 378
+#define INTERNAL_SAMP_TIME 10
 
 struct Particle {
     Rect box;
@@ -14,14 +15,13 @@ struct Particle {
     Particle(float _x, float _y) {
         box.pos.x = _x;
         box.pos.y = _y;
-        radius = randRange(5, 10);
+        radius = randRange(5, 12);
     }
 };
 
 struct Pulse {
     Rect box;
     float radius = 3;
-    // float radius = 6;
     bool visible = false;
     bool isConnected = false;
     bool triggered = false;
@@ -42,8 +42,8 @@ struct Pulse {
 
         haloAlpha = rescale(haloTime, 0, 22000, 200, 0);
 
-        haloRadius += 18.0 / APP->engine->getSampleRate();
-        haloTime++;
+        haloRadius += 18.0 / (APP->engine->getSampleRate() / INTERNAL_SAMP_TIME);
+        haloTime += INTERNAL_SAMP_TIME;
     }
 };
 
@@ -150,8 +150,8 @@ struct Node {
         haloAlpha = rescale(haloTime, 0, 22000, 200, 0);
         // haloAlpha = 255;
 
-        haloRadius += 18.0 / APP->engine->getSampleRate();
-        haloTime++;
+        haloRadius += 18.0 / (APP->engine->getSampleRate() / INTERNAL_SAMP_TIME);
+        haloTime += INTERNAL_SAMP_TIME;
     }
 };
 
@@ -205,8 +205,8 @@ struct Neutrinode : Module, Quantize {
     float maxConnectedDist = 150;
     float pulseSpeed = 1.0 / APP->engine->getSampleRate() * maxConnectedDist;
     int checkParams = 0;
+    int processNodes = 0;
     int moveNodes = 0;
-
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -246,12 +246,61 @@ struct Neutrinode : Module, Quantize {
         delete[] nodes;
     }
 
-    void process(const ProcessArgs &args) override {
-        // checks BPM param knob every 4th sample
-        if (checkParams == 0) {
-            if (rndTrig.process(params[RND_PARTICLES_PARAM].getValue())) {
-                randomizeParticles();
+    json_t *dataToJson() override {
+        json_t *rootJ = json_object();
+        json_t *nodesJ = json_array();
+        // json_t *nodeDataJ = json_array();
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            json_t *dataJ = json_array();
+            json_t *nodeVisibleJ = json_boolean(nodes[i].visible);
+            json_t *nodePosXJ = json_real(nodes[i].box.pos.x);
+            json_t *nodePosYJ = json_real(nodes[i].box.pos.y);
+            json_t *nodeTempoTimeJ = json_real(nodes[i].tempoTime);
+            json_t *nodePhaseJ = json_real(nodes[i].phase);
+            // other data?
+            json_array_append_new(dataJ, nodeVisibleJ);
+            json_array_append_new(dataJ, nodePosXJ);
+            json_array_append_new(dataJ, nodePosYJ);
+            json_array_append_new(dataJ, nodeTempoTimeJ);
+            json_array_append_new(dataJ, nodePhaseJ);
+
+            // append node
+            json_array_append_new(nodesJ, dataJ);
+        }
+
+        json_object_set_new(rootJ, "nodes", nodesJ);
+
+        return rootJ;
+    }
+
+    void dataFromJson(json_t *rootJ) override {
+        json_t *nodesJ = json_object_get(rootJ, "nodes");
+        if (nodesJ) {
+            for (int i = 0; i < NUM_OF_NODES; i++) {
+                // TODO
+                json_t *dataJ = json_array_get(nodesJ, i);
+                if (dataJ) {
+                    json_t *nodeVisibleJ = json_array_get(dataJ, 0);
+                    json_t *nodePosXJ = json_array_get(dataJ, 1);
+                    json_t *nodePosYJ = json_array_get(dataJ, 2);
+                    json_t *nodeTempoTimeJ = json_array_get(dataJ, 3);
+                    json_t *nodePhaseJ = json_array_get(dataJ, 4);
+                    if (nodeVisibleJ) nodes[i].visible = json_boolean_value(nodeVisibleJ);
+                    if (nodePosXJ) nodes[i].box.pos.x = json_real_value(nodePosXJ);
+                    if (nodePosYJ) nodes[i].box.pos.y = json_real_value(nodePosYJ);
+                    if (nodeTempoTimeJ) nodes[i].tempoTime = json_real_value(nodeTempoTimeJ);
+                    if (nodePhaseJ) nodes[i].phase = json_real_value(nodePhaseJ);
+                }
             }
+        }
+    }
+
+    void process(const ProcessArgs &args) override {
+        // checks param knobs every 4th sample
+        if (checkParams == 0) {
+            // if (rndTrig.process(params[RND_PARTICLES_PARAM].getValue())) {
+            //     randomizeParticles();
+            // }
             if (clearTrig.process(params[CLEAR_PARTICLES_PARAM].getValue())) {
                 clearParticles();
             }
@@ -265,77 +314,82 @@ struct Neutrinode : Module, Quantize {
 
             // clockStep = std::pow(2.0, params[BPM_PARAM].getValue());
             clockStep = params[BPM_PARAM].getValue() / 60.0;
-            clockStep = (clockStep / args.sampleRate) / 2;
+            clockStep = (clockStep / (args.sampleRate / INTERNAL_SAMP_TIME)) / 2;
             pulseSpeed = clockStep * maxConnectedDist * 2;
         }
         checkParams = (checkParams+1) % 4;
 
         // TODO: This doesn't need to happen every sample, might try every 700 samples
 
-        lights[PAUSE_LIGHT].setBrightness(toggleStart ? 1.0 : 0.0);
+        if (processNodes == 0) {
+            lights[PAUSE_LIGHT].setBrightness(toggleStart ? 1.0 : 0.0);
 
-        if (movement) {
-            if (moveNodes == 0) {
-                updateNodePos();
-            }
-            moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0); // check 60 hz
-        }
-
-        int polyChannelIndex = 0;
-        int rootNote = params[ROOT_NOTE_PARAM].getValue();
-        int scale = params[SCALE_PARAM].getValue();
-        outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-        outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
-        for (int i = 0; i < NUM_OF_NODES; i++) {
-            nodes[i].start = toggleStart;
-
-
-            if (nodes[i].toggleTrig.process(params[ON_PARAM+i].getValue())) {
-                nodes[i].start = !nodes[i].start;
-                nodes[i].visible = !nodes[i].visible;
+            if (movement) {
+                if (moveNodes == 0) {
+                    updateNodePos();
+                }
+                moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0); // check 60 hz
             }
 
-            if (nodes[i].visible && nodes[i].start) {
-                int oct = params[OCTAVE_PARAMS + i].getValue();
+            int polyChannelIndex = 0;
+            int rootNote = params[ROOT_NOTE_PARAM].getValue();
+            int scale = params[SCALE_PARAM].getValue();
+            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
+            for (int i = 0; i < NUM_OF_NODES; i++) {
+                nodes[i].start = toggleStart;
 
-                for (unsigned int j = 0; j < particles.size(); j++) {
-                    Vec p = particles[j].box.getCenter();
-                    nodes[i].sendPulse(p, j, pulseSpeed);
-                    if (nodes[i].pulses[j].triggered) {
-                        nodes[i].pulses[j].triggered = false;
-                        nodes[i].gatePulse[j % channels].trigger(1e-3f);
-                        gatePulsesAll[j % channels].trigger(1e-3f);
 
-                        float volts;
-                        if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0.0, 0.0, 1.0);
-                        else volts = rescale(particles[j].radius, 5.0, 10.0, 1.0, 0.0);
-                        float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
-                        // allPitches[polyChannelIndex] = pitch;
-                        // outs
-                        outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
-                        // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
-                        outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
+                if (nodes[i].toggleTrig.process(params[ON_PARAM+i].getValue())) {
+                    nodes[i].start = !nodes[i].start;
+                    nodes[i].visible = !nodes[i].visible;
+                }
+
+                if (nodes[i].visible && nodes[i].start) {
+                    int oct = params[OCTAVE_PARAMS + i].getValue();
+
+                    for (unsigned int j = 0; j < particles.size(); j++) {
+                        Vec p = particles[j].box.getCenter();
+                        nodes[i].sendPulse(p, j, pulseSpeed);
+                        if (nodes[i].pulses[j].triggered) {
+                            nodes[i].pulses[j].triggered = false;
+                            nodes[i].gatePulse[j % channels].trigger(1e-3f);
+                            gatePulsesAll[j % channels].trigger(1e-3f);
+
+                            float volts;
+                            if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0.0, 0.0, 2.0);
+                            else volts = rescale(particles[j].radius, 5.0, 12.0, 2.0, 0.0);
+                            float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
+                            // allPitches[polyChannelIndex] = pitch;
+                            // outs
+                            outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
+                            // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
+                            outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
+                        }
+                        if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
+
+                        bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
+                        outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
+                        bool pulseAll = gatePulsesAll[polyChannelIndex].process(1.0 / args.sampleRate);
+                        outputs[GATES_ALL_OUTPUTS].setVoltage(pulseAll ? 10.0 : 0.0, polyChannelIndex);
+                        polyChannelIndex = (polyChannelIndex+1) % channels;
                     }
-                    if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
 
-                    bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
-                    outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
-                    bool pulseAll = gatePulsesAll[polyChannelIndex].process(1.0 / args.sampleRate);
-                    outputs[GATES_ALL_OUTPUTS].setVoltage(pulseAll ? 10.0 : 0.0, polyChannelIndex);
-                    polyChannelIndex = (polyChannelIndex+1) % channels;
+                    nodes[i].phase += clockStep;
+                    if (nodes[i].triggered) nodes[i].blip();
+                    if (nodes[i].phase > 1.0) {
+                        nodes[i].phase = 0;
+                        nodes[i].triggered = true;
+                    }
+
                 }
-
-                nodes[i].phase += clockStep;
-                if (nodes[i].triggered) nodes[i].blip();
-                if (nodes[i].phase > 1.0) {
-                    nodes[i].phase = 0;
-                    nodes[i].triggered = true;
-                }
-
+                outputs[GATE_OUTPUTS + i].setChannels(channels);
+                outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
-            outputs[GATE_OUTPUTS + i].setChannels(channels);
-            outputs[VOLT_OUTPUTS + i].setChannels(channels);
+
         }
+        processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
+
         // loop all channels
         // for (int c = 0; c < channels; c++) {
         //     bool pulse = nodes[PURPLE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
@@ -357,23 +411,23 @@ struct Neutrinode : Module, Quantize {
     }
 
     // TODO: probably won't use this
-    void randomizeParticles() {
-        if (particles.size() < 1) {
-            for (int i = 0; i < 4; i++) {
-                Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
-                particles.push_back(p);
-                for (int i = 0; i < NUM_OF_NODES; i++) {
-                    Pulse pulse;
-                    nodes[i].pulses.push_back(pulse);
-                }
-            }
-        } else {
-            for (unsigned int i = 0; i < particles.size(); i++) {
-                particles[i].box.pos.x = randRange(15, DISPLAY_SIZE - 15);
-                particles[i].box.pos.y = randRange(15, DISPLAY_SIZE - 15);
-            }
-        }
-    }
+    // void randomizeParticles() {
+    //     if (particles.size() < 1) {
+    //         for (int i = 0; i < 4; i++) {
+    //             Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
+    //             particles.push_back(p);
+    //             for (int i = 0; i < NUM_OF_NODES; i++) {
+    //                 Pulse pulse;
+    //                 nodes[i].pulses.push_back(pulse);
+    //             }
+    //         }
+    //     } else {
+    //         for (unsigned int i = 0; i < particles.size(); i++) {
+    //             particles[i].box.pos.x = randRange(15, DISPLAY_SIZE - 15);
+    //             particles[i].box.pos.y = randRange(15, DISPLAY_SIZE - 15);
+    //         }
+    //     }
+    // }
 
     void clearParticles() {
         particles.clear();
