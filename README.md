@@ -15,7 +15,14 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 
 ### Cosmosis
 
-*TODO*
+*A continuous sequencer based on constellations where time can move left->right, right->left, up->down, and down->up.*
+
+Click anywhere to add/drag new stars. To remove stars click/drag them out of the dark display area.
+
+##### BUTTONS:
+- `PLAY` starts the sequencer.
+- `CLR` removes all stars.
+
 
 ---
 
