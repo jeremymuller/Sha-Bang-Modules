@@ -24,6 +24,13 @@ struct Star {
 };
 
 struct Cosmosis : Module, Constellations {
+    enum SeqIds {
+        PURPLE_SEQ,
+        BLUE_SEQ,
+        AQUA_SEQ,
+        RED_SEQ,
+        NUM_SEQS
+    };
     enum ParamIds {
         BPM_PARAM,
         PLAY_PARAM,
@@ -36,25 +43,41 @@ struct Cosmosis : Module, Constellations {
         NUM_OUTPUTS
     };
     enum LightIds {
+        PAUSE_LIGHT,
         NUM_LIGHTS
     };
 
+    dsp::SchmittTrigger playTrig;
     Star stars[MAX_STARS];
     int visibleStars = 0;
+    float seqPos = 0;
+    bool isPlaying = false;
+
 
     Cosmosis() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
         configParam(PLAY_PARAM, 0.0, 1.0, 0.0);
 
-        for (int i = 0; i < 9; i++) {
-            Vec pos = Vec(ANDROMEDA[i].x, ANDROMEDA[i].y);
-            addStar(pos, i, ANDROMEDA[i].r);
+        for (int i = 0; i < 14; i++) {
+            Vec pos = Vec(AQUARIUS[i].x, AQUARIUS[i].y);
+            addStar(pos, i, AQUARIUS[i].r);
         }
     }
 
     void process(const ProcessArgs &args) override {
         // TODO
+        if (playTrig.process(params[PLAY_PARAM].getValue())) {
+            isPlaying = !isPlaying;
+        }
+
+        lights[PAUSE_LIGHT].setBrightness(isPlaying ? 1.0 : 0.0);
+
+        if (isPlaying) {
+            seqPos += 1.0 / 44100 * 60.0;
+            if (seqPos > DISPLAY_SIZE) seqPos = 0;
+        }
+
     }
 
     void addStar(Vec pos, int index) {
@@ -181,7 +204,15 @@ struct CosmosisDisplay : Widget {
                     nvgFill(args.vg);
                 }
             }
+            // draw line
+            nvgStrokeWidth(args.vg, 2.0);
+            nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, module->seqPos, 0);
+            nvgLineTo(args.vg, module->seqPos, box.size.y);
+            nvgStroke(args.vg);
         }
+
     }
 };
 
@@ -201,6 +232,8 @@ struct CosmosisWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(74.6, box.size.y - 14)));
         // addChild(createWidget<JeremyScrew>(Vec(431, 2)));
         // addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
+
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
 
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 78.1), module, Cosmosis::PLAY_PARAM));
         addParam(createParamCentered<BlueInvertKnob>(Vec(58.8, 78.1), module, Cosmosis::BPM_PARAM));
