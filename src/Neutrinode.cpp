@@ -16,6 +16,7 @@ struct Particle {
         box.pos.x = 0;
         box.pos.y = 0;
         radius = randRange(5, 12);
+        visible = false;
     }
 
     // Particle(float _x, float _y) {
@@ -42,7 +43,10 @@ struct Pulse {
     float haloAlpha = 0.0;
     float inc = 0.0;
 
-    Pulse() {}
+    Pulse() {
+        box.pos.x = 0;
+        box.pos.y = 0;
+    }
 
     void setPos(Vec pos) {
         box.pos.x = pos.x;
@@ -464,7 +468,8 @@ struct Neutrinode : Module, Quantize {
 
         for (int i = 0; i < NUM_OF_NODES; i++) {
             nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
-            nodes[i].pulses[index].visible = true;
+            // nodes[i].pulses[index].isConnected = false;
+            // nodes[i].pulses[index].visible = true;
             // Pulse pulse;
             // nodes[i].pulses.push_back(pulse);
         }
@@ -704,7 +709,7 @@ struct NeutrinodeDisplay : Widget {
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
                     // draw lines and pulses
-                    Node n = module->nodes[i];
+                    // Node n = module->nodes[i];
                     for (int j = 0; j < MAX_PARTICLES; j++) {
                         if (module->particles[j].visible) {
                             Vec particle = module->particles[j].box.getCenter();
