@@ -1,6 +1,6 @@
 # Sha#Bang! Modules
 
-A collection of innovative, probabilistic, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller).
+A collection of innovative, probabilistic, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller). :hash: :exclamation:
 
 ## Contents:
 
@@ -41,7 +41,10 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 - `MOVE` each node will randomly move around the dispay area. 
 - `PITCH` left side will take pitch from the radius of particles. The right side will take pitch based on the Y position (height) in the display. The left switch is good if you'd like to generate randomness in the pitches, however, if you want more control over the pitch then select the right switch.
 ##### OUTPUTS:
-- 
+- `GATES` and `V/OCT` output only from the corresponding node color.
+- `ALL` outputs all nodes.
+
+*:warning: There are a maximum of 16 particles (for 16 polyphonic channels) per node. However, when using the `ALL` outputs, there is potential to reach that maximum (16 x 4 = 64) in which case it does voice stealing.*
 
 
 ---
