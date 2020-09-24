@@ -275,9 +275,10 @@ struct Neutrinode : Module, Quantize {
     }
 
     json_t *dataToJson() override {
+        // TODO: add channels
         json_t *rootJ = json_object();
         json_t *nodesJ = json_array();
-        // json_t *nodeDataJ = json_array();
+        json_t *particlesJ = json_array();
         for (int i = 0; i < NUM_OF_NODES; i++) {
             json_t *dataJ = json_array();
             json_t *nodeVisibleJ = json_boolean(nodes[i].visible);
@@ -296,16 +297,30 @@ struct Neutrinode : Module, Quantize {
             json_array_append_new(nodesJ, dataJ);
         }
 
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            json_t *pDataJ = json_array();
+            json_t *particleVisibleJ = json_boolean(particles[i].visible);
+            json_t *particlePosXJ = json_real(particles[i].box.pos.x);
+            json_t *particlePosYJ = json_real(particles[i].box.pos.y);
+            json_t *particleRadJ = json_real(particles[i].radius);
+
+            json_array_append_new(pDataJ, particleVisibleJ);
+            json_array_append_new(pDataJ, particlePosXJ);
+            json_array_append_new(pDataJ, particlePosYJ);
+            json_array_append_new(pDataJ, particleRadJ);
+        }
+
         json_object_set_new(rootJ, "nodes", nodesJ);
+        json_object_set_new(rootJ, "particles", particlesJ);
 
         return rootJ;
     }
 
     void dataFromJson(json_t *rootJ) override {
+        // data from nodes
         json_t *nodesJ = json_object_get(rootJ, "nodes");
         if (nodesJ) {
             for (int i = 0; i < NUM_OF_NODES; i++) {
-                // TODO
                 json_t *dataJ = json_array_get(nodesJ, i);
                 if (dataJ) {
                     json_t *nodeVisibleJ = json_array_get(dataJ, 0);
@@ -318,6 +333,30 @@ struct Neutrinode : Module, Quantize {
                     if (nodePosYJ) nodes[i].box.pos.y = json_real_value(nodePosYJ);
                     if (nodeTempoTimeJ) nodes[i].tempoTime = json_real_value(nodeTempoTimeJ);
                     if (nodePhaseJ) nodes[i].phase = json_real_value(nodePhaseJ);
+                }
+            }
+        }
+        // data from particles
+        json_t *particlesJ = json_object_get(rootJ, "particles");
+        if (particlesJ) {
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                json_t *pDataJ = json_array_get(particlesJ, i);
+                if (pDataJ) {
+                    json_t *particleVisibleJ = json_array_get(pDataJ, 0);
+                    json_t *particlePosXJ = json_array_get(pDataJ, 1);
+                    json_t *particlePosYJ = json_array_get(pDataJ, 2);
+                    json_t *particleRadJ = json_array_get(pDataJ, 3);
+                    if (particleVisibleJ) {
+                        if (json_boolean_value(particleVisibleJ)) {
+                            float x = 0;
+                            float y = 0;
+                            float r = 0;
+                            if (particlePosXJ) x = json_real_value(particlePosXJ);
+                            if (particlePosYJ) y = json_real_value(particlePosYJ);
+                            if (particleRadJ) r = json_real_value(particleRadJ);
+                            addParticle(Vec(x, y), i, r);
+                        }
+                    }
                 }
             }
         }
@@ -338,9 +377,6 @@ struct Neutrinode : Module, Quantize {
             movement = params[MOVE_PARAM].getValue();
             pitchChoice = params[PITCH_PARAM].getValue();
             
-
-
-            // clockStep = std::pow(2.0, params[BPM_PARAM].getValue());
             clockStep = params[BPM_PARAM].getValue() / 60.0;
             clockStep = (clockStep / (args.sampleRate / INTERNAL_SAMP_TIME)) / 2;
             pulseSpeed = clockStep * maxConnectedDist * 2;
@@ -376,6 +412,7 @@ struct Neutrinode : Module, Quantize {
                 if (nodes[i].visible && nodes[i].start) {
                     int oct = params[OCTAVE_PARAMS + i].getValue();
 
+                    // when using 16 channels it doesn't work for All outputs
                     for (int j = 0; j < MAX_PARTICLES; j++) {
                         if (particles[j].visible) {
                             Vec p = particles[j].box.getCenter();
@@ -383,17 +420,19 @@ struct Neutrinode : Module, Quantize {
                             if (nodes[i].pulses[j].triggered) {
                                 nodes[i].pulses[j].triggered = false;
                                 nodes[i].gatePulse[j % channels].trigger(1e-3f);
-                                gatePulsesAll[j % channels].trigger(1e-3f);
+                                // gatePulsesAll[j % channels].trigger(1e-3f);
+                                gatePulsesAll[polyChannelIndex].trigger(1e-3f);
 
                                 float volts;
-                                if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0.0, 0.0, 2.0);
+                                float margin = 5.0;
+                                if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
                                 else volts = rescale(particles[j].radius, 5.0, 12.0, 2.0, 0.0);
                                 float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
                                 // allPitches[polyChannelIndex] = pitch;
                                 // outs
                                 outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
-                                // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
-                                outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
+                                outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
+                                // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
                             }
                             if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
 
@@ -463,6 +502,22 @@ struct Neutrinode : Module, Quantize {
         visibleParticles++;
         particles[index].setPos(pos);
         particles[index].radius = randRange(5, 12);
+        particles[index].visible = true;
+        particles[index].locked = false;
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
+            // nodes[i].pulses[index].isConnected = false;
+            // nodes[i].pulses[index].visible = true;
+            // Pulse pulse;
+            // nodes[i].pulses.push_back(pulse);
+        }
+    }
+
+    void addParticle(Vec pos, int index, float _radius) {
+        visibleParticles++;
+        particles[index].setPos(pos);
+        particles[index].radius = _radius;
         particles[index].visible = true;
         particles[index].locked = false;
 
