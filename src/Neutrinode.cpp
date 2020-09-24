@@ -9,14 +9,15 @@ struct Particle {
     Rect box;
     NVGcolor color = nvgRGB(255, 255, 255);
     float radius;
-    bool locked = true;
-    bool visible = false;
+    bool locked;
+    bool visible;
 
     Particle() {
         box.pos.x = 0;
         box.pos.y = 0;
         radius = randRange(5, 12);
         visible = false;
+        locked = true;
     }
 
     // Particle(float _x, float _y) {
@@ -275,8 +276,8 @@ struct Neutrinode : Module, Quantize {
     }
 
     json_t *dataToJson() override {
-        // TODO: add channels
         json_t *rootJ = json_object();
+
         json_t *nodesJ = json_array();
         json_t *particlesJ = json_array();
         for (int i = 0; i < NUM_OF_NODES; i++) {
@@ -308,8 +309,11 @@ struct Neutrinode : Module, Quantize {
             json_array_append_new(pDataJ, particlePosXJ);
             json_array_append_new(pDataJ, particlePosYJ);
             json_array_append_new(pDataJ, particleRadJ);
+
+            json_array_append_new(particlesJ, pDataJ);
         }
 
+        json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "nodes", nodesJ);
         json_object_set_new(rootJ, "particles", particlesJ);
 
@@ -317,6 +321,9 @@ struct Neutrinode : Module, Quantize {
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *channelsJ = json_object_get(rootJ, "channels");
+        if (channelsJ) channels = json_integer_value(channelsJ);
+
         // data from nodes
         json_t *nodesJ = json_object_get(rootJ, "nodes");
         if (nodesJ) {
@@ -458,25 +465,6 @@ struct Neutrinode : Module, Quantize {
 
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
-
-        // loop all channels
-        // for (int c = 0; c < channels; c++) {
-        //     bool pulse = nodes[PURPLE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + PURPLE_NODE].setVoltage(nodes[PURPLE_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + PURPLE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-
-        //     pulse = nodes[BLUE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + BLUE_NODE].setVoltage(nodes[BLUE_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + BLUE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-
-        //     pulse = nodes[AQUA_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + AQUA_NODE].setVoltage(nodes[AQUA_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + AQUA_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-
-        //     pulse = nodes[RED_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + RED_NODE].setVoltage(nodes[RED_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + RED_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-        // }
     }
 
     // TODO: probably won't use this
