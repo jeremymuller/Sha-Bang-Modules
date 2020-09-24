@@ -9,13 +9,26 @@ struct Particle {
     Rect box;
     NVGcolor color = nvgRGB(255, 255, 255);
     float radius;
-    bool locked = true;
-    bool visible = true;
+    bool locked;
+    bool visible;
 
-    Particle(float _x, float _y) {
-        box.pos.x = _x;
-        box.pos.y = _y;
+    Particle() {
+        box.pos.x = 0;
+        box.pos.y = 0;
         radius = randRange(5, 12);
+        visible = false;
+        locked = true;
+    }
+
+    // Particle(float _x, float _y) {
+    //     box.pos.x = _x;
+    //     box.pos.y = _y;
+    //     radius = randRange(5, 12);
+    // }
+
+    void setPos(Vec pos) {
+        box.pos.x = pos.x;
+        box.pos.y = pos.y;
     }
 };
 
@@ -31,7 +44,15 @@ struct Pulse {
     float haloAlpha = 0.0;
     float inc = 0.0;
 
-    Pulse() {}
+    Pulse() {
+        box.pos.x = 0;
+        box.pos.y = 0;
+    }
+
+    void setPos(Vec pos) {
+        box.pos.x = pos.x;
+        box.pos.y = pos.y;
+    }
 
     void blip() {
         if (haloTime > 22000) {
@@ -54,7 +75,8 @@ struct Node {
     float radius = 15.5;
     NVGcolor color;
     NVGcolor lineColor;
-    std::vector<Pulse> pulses;
+    Pulse *pulses = new Pulse[MAX_PARTICLES];
+    // std::vector<Pulse> pulses;
     float lineAlpha;
     float lineWidth;
     int maxConnectedDist = 150;
@@ -86,6 +108,10 @@ struct Node {
         // tempoTime = 0;
         tempoTime = static_cast<int>(random::uniform() * maxConnectedDist);
         phase = random::uniform();
+    }
+
+    ~Node() {
+        delete[] pulses;
     }
 
     bool connected(Vec p, int index) {
@@ -194,9 +220,11 @@ struct Neutrinode : Module, Quantize {
 
     dsp::SchmittTrigger rndTrig, clearTrig, pauseTrig;
     dsp::PulseGenerator gatePulsesAll[16];
-    float allPitches[16] = {};
+    float allPitches[16] = {}; // <-- this is weird when two nodes collide on one particle
     Node *nodes = new Node[NUM_OF_NODES];
-    std::vector<Particle> particles;
+    Particle *particles = new Particle[MAX_PARTICLES];
+    int visibleParticles = 0;
+    // std::vector<Particle> particles;
     int channels = 1;
     bool movement = false;
     bool pitchChoice = false;
@@ -244,12 +272,14 @@ struct Neutrinode : Module, Quantize {
 
     ~Neutrinode() {
         delete[] nodes;
+        delete[] particles;
     }
 
     json_t *dataToJson() override {
         json_t *rootJ = json_object();
+
         json_t *nodesJ = json_array();
-        // json_t *nodeDataJ = json_array();
+        json_t *particlesJ = json_array();
         for (int i = 0; i < NUM_OF_NODES; i++) {
             json_t *dataJ = json_array();
             json_t *nodeVisibleJ = json_boolean(nodes[i].visible);
@@ -268,16 +298,36 @@ struct Neutrinode : Module, Quantize {
             json_array_append_new(nodesJ, dataJ);
         }
 
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            json_t *pDataJ = json_array();
+            json_t *particleVisibleJ = json_boolean(particles[i].visible);
+            json_t *particlePosXJ = json_real(particles[i].box.pos.x);
+            json_t *particlePosYJ = json_real(particles[i].box.pos.y);
+            json_t *particleRadJ = json_real(particles[i].radius);
+
+            json_array_append_new(pDataJ, particleVisibleJ);
+            json_array_append_new(pDataJ, particlePosXJ);
+            json_array_append_new(pDataJ, particlePosYJ);
+            json_array_append_new(pDataJ, particleRadJ);
+
+            json_array_append_new(particlesJ, pDataJ);
+        }
+
+        json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "nodes", nodesJ);
+        json_object_set_new(rootJ, "particles", particlesJ);
 
         return rootJ;
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *channelsJ = json_object_get(rootJ, "channels");
+        if (channelsJ) channels = json_integer_value(channelsJ);
+
+        // data from nodes
         json_t *nodesJ = json_object_get(rootJ, "nodes");
         if (nodesJ) {
             for (int i = 0; i < NUM_OF_NODES; i++) {
-                // TODO
                 json_t *dataJ = json_array_get(nodesJ, i);
                 if (dataJ) {
                     json_t *nodeVisibleJ = json_array_get(dataJ, 0);
@@ -290,6 +340,30 @@ struct Neutrinode : Module, Quantize {
                     if (nodePosYJ) nodes[i].box.pos.y = json_real_value(nodePosYJ);
                     if (nodeTempoTimeJ) nodes[i].tempoTime = json_real_value(nodeTempoTimeJ);
                     if (nodePhaseJ) nodes[i].phase = json_real_value(nodePhaseJ);
+                }
+            }
+        }
+        // data from particles
+        json_t *particlesJ = json_object_get(rootJ, "particles");
+        if (particlesJ) {
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                json_t *pDataJ = json_array_get(particlesJ, i);
+                if (pDataJ) {
+                    json_t *particleVisibleJ = json_array_get(pDataJ, 0);
+                    json_t *particlePosXJ = json_array_get(pDataJ, 1);
+                    json_t *particlePosYJ = json_array_get(pDataJ, 2);
+                    json_t *particleRadJ = json_array_get(pDataJ, 3);
+                    if (particleVisibleJ) {
+                        if (json_boolean_value(particleVisibleJ)) {
+                            float x = 0;
+                            float y = 0;
+                            float r = 0;
+                            if (particlePosXJ) x = json_real_value(particlePosXJ);
+                            if (particlePosYJ) y = json_real_value(particlePosYJ);
+                            if (particleRadJ) r = json_real_value(particleRadJ);
+                            addParticle(Vec(x, y), i, r);
+                        }
+                    }
                 }
             }
         }
@@ -310,9 +384,6 @@ struct Neutrinode : Module, Quantize {
             movement = params[MOVE_PARAM].getValue();
             pitchChoice = params[PITCH_PARAM].getValue();
             
-
-
-            // clockStep = std::pow(2.0, params[BPM_PARAM].getValue());
             clockStep = params[BPM_PARAM].getValue() / 60.0;
             clockStep = (clockStep / (args.sampleRate / INTERNAL_SAMP_TIME)) / 2;
             pulseSpeed = clockStep * maxConnectedDist * 2;
@@ -348,31 +419,36 @@ struct Neutrinode : Module, Quantize {
                 if (nodes[i].visible && nodes[i].start) {
                     int oct = params[OCTAVE_PARAMS + i].getValue();
 
-                    for (unsigned int j = 0; j < particles.size(); j++) {
-                        Vec p = particles[j].box.getCenter();
-                        nodes[i].sendPulse(p, j, pulseSpeed);
-                        if (nodes[i].pulses[j].triggered) {
-                            nodes[i].pulses[j].triggered = false;
-                            nodes[i].gatePulse[j % channels].trigger(1e-3f);
-                            gatePulsesAll[j % channels].trigger(1e-3f);
+                    // when using 16 channels it doesn't work for All outputs
+                    for (int j = 0; j < MAX_PARTICLES; j++) {
+                        if (particles[j].visible) {
+                            Vec p = particles[j].box.getCenter();
+                            nodes[i].sendPulse(p, j, pulseSpeed);
+                            if (nodes[i].pulses[j].triggered) {
+                                nodes[i].pulses[j].triggered = false;
+                                nodes[i].gatePulse[j % channels].trigger(1e-3f);
+                                // gatePulsesAll[j % channels].trigger(1e-3f);
+                                gatePulsesAll[polyChannelIndex].trigger(1e-3f);
 
-                            float volts;
-                            if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE, 0.0, 0.0, 2.0);
-                            else volts = rescale(particles[j].radius, 5.0, 12.0, 2.0, 0.0);
-                            float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
-                            // allPitches[polyChannelIndex] = pitch;
-                            // outs
-                            outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
-                            // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
-                            outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
+                                float volts;
+                                float margin = 5.0;
+                                if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
+                                else volts = rescale(particles[j].radius, 5.0, 12.0, 2.0, 0.0);
+                                float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
+                                // allPitches[polyChannelIndex] = pitch;
+                                // outs
+                                outputs[VOLT_OUTPUTS + i].setVoltage(pitch, (j % channels));
+                                outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
+                                // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
+                            }
+                            if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
+
+                            bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
+                            outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
+                            bool pulseAll = gatePulsesAll[polyChannelIndex].process(1.0 / args.sampleRate);
+                            outputs[GATES_ALL_OUTPUTS].setVoltage(pulseAll ? 10.0 : 0.0, polyChannelIndex);
+                            polyChannelIndex = (polyChannelIndex+1) % channels;
                         }
-                        if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
-
-                        bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
-                        outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
-                        bool pulseAll = gatePulsesAll[polyChannelIndex].process(1.0 / args.sampleRate);
-                        outputs[GATES_ALL_OUTPUTS].setVoltage(pulseAll ? 10.0 : 0.0, polyChannelIndex);
-                        polyChannelIndex = (polyChannelIndex+1) % channels;
                     }
 
                     nodes[i].phase += clockStep;
@@ -389,25 +465,6 @@ struct Neutrinode : Module, Quantize {
 
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
-
-        // loop all channels
-        // for (int c = 0; c < channels; c++) {
-        //     bool pulse = nodes[PURPLE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + PURPLE_NODE].setVoltage(nodes[PURPLE_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + PURPLE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-
-        //     pulse = nodes[BLUE_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + BLUE_NODE].setVoltage(nodes[BLUE_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + BLUE_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-
-        //     pulse = nodes[AQUA_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + AQUA_NODE].setVoltage(nodes[AQUA_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + AQUA_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-
-        //     pulse = nodes[RED_NODE].gatePulse[c].process(1.0 / args.sampleRate);
-        //     outputs[VOLT_OUTPUTS + RED_NODE].setVoltage(nodes[RED_NODE].pitchVoltage[c], c);
-        //     outputs[GATE_OUTPUTS + RED_NODE].setVoltage(pulse ? 10.0 : 0.0, c);
-        // }
     }
 
     // TODO: probably won't use this
@@ -429,10 +486,61 @@ struct Neutrinode : Module, Quantize {
     //     }
     // }
 
+    void addParticle(Vec pos, int index) {
+        visibleParticles++;
+        particles[index].setPos(pos);
+        particles[index].radius = randRange(5, 12);
+        particles[index].visible = true;
+        particles[index].locked = false;
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
+            // nodes[i].pulses[index].isConnected = false;
+            // nodes[i].pulses[index].visible = true;
+            // Pulse pulse;
+            // nodes[i].pulses.push_back(pulse);
+        }
+    }
+
+    void addParticle(Vec pos, int index, float _radius) {
+        visibleParticles++;
+        particles[index].setPos(pos);
+        particles[index].radius = _radius;
+        particles[index].visible = true;
+        particles[index].locked = false;
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
+            // nodes[i].pulses[index].isConnected = false;
+            // nodes[i].pulses[index].visible = true;
+            // Pulse pulse;
+            // nodes[i].pulses.push_back(pulse);
+        }
+    }
+
+    void removeParticle(int index) {
+        visibleParticles--;
+        particles[index].visible = false;
+        particles[index].locked = true;
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].pulses[index].visible = false;
+
+            // nodes[i].pulses.erase(nodes[i].pulses.begin() + index);
+        }
+    }
+
     void clearParticles() {
-        particles.clear();
-        for (int i = 0; i < NUM_OF_NODES; i++) 
-            nodes[i].pulses.clear();
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            particles[i].visible = false;
+            particles[i].locked = true;
+            for (int j = 0; j < NUM_OF_NODES; j++) {
+                nodes[j].pulses[i].visible = false;
+            }
+        }
+        visibleParticles = 0;
+        // particles.clear();
+        // nodes[i].pulses.clear();
     }
 
     void updateNodePos() {
@@ -502,6 +610,7 @@ struct NeutrinodeDisplay : Widget {
 			initY = e.pos.y;
             Vec inits = Vec(initX, initY);
             bool clickedOnObj = false;
+            int nextAvailableIndex = 0;
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
                     Vec nodePos = module->nodes[i].box.getCenter();
@@ -518,31 +627,36 @@ struct NeutrinodeDisplay : Widget {
                     module->nodes[i].locked = true;
                 }
             }
-            for (unsigned int i = 0; i < module->particles.size(); i++) {
-                Vec partPos = module->particles[i].box.getCenter();
-                float d = dist(inits, partPos);
-                float r = module->particles[i].radius;
-                if (d < r) {
-                    // module->particles.erase(module->particles.begin()+i);
-                    module->particles[i].box.pos.x = initX;
-                    module->particles[i].box.pos.y = initY;
-                    module->particles[i].locked = false;
-                    clickedOnObj = true;
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                if (module->particles[i].visible) {
+                    Vec partPos = module->particles[i].box.getCenter();
+                    float d = dist(inits, partPos);
+                    float r = module->particles[i].radius;
+                    if (d < r && !clickedOnObj) {
+                        // module->particles.erase(module->particles.begin()+i);
+                        module->particles[i].box.pos.x = initX;
+                        module->particles[i].box.pos.y = initY;
+                        module->particles[i].locked = false;
+                        clickedOnObj = true;
+                    } else {
+                        module->particles[i].locked = true;
+                    }
                 } else {
-                    module->particles[i].locked = true;
+                    nextAvailableIndex = i;
                 }
             }
 
-            if (!clickedOnObj) {
-                if (module->particles.size() < MAX_PARTICLES) {
-                    Particle p(initX, initY);
-                    p.locked = false;
-                    module->particles.push_back(p);
-                    for (int i = 0; i < NUM_OF_NODES; i++) {
-                        Pulse pulse;
-                        module->nodes[i].pulses.push_back(pulse);
-                    }
-                }
+            if (!clickedOnObj && (module->visibleParticles < MAX_PARTICLES)) {
+                module->addParticle(inits, nextAvailableIndex);
+
+                // for (int i = 0; i < NUM_OF_NODES; i++) {
+                //     module->nodes[i].pulses[nextAvailableIndex].setPos(module->nodes[i].box.getCenter());
+                //     module->nodes[i].pulses[nextAvailableIndex].visible = true;
+
+                //     // Pulse pulse;
+                //     // module->nodes[i].pulses.push_back(pulse);
+                // }
+
             }
         } 
     }
@@ -563,8 +677,8 @@ struct NeutrinodeDisplay : Widget {
                 checkEdges(i);
             }
         }
-        for (unsigned int i = 0; i < module->particles.size(); i++) {
-            if (!module->particles[i].locked) {
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            if (!module->particles[i].locked && module->particles[i].visible) {
                 module->particles[i].box.pos.x = initX + (newDragX - dragX);
                 module->particles[i].box.pos.y = initY + (newDragY - dragY);
                 checkEdgesForDelete(i);
@@ -617,9 +731,11 @@ struct NeutrinodeDisplay : Widget {
             else if (module->particles[index].box.pos.y > box.size.y - r) eraseParticle = true;
 
             if (eraseParticle) {
-                module->particles.erase(module->particles.begin()+index);
-                for (int i = 0; i < NUM_OF_NODES; i++) 
-                    module->nodes[i].pulses.erase(module->nodes[i].pulses.begin() + index);
+                module->removeParticle(index);
+                // for (int i = 0; i < NUM_OF_NODES; i++) {
+                //     // module->nodes[i].pulses[index].visible = false;
+                //     // module->nodes[i].pulses.erase(module->nodes[i].pulses.begin() + index);
+                // }
             }
         }
     }
@@ -636,36 +752,38 @@ struct NeutrinodeDisplay : Widget {
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
                     // draw lines and pulses
-                    Node n = module->nodes[i];
-                    for (unsigned int j = 0; j < module->particles.size(); j++) {
-                        Vec particle = module->particles[j].box.getCenter();
-                        if (module->nodes[i].connected(particle, j)) {
-                            nvgStrokeColor(args.vg, nvgTransRGBA(module->nodes[i].lineColor, module->nodes[i].lineAlpha));
-                            nvgStrokeWidth(args.vg, module->nodes[i].lineWidth);
-                            nvgBeginPath(args.vg);
-                            nvgMoveTo(args.vg, module->nodes[i].box.pos.x, module->nodes[i].box.pos.y);
-                            nvgLineTo(args.vg, particle.x, particle.y);
-                            nvgStroke(args.vg);
-                        }
-
-                        if (module->nodes[i].start) {
-                            Pulse *pulse = &module->nodes[i].pulses[j];
-                            if (pulse->visible && pulse->isConnected) {
-
-
-                                nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].color, 200));
+                    // Node n = module->nodes[i];
+                    for (int j = 0; j < MAX_PARTICLES; j++) {
+                        if (module->particles[j].visible) {
+                            Vec particle = module->particles[j].box.getCenter();
+                            if (module->nodes[i].connected(particle, j)) {
+                                nvgStrokeColor(args.vg, nvgTransRGBA(module->nodes[i].lineColor, module->nodes[i].lineAlpha));
+                                nvgStrokeWidth(args.vg, module->nodes[i].lineWidth);
                                 nvgBeginPath(args.vg);
-                                // Vec pulsePos = module->nodes[i].pulses[j].box.getCenter();
-                                nvgCircle(args.vg, pulse->box.pos.x, pulse->box.pos.y, pulse->radius);
-                                nvgFill(args.vg);
-
+                                nvgMoveTo(args.vg, module->nodes[i].box.pos.x, module->nodes[i].box.pos.y);
+                                nvgLineTo(args.vg, particle.x, particle.y);
+                                nvgStroke(args.vg);
                             }
-                            if (pulse->blipTrigger) {
-                                // pulse blip
-                                nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].lineColor, pulse->haloAlpha));
-                                nvgBeginPath(args.vg);
-                                nvgCircle(args.vg, particle.x, particle.y, pulse->haloRadius);
-                                nvgFill(args.vg);
+
+                            if (module->nodes[i].start) {
+                                Pulse *pulse = &module->nodes[i].pulses[j];
+                                if (pulse->visible && pulse->isConnected) {
+
+
+                                    nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].color, 200));
+                                    nvgBeginPath(args.vg);
+                                    // Vec pulsePos = module->nodes[i].pulses[j].box.getCenter();
+                                    nvgCircle(args.vg, pulse->box.pos.x, pulse->box.pos.y, pulse->radius);
+                                    nvgFill(args.vg);
+
+                                }
+                                if (pulse->blipTrigger) {
+                                    // pulse blip
+                                    nvgFillColor(args.vg, nvgTransRGBA(module->nodes[i].lineColor, pulse->haloAlpha));
+                                    nvgBeginPath(args.vg);
+                                    nvgCircle(args.vg, particle.x, particle.y, pulse->haloRadius);
+                                    nvgFill(args.vg);
+                                }
                             }
                         }
                     }
@@ -696,17 +814,19 @@ struct NeutrinodeDisplay : Widget {
             }
 
             // draw particles
-            for (unsigned int i = 0; i < module->particles.size(); i++) {
-                Vec pos = module->particles[i].box.getCenter();
-                nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
-                nvgFill(args.vg);
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                if (module->particles[i].visible) {
+                    Vec pos = module->particles[i].box.getCenter();
+                    nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
+                    nvgFill(args.vg);
 
-                nvgFillColor(args.vg, module->particles[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                nvgFill(args.vg);
+                    nvgFillColor(args.vg, module->particles[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
+                    nvgFill(args.vg);
+                }
             }
 
         }
