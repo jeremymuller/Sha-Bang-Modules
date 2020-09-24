@@ -20,12 +20,6 @@ struct Particle {
         locked = true;
     }
 
-    // Particle(float _x, float _y) {
-    //     box.pos.x = _x;
-    //     box.pos.y = _y;
-    //     radius = randRange(5, 12);
-    // }
-
     void setPos(Vec pos) {
         box.pos.x = pos.x;
         box.pos.y = pos.y;
