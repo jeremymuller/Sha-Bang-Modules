@@ -2,18 +2,26 @@
 
 #define DISPLAY_SIZE 378
 #define MAX_STARS 25
+#define INTERNAL_SAMP_TIME 4
 
 struct Star {
     Rect box;
     NVGcolor color = nvgRGB(255, 255, 255);
     float radius;
+    // bool triggered = false;
+    bool alreadyTriggered = false;
+    bool blipTrigger = false;
     bool locked = true;
     bool visible = false;
+    int haloTime = 0;
+    float haloRadius;
+    float haloAlpha = 0.0;
 
     Star() {
         // box.pos.x = _x;
         // box.pos.y = _y;
-        radius = randRange(5, 10);
+        radius = randRange(5, 12);
+        haloRadius = radius;
     }
 
     void setPos(Vec pos) {
@@ -21,9 +29,21 @@ struct Star {
         box.pos.y = pos.y;
     }
 
+    void blip() {
+        if (haloTime > 22000) {
+            haloTime = 0;
+            haloRadius = radius;
+            blipTrigger = false;
+        }
+
+        haloAlpha = rescale(haloTime, 0, 22000, 200, 0);
+
+        haloRadius += 18.0 / (APP->engine->getSampleRate() / INTERNAL_SAMP_TIME);
+        haloTime += INTERNAL_SAMP_TIME;
+    }
 };
 
-struct Cosmosis : Module, Constellations {
+struct Cosmosis : Module, Constellations, Quantize {
     enum SeqIds {
         PURPLE_SEQ,
         BLUE_SEQ,
@@ -32,14 +52,22 @@ struct Cosmosis : Module, Constellations {
         NUM_SEQS
     };
     enum ParamIds {
-        BPM_PARAM,
+        SPEED_PARAM,
         PLAY_PARAM,
+        ROOT_NOTE_PARAM,
+        SCALE_PARAM,
+        PITCH_PARAM,
+        PATTERN_PARAM,
+        SIZE_PARAM,
+        CLEAR_STARS_PARAM,
         NUM_PARAMS
     };
     enum InputIds {
         NUM_INPUTS
     };
     enum OutputIds {
+        GATE_OUT,
+        VOLT_OUT,
         NUM_OUTPUTS
     };
     enum LightIds {
@@ -48,36 +76,140 @@ struct Cosmosis : Module, Constellations {
     };
 
     dsp::SchmittTrigger playTrig;
-    Star stars[MAX_STARS];
+    dsp::PulseGenerator gatePulsePoly[16];
+    Star *stars = new Star[MAX_STARS];
+    Vec *starOffsets = new Vec[MAX_STARS];
     int visibleStars = 0;
     float seqPos = 0;
+    float seqSpeed = 1.0;
     bool isPlaying = false;
-
+    bool pitchChoice = false;
+    int checkParams = 0;
+    int processStars = 0;
+    int channels = 1;
 
     Cosmosis() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
+        configParam(SPEED_PARAM, -2.0, 2.0, 0.0);
         configParam(PLAY_PARAM, 0.0, 1.0, 0.0);
+        configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
+        configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
+        configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
+        configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation");
+        configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
 
-        for (int i = 0; i < 14; i++) {
-            Vec pos = Vec(AQUARIUS[i].x, AQUARIUS[i].y);
-            addStar(pos, i, AQUARIUS[i].r);
+        for (int i = 0; i < 9; i++) {
+            Vec pos = Vec(ANDROMEDA[i].x, ANDROMEDA[i].y);
+            addStar(pos, i, ANDROMEDA[i].r);
         }
     }
 
+    ~Cosmosis () {
+        delete[] stars;
+        delete[] starOffsets;
+    }
+
+    json_t *dataToJson() override {
+        json_t *rootJ = json_object();
+
+        json_object_set_new(rootJ, "channels", json_integer(channels));
+
+        return rootJ;
+    }
+
+    void dataFromJson(json_t *rootJ) override {
+        json_t *channelsJ = json_object_get(rootJ, "channels");
+        if (channelsJ) channels = json_integer_value(channelsJ);
+    }
+
     void process(const ProcessArgs &args) override {
-        // TODO
-        if (playTrig.process(params[PLAY_PARAM].getValue())) {
-            isPlaying = !isPlaying;
+        // check params every 4th sample
+        if (checkParams == 0) {
+            if (playTrig.process(params[PLAY_PARAM].getValue())) {
+                isPlaying = !isPlaying;
+            }
+
+            pitchChoice = params[PITCH_PARAM].getValue();
+            float scl = std::pow(2, params[SPEED_PARAM].getValue());
+            seqSpeed = scl * (INTERNAL_SAMP_TIME / args.sampleRate * 60.0);
+
+            resizeConstellation();
+        }
+        checkParams = (checkParams+1) % 4;
+
+        if (processStars == 0) {
+            int polyChannelIndex = 0;
+            int rootNote = params[ROOT_NOTE_PARAM].getValue();
+            int scale = params[SCALE_PARAM].getValue();
+
+            lights[PAUSE_LIGHT].setBrightness(isPlaying ? 1.0 : 0.0);
+
+            if (isPlaying) {
+                seqPos += seqSpeed;
+                if (seqPos > DISPLAY_SIZE) {
+                    seqPos = 0;
+                    for (int i = 0; i < MAX_STARS; i++) {
+                        stars[i].alreadyTriggered = false;
+                    }
+                }
+
+                // change the MAX_STARS to the current length of selected constellation
+                for (int i = 0; i < MAX_STARS; i++) {
+                    if (stars[i].visible && isStarTrigger(i)) {
+                        stars[i].blipTrigger = true;
+                        stars[i].alreadyTriggered = true;
+                        gatePulsePoly[polyChannelIndex].trigger(1e-3f);
+
+                        float margin = 5.0;
+                        float volts;
+                        Vec pos = stars[i].box.pos.minus(starOffsets[i]);
+                        if (pitchChoice) volts = rescale(pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
+                        else volts = rescale(stars[i].radius, 5.0, 12.0, 2.0, 0.0);
+                        float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale);
+
+                        outputs[VOLT_OUT].setVoltage(pitch, polyChannelIndex);
+                    }
+                    if (stars[i].blipTrigger) stars[i].blip();
+
+                    bool pulse = gatePulsePoly[polyChannelIndex].process(1.0 / args.sampleRate);
+                    outputs[GATE_OUT].setVoltage(pulse ? 10.0 : 0.0, polyChannelIndex);
+                    polyChannelIndex = (polyChannelIndex + 1) % channels;
+                }
+            }
+
+            outputs[GATE_OUT].setChannels(channels);
+            outputs[VOLT_OUT].setChannels(channels);
+        }
+        processStars = (processStars+1) % INTERNAL_SAMP_TIME;
+
+    }
+
+    void resizeConstellation() {
+        // TODO: put limits on this
+        Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
+        for (int i = 0; i < MAX_STARS; i++) {
+            Vec pos = stars[i].box.getCenter();
+            Vec mag = pos.minus(center);
+            float maxDist = sqrt(mag.x * mag.x + mag.y * mag.y) * 0.5;
+            mag = mag.normalize();
+            float m = rescale(params[SIZE_PARAM].getValue(), 0, 1, maxDist, 0);
+            mag = mag.mult(m);
+            starOffsets[i] = mag;
         }
 
-        lights[PAUSE_LIGHT].setBrightness(isPlaying ? 1.0 : 0.0);
+        // return mag;
+        // pos = pos.minus(mag);
+        // stars[index].box.pos.x = pos.x;
+        // stars[index].box.pos.y = pos.y;
+    }
 
-        if (isPlaying) {
-            seqPos += 1.0 / 44100 * 60.0;
-            if (seqPos > DISPLAY_SIZE) seqPos = 0;
+    bool isStarTrigger(int index) {
+        if (!stars[index].alreadyTriggered) {
+            Vec pos = stars[index].box.pos.minus(starOffsets[index]);
+            return seqPos > pos.x ? true : false;
+        } else {
+            return false;
         }
-
     }
 
     void addStar(Vec pos, int index) {
@@ -86,6 +218,7 @@ struct Cosmosis : Module, Constellations {
         stars[index].radius = randRange(5, 10);
         stars[index].visible = true;
         stars[index].locked = false;
+        stars[index].alreadyTriggered = pos.x < seqPos ? true : false;
     }
 
     void addStar(Vec pos, int index, float _radius) {
@@ -101,6 +234,33 @@ struct Cosmosis : Module, Constellations {
         stars[index].visible = false;
         stars[index].locked = true;
     }
+};
+
+struct ChannelValueItem : MenuItem {
+    Cosmosis *module;
+    int channels;
+    void onAction(const event::Action &e) override {
+        module->channels = channels;
+    }
+};
+
+struct ChannelItem : MenuItem {
+    Cosmosis *module;
+    	Menu *createChildMenu() override {
+		Menu *menu = new Menu;
+		for (int channels = 1; channels <= 16; channels++) {
+			ChannelValueItem *item = new ChannelValueItem;
+			if (channels == 1)
+				item->text = "Monophonic";
+			else
+				item->text = string::f("%d", channels);
+			item->rightText = CHECKMARK(module->channels == channels);
+			item->module = module;
+			item->channels = channels;
+			menu->addChild(item);
+		}
+		return menu;
+	}
 };
 
 struct CosmosisDisplay : Widget {
@@ -193,6 +353,16 @@ struct CosmosisDisplay : Widget {
             for (int i = 0; i < MAX_STARS; i++) {
                 if (module->stars[i].visible) {
                     Vec pos = module->stars[i].box.getCenter();
+                    pos = pos.minus(module->starOffsets[i]);
+
+                    if (module->stars[i].blipTrigger) {
+                        // use current seq line color
+                        nvgFillColor(args.vg, nvgTransRGBA(nvgRGB(128, 0, 219), module->stars[i].haloAlpha));
+                        nvgBeginPath(args.vg);
+                        nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
+                        nvgFill(args.vg);
+                    }
+
                     nvgFillColor(args.vg, nvgTransRGBA(module->stars[i].color, 90));
                     nvgBeginPath(args.vg);
                     nvgCircle(args.vg, pos.x, pos.y, module->stars[i].radius);
@@ -236,7 +406,40 @@ struct CosmosisWidget : ModuleWidget {
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
 
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 78.1), module, Cosmosis::PLAY_PARAM));
-        addParam(createParamCentered<BlueInvertKnob>(Vec(58.8, 78.1), module, Cosmosis::BPM_PARAM));
+        addParam(createParamCentered<BlueKnob>(Vec(61.2, 78.1), module, Cosmosis::SPEED_PARAM));
+        addParam(createParamCentered<BlueKnob>(Vec(130.7, 78.1), module, Cosmosis::SIZE_PARAM));
+
+        // note and scale knobs
+        BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(26.4, 122.3), module, Cosmosis::ROOT_NOTE_PARAM));
+        LeftAlignedLabel *const noteLabel = new LeftAlignedLabel;
+        noteLabel->box.pos = Vec(42.6, 125.8);
+        noteLabel->text = "";
+        noteKnob->connectLabel(noteLabel, module);
+        addChild(noteLabel);
+        addParam(noteKnob);
+
+        BlueScaleKnob *scaleKnob = dynamic_cast<BlueScaleKnob *>(createParamCentered<BlueScaleKnob>(Vec(26.4, 153.4), module, Cosmosis::SCALE_PARAM));
+        LeftAlignedLabel *const scaleLabel = new LeftAlignedLabel;
+        scaleLabel->box.pos = Vec(42.6, 157.7);
+        scaleLabel->text = "";
+        scaleKnob->connectLabel(scaleLabel, module);
+        addChild(scaleLabel);
+        addParam(scaleKnob);
+
+        addParam(createParamCentered<Jeremy_HSwitchBlue>(Vec(91.5, 122.8), module, Cosmosis::PITCH_PARAM));
+
+        addOutput(createOutputCentered<PJ301MPort>(Vec(32.1, 343.2), module, Cosmosis::GATE_OUT));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Cosmosis::VOLT_OUT));
+    }
+
+    void appendContextMenu(Menu *menu) override {
+        Cosmosis *module = dynamic_cast<Cosmosis*>(this->module);
+
+        ChannelItem *channelItem = new ChannelItem;
+        channelItem->text = "Polyphony channels";
+        channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
+        channelItem->module = module;
+        menu->addChild(channelItem);
     }
 };
 

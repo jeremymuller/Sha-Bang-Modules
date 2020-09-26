@@ -272,6 +272,7 @@ struct Neutrinode : Module, Quantize {
     json_t *dataToJson() override {
         json_t *rootJ = json_object();
 
+
         json_t *nodesJ = json_array();
         json_t *particlesJ = json_array();
         for (int i = 0; i < NUM_OF_NODES; i++) {
@@ -307,6 +308,7 @@ struct Neutrinode : Module, Quantize {
             json_array_append_new(particlesJ, pDataJ);
         }
 
+        json_object_set_new(rootJ, "start", json_boolean(toggleStart));
         json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "nodes", nodesJ);
         json_object_set_new(rootJ, "particles", particlesJ);
@@ -315,6 +317,9 @@ struct Neutrinode : Module, Quantize {
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *startJ = json_object_get(rootJ, "start");
+        if (startJ) toggleStart = json_boolean_value(startJ);
+
         json_t *channelsJ = json_object_get(rootJ, "channels");
         if (channelsJ) channels = json_integer_value(channelsJ);
 
@@ -852,7 +857,7 @@ struct NeutrinodeWidget : ModuleWidget {
         addParam(createParamCentered<PurpleKnob>(Vec(130.7, 78.1), module, Neutrinode::SPEED_PARAM));
 
         // note and scale knobs
-        NoteKnob *noteKnob = dynamic_cast<NoteKnob *>(createParamCentered<NoteKnob>(Vec(26.4, 122.3), module, Neutrinode::ROOT_NOTE_PARAM));
+        PurpleNoteKnob *noteKnob = dynamic_cast<PurpleNoteKnob *>(createParamCentered<PurpleNoteKnob>(Vec(26.4, 122.3), module, Neutrinode::ROOT_NOTE_PARAM));
         LeftAlignedLabel* const noteLabel = new LeftAlignedLabel;
         noteLabel->box.pos = Vec(42.6, 125.8);
         noteLabel->text = "";
@@ -860,7 +865,7 @@ struct NeutrinodeWidget : ModuleWidget {
         addChild(noteLabel);
         addParam(noteKnob);
 
-        ScaleKnob *scaleKnob = dynamic_cast<ScaleKnob *>(createParamCentered<ScaleKnob>(Vec(26.4, 153.4), module, Neutrinode::SCALE_PARAM));
+        PurpleScaleKnob *scaleKnob = dynamic_cast<PurpleScaleKnob *>(createParamCentered<PurpleScaleKnob>(Vec(26.4, 153.4), module, Neutrinode::SCALE_PARAM));
         LeftAlignedLabel* const scaleLabel = new LeftAlignedLabel;
         scaleLabel->box.pos = Vec(42.6, 157.7);
         scaleLabel->text = "";

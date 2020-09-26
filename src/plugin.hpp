@@ -41,14 +41,16 @@ inline float randRange(float min, float max) { // returns random float within mi
 struct LeftAlignedLabel : Widget {
     std::string text;
 	int fontSize;
+    NVGcolor color;
 	LeftAlignedLabel(int _fontSize = 13) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
 	}
 	void draw(const DrawArgs &args) override {
 		nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
-		nvgFillColor(args.vg, nvgRGB(128, 0, 219));
-		nvgFontSize(args.vg, fontSize);
+        nvgFillColor(args.vg, color);
+        // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
+        nvgFontSize(args.vg, fontSize);
 		nvgText(args.vg, 0, 0, text.c_str(), NULL);
 	}
 };
@@ -122,6 +124,14 @@ struct Jeremy_HSwitch : SvgSwitch {
         shadow->opacity = 0;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Switch_0.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Switch_1.svg")));
+    }
+};
+
+struct Jeremy_HSwitchBlue : SvgSwitch {
+    Jeremy_HSwitchBlue() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BlueSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BlueSwitch_1.svg")));
     }
 };
 
@@ -315,6 +325,7 @@ struct PurpleInvertKnobLabel : PurpleInvertKnob {
         linkedModule = module;
         if (linkedModule && linkedLabel) {
             linkedLabel->text = formatCurrentValue();
+            linkedLabel->color = nvgRGB(128, 0, 219);
         }
     }
 
@@ -333,9 +344,39 @@ struct PurpleInvertKnobLabel : PurpleInvertKnob {
     }
 };
 
-struct NoteKnob : PurpleInvertKnobLabel {
+struct BlueInvertKnobLabel : BlueInvertKnob {
+    LeftAlignedLabel *linkedLabel = NULL;
+    Module *linkedModule = NULL;
+
+    BlueInvertKnobLabel() {}
+
+    void connectLabel(LeftAlignedLabel *label, Module *module) {
+        linkedLabel = label;
+        linkedModule = module;
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+            linkedLabel->color = nvgRGB(38, 0, 255);
+        }
+    }
+
+    void onChange(const event::Change &e) override {
+        RoundKnob::onChange(e);
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+        }
+    }
+
+    virtual std::string formatCurrentValue() {
+        if (paramQuantity != NULL) {
+            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct PurpleNoteKnob : PurpleInvertKnobLabel {
     Quantize *quantize;
-    NoteKnob() {}
+    PurpleNoteKnob() {}
 
     std::string formatCurrentValue() override {
         if (paramQuantity != NULL) {
@@ -345,9 +386,33 @@ struct NoteKnob : PurpleInvertKnobLabel {
     }
 };
 
-struct ScaleKnob : PurpleInvertKnobLabel {
+struct PurpleScaleKnob : PurpleInvertKnobLabel {
     Quantize *quantize;
-    ScaleKnob() {}  
+    PurpleScaleKnob() {}  
+    
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct BlueNoteKnob : BlueInvertKnobLabel {
+    Quantize *quantize;
+    BlueNoteKnob() {}
+
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct BlueScaleKnob : BlueInvertKnobLabel {
+    Quantize *quantize;
+    BlueScaleKnob() {}  
     
     std::string formatCurrentValue() override {
         if (paramQuantity != NULL) {
