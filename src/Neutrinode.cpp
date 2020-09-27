@@ -203,7 +203,7 @@ struct Neutrinode : Module, Quantize {
     enum OutputIds {
         GATES_ALL_OUTPUTS,
         VOLTS_ALL_OUTPUTS,
-        GATE_OUTPUTS = NUM_OF_NODES,
+        GATE_OUTPUTS = VOLTS_ALL_OUTPUTS + NUM_OF_NODES,
         VOLT_OUTPUTS = GATE_OUTPUTS + NUM_OF_NODES,
         NUM_OUTPUTS = VOLT_OUTPUTS + NUM_OF_NODES
     };
@@ -219,7 +219,6 @@ struct Neutrinode : Module, Quantize {
     Particle *particles = new Particle[MAX_PARTICLES];
     int visibleParticles = 0;
     // std::vector<Particle> particles;
-    int channels = 1;
     bool movement = false;
     bool pitchChoice = false;
     bool toggleStart = true;
@@ -229,6 +228,7 @@ struct Neutrinode : Module, Quantize {
     int checkParams = 0;
     int processNodes = 0;
     int moveNodes = 0;
+    int channels = 16;
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -271,7 +271,6 @@ struct Neutrinode : Module, Quantize {
 
     json_t *dataToJson() override {
         json_t *rootJ = json_object();
-
 
         json_t *nodesJ = json_array();
         json_t *particlesJ = json_array();
@@ -317,11 +316,12 @@ struct Neutrinode : Module, Quantize {
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *channelsJ = json_object_get(rootJ, "channels");
+        if (channelsJ) channels = json_integer_value(channelsJ);
+
         json_t *startJ = json_object_get(rootJ, "start");
         if (startJ) toggleStart = json_boolean_value(startJ);
 
-        json_t *channelsJ = json_object_get(rootJ, "channels");
-        if (channelsJ) channels = json_integer_value(channelsJ);
 
         // data from nodes
         json_t *nodesJ = json_object_get(rootJ, "nodes");
@@ -369,6 +369,17 @@ struct Neutrinode : Module, Quantize {
     }
 
     void process(const ProcessArgs &args) override {
+        outputs[GATE_OUTPUTS + PURPLE_NODE].setChannels(channels);
+        outputs[GATE_OUTPUTS + BLUE_NODE].setChannels(channels);
+        outputs[GATE_OUTPUTS + AQUA_NODE].setChannels(channels);
+        outputs[GATE_OUTPUTS + RED_NODE].setChannels(channels);
+        outputs[VOLT_OUTPUTS + PURPLE_NODE].setChannels(channels);
+        outputs[VOLT_OUTPUTS + BLUE_NODE].setChannels(channels);
+        outputs[VOLT_OUTPUTS + AQUA_NODE].setChannels(channels);
+        outputs[VOLT_OUTPUTS + RED_NODE].setChannels(channels);
+        outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+        outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
+
         // checks param knobs every 4th sample
         if (checkParams == 0) {
             // if (rndTrig.process(params[RND_PARTICLES_PARAM].getValue())) {
@@ -398,14 +409,13 @@ struct Neutrinode : Module, Quantize {
                 if (moveNodes == 0) {
                     updateNodePos();
                 }
-                moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0); // check 60 hz
+                moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0/INTERNAL_SAMP_TIME); // check 60 hz
             }
 
             int polyChannelIndex = 0;
             int rootNote = params[ROOT_NOTE_PARAM].getValue();
             int scale = params[SCALE_PARAM].getValue();
-            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
+
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 nodes[i].start = toggleStart;
 
@@ -430,7 +440,7 @@ struct Neutrinode : Module, Quantize {
                                 gatePulsesAll[polyChannelIndex].trigger(1e-3f);
 
                                 float volts;
-                                float margin = 5.0;
+                                float margin = 7.0;
                                 if (pitchChoice) volts = rescale(particles[j].box.pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
                                 else volts = rescale(particles[j].radius, 5.0, 12.0, 2.0, 0.0);
                                 float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
@@ -458,13 +468,20 @@ struct Neutrinode : Module, Quantize {
                     }
 
                 }
-                outputs[GATE_OUTPUTS + i].setChannels(channels);
-                outputs[VOLT_OUTPUTS + i].setChannels(channels);
+                // outputs[GATE_OUTPUTS + i].setChannels(channels);
+                // outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
 
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
+
     }
+
+    void setChannels(int channels) {
+		if (channels == this->channels)
+			return;
+		this->channels = channels;
+	}
 
     // TODO: probably won't use this
     // void randomizeParticles() {
@@ -566,13 +583,13 @@ struct ChannelValueItem : MenuItem {
     Neutrinode *module;
     int channels;
     void onAction(const event::Action &e) override {
-        module->channels = channels;
+        module->setChannels(channels);
     }
 };
 
 struct ChannelItem : MenuItem {
     Neutrinode *module;
-    	Menu *createChildMenu() override {
+    Menu *createChildMenu() override {
 		Menu *menu = new Menu;
 		for (int channels = 1; channels <= 16; channels++) {
 			ChannelValueItem *item = new ChannelValueItem;
@@ -912,6 +929,8 @@ struct NeutrinodeWidget : ModuleWidget {
 
     void appendContextMenu(Menu *menu) override {
         Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
+        MenuEntry *spacerLabel = new MenuEntry();
+        menu->addChild(spacerLabel);
 
         ChannelItem *channelItem = new ChannelItem;
         channelItem->text = "Polyphony channels";

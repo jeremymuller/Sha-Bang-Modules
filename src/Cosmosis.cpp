@@ -6,6 +6,7 @@
 
 struct Star {
     Rect box;
+    Vec posOffset;
     NVGcolor color = nvgRGB(255, 255, 255);
     float radius;
     // bool triggered = false;
@@ -20,6 +21,8 @@ struct Star {
     Star() {
         // box.pos.x = _x;
         // box.pos.y = _y;
+        posOffset.x = 0;
+        posOffset.y = 0;
         radius = randRange(5, 12);
         haloRadius = radius;
     }
@@ -27,6 +30,11 @@ struct Star {
     void setPos(Vec pos) {
         box.pos.x = pos.x;
         box.pos.y = pos.y;
+    }
+
+    Vec getPos() {
+        // returns position with offset
+        return box.pos.minus(posOffset);
     }
 
     void blip() {
@@ -44,12 +52,14 @@ struct Star {
 };
 
 struct Cosmosis : Module, Constellations, Quantize {
-    enum SeqIds {
+    enum SeqModeIds {
         PURPLE_SEQ,
         BLUE_SEQ,
         AQUA_SEQ,
         RED_SEQ,
-        NUM_SEQS
+        CLOCKWISE_SEQ,
+        COUNTER_CLOCKWISE_SEQ,
+        NUM_SEQ_MODES
     };
     enum ParamIds {
         SPEED_PARAM,
@@ -58,6 +68,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         SCALE_PARAM,
         PITCH_PARAM,
         PATTERN_PARAM,
+        OCTAVE_PARAM,
         SIZE_PARAM,
         CLEAR_STARS_PARAM,
         NUM_PARAMS
@@ -75,11 +86,11 @@ struct Cosmosis : Module, Constellations, Quantize {
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger playTrig;
+    dsp::SchmittTrigger playTrig, clearTrig;
     dsp::PulseGenerator gatePulsePoly[16];
     Star *stars = new Star[MAX_STARS];
-    Vec *starOffsets = new Vec[MAX_STARS];
     int visibleStars = 0;
+    int currentSeqMode = PURPLE_SEQ;
     float seqPos = 0;
     float seqSpeed = 1.0;
     bool isPlaying = false;
@@ -95,6 +106,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
+        configParam(OCTAVE_PARAM, -5.0, 5.0, 0.0, "Octave");
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation");
         configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
 
@@ -106,7 +118,6 @@ struct Cosmosis : Module, Constellations, Quantize {
 
     ~Cosmosis () {
         delete[] stars;
-        delete[] starOffsets;
     }
 
     json_t *dataToJson() override {
@@ -127,6 +138,9 @@ struct Cosmosis : Module, Constellations, Quantize {
         if (checkParams == 0) {
             if (playTrig.process(params[PLAY_PARAM].getValue())) {
                 isPlaying = !isPlaying;
+            }
+            if (clearTrig.process(params[CLEAR_STARS_PARAM].getValue())) {
+                removeAllStars();
             }
 
             pitchChoice = params[PITCH_PARAM].getValue();
@@ -153,6 +167,7 @@ struct Cosmosis : Module, Constellations, Quantize {
                     }
                 }
 
+                int oct = params[OCTAVE_PARAM].getValue();
                 // change the MAX_STARS to the current length of selected constellation
                 for (int i = 0; i < MAX_STARS; i++) {
                     if (stars[i].visible && isStarTrigger(i)) {
@@ -162,10 +177,10 @@ struct Cosmosis : Module, Constellations, Quantize {
 
                         float margin = 5.0;
                         float volts;
-                        Vec pos = stars[i].box.pos.minus(starOffsets[i]);
+                        Vec pos = stars[i].getPos();
                         if (pitchChoice) volts = rescale(pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
                         else volts = rescale(stars[i].radius, 5.0, 12.0, 2.0, 0.0);
-                        float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale);
+                        float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
 
                         outputs[VOLT_OUT].setVoltage(pitch, polyChannelIndex);
                     }
@@ -194,7 +209,7 @@ struct Cosmosis : Module, Constellations, Quantize {
             mag = mag.normalize();
             float m = rescale(params[SIZE_PARAM].getValue(), 0, 1, maxDist, 0);
             mag = mag.mult(m);
-            starOffsets[i] = mag;
+            stars[i].posOffset = mag;
         }
 
         // return mag;
@@ -205,8 +220,13 @@ struct Cosmosis : Module, Constellations, Quantize {
 
     bool isStarTrigger(int index) {
         if (!stars[index].alreadyTriggered) {
-            Vec pos = stars[index].box.pos.minus(starOffsets[index]);
-            return seqPos > pos.x ? true : false;
+            Vec pos = stars[index].getPos();
+            switch (currentSeqMode) {
+                case PURPLE_SEQ:    return seqPos > pos.x ? true : false;
+                case BLUE_SEQ:      return seqPos > pos.y ? true : false;
+                case AQUA_SEQ:      return seqPos < pos.x ? true : false;
+                case RED_SEQ:       return seqPos < pos.y ? true : false;
+            }
         } else {
             return false;
         }
@@ -234,6 +254,12 @@ struct Cosmosis : Module, Constellations, Quantize {
         stars[index].visible = false;
         stars[index].locked = true;
     }
+
+    void removeAllStars() {
+        for (int i = 0; i < MAX_STARS; i++) {
+            removeStar(i);
+        }
+    }
 };
 
 struct ChannelValueItem : MenuItem {
@@ -246,7 +272,7 @@ struct ChannelValueItem : MenuItem {
 
 struct ChannelItem : MenuItem {
     Cosmosis *module;
-    	Menu *createChildMenu() override {
+    Menu *createChildMenu() override {
 		Menu *menu = new Menu;
 		for (int channels = 1; channels <= 16; channels++) {
 			ChannelValueItem *item = new ChannelValueItem;
@@ -352,12 +378,11 @@ struct CosmosisDisplay : Widget {
             // draw stars
             for (int i = 0; i < MAX_STARS; i++) {
                 if (module->stars[i].visible) {
-                    Vec pos = module->stars[i].box.getCenter();
-                    pos = pos.minus(module->starOffsets[i]);
+                    Vec pos = module->stars[i].getPos();
 
                     if (module->stars[i].blipTrigger) {
                         // use current seq line color
-                        nvgFillColor(args.vg, nvgTransRGBA(nvgRGB(128, 0, 219), module->stars[i].haloAlpha));
+                        nvgFillColor(args.vg, nvgTransRGBA(nvgRGB(213, 153, 255), module->stars[i].haloAlpha));
                         nvgBeginPath(args.vg);
                         nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
                         nvgFill(args.vg);
@@ -408,6 +433,7 @@ struct CosmosisWidget : ModuleWidget {
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 78.1), module, Cosmosis::PLAY_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(61.2, 78.1), module, Cosmosis::SPEED_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(130.7, 78.1), module, Cosmosis::SIZE_PARAM));
+        addParam(createParamCentered<DefaultButton>(Vec(130.7, 201.8), module, Cosmosis::CLEAR_STARS_PARAM));
 
         // note and scale knobs
         BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(26.4, 122.3), module, Cosmosis::ROOT_NOTE_PARAM));
@@ -426,7 +452,8 @@ struct CosmosisWidget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
-        addParam(createParamCentered<Jeremy_HSwitchBlue>(Vec(91.5, 122.8), module, Cosmosis::PITCH_PARAM));
+        addParam(createParamCentered<Jeremy_HSwitchBlue>(Vec(83.2, 122.8), module, Cosmosis::PITCH_PARAM));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(130.7, 121.9), module, Cosmosis::OCTAVE_PARAM));
 
         addOutput(createOutputCentered<PJ301MPort>(Vec(32.1, 343.2), module, Cosmosis::GATE_OUT));
         addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Cosmosis::VOLT_OUT));
@@ -434,6 +461,9 @@ struct CosmosisWidget : ModuleWidget {
 
     void appendContextMenu(Menu *menu) override {
         Cosmosis *module = dynamic_cast<Cosmosis*>(this->module);
+
+        MenuLabel *spacerLabel = new MenuLabel();
+        menu->addChild(spacerLabel);
 
         ChannelItem *channelItem = new ChannelItem;
         channelItem->text = "Polyphony channels";
