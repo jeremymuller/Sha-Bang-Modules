@@ -17,6 +17,10 @@ struct RandGates : Module {
 		NUM_OUTPUTS
 	};
 	enum LightIds {
+        PURPLE_LIGHT,
+        BLUE_LIGHT,
+        AQUA_LIGHT,
+        RED_LIGHT,
 		NUM_LIGHTS
 	};
 
@@ -45,8 +49,20 @@ struct RandGates : Module {
         if (mainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
             setCurrentGate();
         }
+        for (int i = 0; i < NUM_LIGHTS; i++) {
+            lights[i].setBrightness((i==currentGate) ? 1.0 : 0.0);
+        }
 
-        outputs[GATE_OUTPUT].setVoltage(inputs[GATES_INPUT + currentGate].getVoltage());
+        int channels = 1;
+        for (int i = 0; i < NUM_OF_INPUTS; i++) {
+            channels = std::max(inputs[GATES_INPUT+i].getChannels(), channels);
+        }
+        for (int c = 0; c < channels; c++) {
+            float in = inputs[GATES_INPUT + currentGate].getVoltage(c);
+            outputs[GATE_OUTPUT].setVoltage(in, c);
+        }
+        outputs[GATE_OUTPUT].setChannels(channels);
+        // outputs[GATE_OUTPUT].setVoltage(inputs[GATES_INPUT + currentGate].getVoltage());
     }
 };
 
@@ -66,6 +82,12 @@ struct RandGatesWidget : ModuleWidget {
         }
         // addInput(createInputCentered<PJ301MPort>(Vec(36.9, 237.3), module, StochSeq::CLOCK_INPUT));
         addOutput(createOutputCentered<PJ301MPort>(Vec(22.5, 322.1), module, RandGates::GATE_OUTPUT));
+
+        // lights
+        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(22.5 - 3.21, 340.9 - 3.21), module, RandGates::PURPLE_LIGHT));
+        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(22.5 - 3.21, 340.9 - 3.21), module, RandGates::BLUE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(22.5 - 3.21, 340.9 - 3.21), module, RandGates::AQUA_LIGHT));
+        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(22.5 - 3.21, 340.9 - 3.21), module, RandGates::RED_LIGHT));
     }
 };
 
