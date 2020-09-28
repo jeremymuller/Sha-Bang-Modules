@@ -307,7 +307,7 @@ struct Neutrinode : Module, Quantize {
             json_array_append_new(particlesJ, pDataJ);
         }
 
-        json_object_set_new(rootJ, "start", json_boolean(toggleStart));
+        // json_object_set_new(rootJ, "start", json_boolean(toggleStart));
         json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "nodes", nodesJ);
         json_object_set_new(rootJ, "particles", particlesJ);
@@ -319,8 +319,8 @@ struct Neutrinode : Module, Quantize {
         json_t *channelsJ = json_object_get(rootJ, "channels");
         if (channelsJ) channels = json_integer_value(channelsJ);
 
-        json_t *startJ = json_object_get(rootJ, "start");
-        if (startJ) toggleStart = json_boolean_value(startJ);
+        // json_t *startJ = json_object_get(rootJ, "start");
+        // if (startJ) toggleStart = json_boolean_value(startJ);
 
 
         // data from nodes
@@ -369,16 +369,16 @@ struct Neutrinode : Module, Quantize {
     }
 
     void process(const ProcessArgs &args) override {
-        outputs[GATE_OUTPUTS + PURPLE_NODE].setChannels(channels);
-        outputs[GATE_OUTPUTS + BLUE_NODE].setChannels(channels);
-        outputs[GATE_OUTPUTS + AQUA_NODE].setChannels(channels);
-        outputs[GATE_OUTPUTS + RED_NODE].setChannels(channels);
-        outputs[VOLT_OUTPUTS + PURPLE_NODE].setChannels(channels);
-        outputs[VOLT_OUTPUTS + BLUE_NODE].setChannels(channels);
-        outputs[VOLT_OUTPUTS + AQUA_NODE].setChannels(channels);
-        outputs[VOLT_OUTPUTS + RED_NODE].setChannels(channels);
-        outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-        outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
+        // outputs[GATE_OUTPUTS + PURPLE_NODE].setChannels(channels);
+        // outputs[GATE_OUTPUTS + BLUE_NODE].setChannels(channels);
+        // outputs[GATE_OUTPUTS + AQUA_NODE].setChannels(channels);
+        // outputs[GATE_OUTPUTS + RED_NODE].setChannels(channels);
+        // outputs[VOLT_OUTPUTS + PURPLE_NODE].setChannels(channels);
+        // outputs[VOLT_OUTPUTS + BLUE_NODE].setChannels(channels);
+        // outputs[VOLT_OUTPUTS + AQUA_NODE].setChannels(channels);
+        // outputs[VOLT_OUTPUTS + RED_NODE].setChannels(channels);
+        // outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+        // outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
 
         // checks param knobs every 4th sample
         if (checkParams == 0) {
@@ -415,7 +415,8 @@ struct Neutrinode : Module, Quantize {
             int polyChannelIndex = 0;
             int rootNote = params[ROOT_NOTE_PARAM].getValue();
             int scale = params[SCALE_PARAM].getValue();
-
+            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 nodes[i].start = toggleStart;
 
@@ -468,8 +469,8 @@ struct Neutrinode : Module, Quantize {
                     }
 
                 }
-                // outputs[GATE_OUTPUTS + i].setChannels(channels);
-                // outputs[VOLT_OUTPUTS + i].setChannels(channels);
+                outputs[GATE_OUTPUTS + i].setChannels(channels);
+                outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
 
         }

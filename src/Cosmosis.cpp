@@ -90,8 +90,9 @@ struct Cosmosis : Module, Constellations, Quantize {
     dsp::PulseGenerator gatePulsePoly[16];
     Star *stars = new Star[MAX_STARS];
     int visibleStars = 0;
-    int currentSeqMode = PURPLE_SEQ;
-    float seqPos = 0;
+    int currentSeqMode;
+    NVGcolor blipColor;
+    float *seqPos = new float[NUM_SEQ_MODES];
     float seqSpeed = 1.0;
     bool isPlaying = false;
     bool pitchChoice = false;
@@ -110,14 +111,22 @@ struct Cosmosis : Module, Constellations, Quantize {
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation");
         configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
 
+        setSeqMode(AQUA_SEQ);
+
+        seqPos[PURPLE_SEQ] = 0;
+        seqPos[BLUE_SEQ] = 0;
+        seqPos[AQUA_SEQ] = DISPLAY_SIZE;
+        seqPos[RED_SEQ] = DISPLAY_SIZE;
+
         for (int i = 0; i < 9; i++) {
-            Vec pos = Vec(ANDROMEDA[i].x, ANDROMEDA[i].y);
-            addStar(pos, i, ANDROMEDA[i].r);
+            Vec pos = Vec(CONSTELLATION_ANDROMEDA[i].x, CONSTELLATION_ANDROMEDA[i].y);
+            addStar(pos, i, CONSTELLATION_ANDROMEDA[i].r);
         }
     }
 
     ~Cosmosis () {
         delete[] stars;
+        delete[] seqPos;
     }
 
     json_t *dataToJson() override {
@@ -159,13 +168,23 @@ struct Cosmosis : Module, Constellations, Quantize {
             lights[PAUSE_LIGHT].setBrightness(isPlaying ? 1.0 : 0.0);
 
             if (isPlaying) {
-                seqPos += seqSpeed;
-                if (seqPos > DISPLAY_SIZE) {
-                    seqPos = 0;
-                    for (int i = 0; i < MAX_STARS; i++) {
-                        stars[i].alreadyTriggered = false;
-                    }
+                switch (currentSeqMode) {
+                    case PURPLE_SEQ:
+                    case BLUE_SEQ:
+                        seqPos[currentSeqMode] += seqSpeed;
+                        break;
+                    case AQUA_SEQ:
+                    case RED_SEQ:
+                        seqPos[currentSeqMode] -= seqSpeed;
+                        break;
                 }
+                checkSeqEdges();
+                // if (seqPos[currentSeqMode] > DISPLAY_SIZE) {
+                //     seqPos[currentSeqMode] = 0;
+                //     for (int i = 0; i < MAX_STARS; i++) {
+                //         stars[i].alreadyTriggered = false;
+                //     }
+                // }
 
                 int oct = params[OCTAVE_PARAM].getValue();
                 // change the MAX_STARS to the current length of selected constellation
@@ -175,11 +194,11 @@ struct Cosmosis : Module, Constellations, Quantize {
                         stars[i].alreadyTriggered = true;
                         gatePulsePoly[polyChannelIndex].trigger(1e-3f);
 
-                        float margin = 5.0;
-                        float volts;
-                        Vec pos = stars[i].getPos();
-                        if (pitchChoice) volts = rescale(pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
-                        else volts = rescale(stars[i].radius, 5.0, 12.0, 2.0, 0.0);
+                        float volts = getVolts(stars[i]);
+                        // float margin = 5.0;
+                        // Vec pos = stars[i].getPos();
+                        // if (pitchChoice) volts = rescale(pos.y, DISPLAY_SIZE-margin, margin, 0.0, 2.0);
+                        // else volts = rescale(stars[i].radius, 5.0, 12.0, 2.0, 0.0);
                         float pitch = Quantize::quantizeRawVoltage(volts, rootNote, scale) + oct;
 
                         outputs[VOLT_OUT].setVoltage(pitch, polyChannelIndex);
@@ -199,17 +218,44 @@ struct Cosmosis : Module, Constellations, Quantize {
 
     }
 
+    void setSeqMode(int mode) {
+        currentSeqMode = mode;
+        switch (currentSeqMode) {
+            case PURPLE_SEQ:
+                blipColor = nvgRGB(213, 153, 255);
+                break;
+            case BLUE_SEQ:
+                blipColor = nvgRGB(165, 152, 255);
+                break;
+            case AQUA_SEQ:
+                blipColor = nvgRGB(104, 245, 255);
+                break;
+            case RED_SEQ:
+                blipColor = nvgRGB(255, 101, 101);
+                break;
+        }
+
+        // nvgRGB(213, 153, 255);
+        // nvgRGB(165, 152, 255);
+        // nvgRGB(104, 245, 255);
+        // nvgRGB(255, 101, 101);
+    }
+
     void resizeConstellation() {
         // TODO: put limits on this
         Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
         for (int i = 0; i < MAX_STARS; i++) {
-            Vec pos = stars[i].box.getCenter();
-            Vec mag = pos.minus(center);
-            float maxDist = sqrt(mag.x * mag.x + mag.y * mag.y) * 0.5;
-            mag = mag.normalize();
-            float m = rescale(params[SIZE_PARAM].getValue(), 0, 1, maxDist, 0);
-            mag = mag.mult(m);
-            stars[i].posOffset = mag;
+            if (stars[i].visible) {
+                Vec pos = stars[i].box.getCenter();
+                Vec mag = pos.minus(center);
+                float maxDist = sqrt(mag.x * mag.x + mag.y * mag.y) * 0.5;
+                mag = mag.normalize();
+                float m = rescale(params[SIZE_PARAM].getValue(), 0, 1, maxDist, 0);
+                mag = mag.mult(m);
+                stars[i].posOffset = mag;
+            } else {
+                stars[i].posOffset = Vec(0, 0);
+            }
         }
 
         // return mag;
@@ -222,10 +268,12 @@ struct Cosmosis : Module, Constellations, Quantize {
         if (!stars[index].alreadyTriggered) {
             Vec pos = stars[index].getPos();
             switch (currentSeqMode) {
-                case PURPLE_SEQ:    return seqPos > pos.x ? true : false;
-                case BLUE_SEQ:      return seqPos > pos.y ? true : false;
-                case AQUA_SEQ:      return seqPos < pos.x ? true : false;
-                case RED_SEQ:       return seqPos < pos.y ? true : false;
+                case PURPLE_SEQ:
+                return seqPos[PURPLE_SEQ] > pos.x ? true : false;
+                case BLUE_SEQ:      return seqPos[BLUE_SEQ] > pos.y ? true : false;
+                case AQUA_SEQ:      return seqPos[AQUA_SEQ] < pos.x ? true : false;
+                case RED_SEQ:       return seqPos[RED_SEQ] < pos.y ? true : false;
+                default:            return false;
             }
         } else {
             return false;
@@ -238,7 +286,8 @@ struct Cosmosis : Module, Constellations, Quantize {
         stars[index].radius = randRange(5, 10);
         stars[index].visible = true;
         stars[index].locked = false;
-        stars[index].alreadyTriggered = pos.x < seqPos ? true : false;
+        stars[index].posOffset = Vec(0, 0);
+        stars[index].alreadyTriggered = pos.x < seqPos[currentSeqMode] ? true : false;
     }
 
     void addStar(Vec pos, int index, float _radius) {
@@ -259,6 +308,45 @@ struct Cosmosis : Module, Constellations, Quantize {
         for (int i = 0; i < MAX_STARS; i++) {
             removeStar(i);
         }
+    }
+
+    void checkSeqEdges() {
+        bool reset = false;
+        if (seqPos[PURPLE_SEQ] > DISPLAY_SIZE) {
+            seqPos[PURPLE_SEQ] = 0;
+            reset = true;
+        } else if (seqPos[BLUE_SEQ] > DISPLAY_SIZE) {
+            seqPos[BLUE_SEQ] = 0;
+            reset = true;
+        } else if (seqPos[AQUA_SEQ] < 0) {
+            seqPos[AQUA_SEQ] = DISPLAY_SIZE;
+            reset = true;
+        } else if (seqPos[RED_SEQ] < 0) {
+            seqPos[RED_SEQ] = DISPLAY_SIZE;
+            reset = true;
+        }
+
+        if (reset) {
+            for (int i = 0; i < MAX_STARS; i++) {
+                stars[i].alreadyTriggered = false;
+            }
+        }
+    }
+
+    float getVolts(Star star) {
+        if (pitchChoice){
+            float margin = 7.0;
+            Vec pos = star.getPos();
+            switch (currentSeqMode) {
+                case PURPLE_SEQ:    return rescale(pos.y, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
+                case BLUE_SEQ:      return rescale(pos.x, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
+                case AQUA_SEQ:      return rescale(pos.y, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
+                case RED_SEQ:       return rescale(pos.x, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
+                default:            return rescale(pos.y, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
+            }
+        }
+        else
+            return rescale(star.radius, 5.0, 12.0, 2.0, 0.0);
     }
 };
 
@@ -382,7 +470,7 @@ struct CosmosisDisplay : Widget {
 
                     if (module->stars[i].blipTrigger) {
                         // use current seq line color
-                        nvgFillColor(args.vg, nvgTransRGBA(nvgRGB(213, 153, 255), module->stars[i].haloAlpha));
+                        nvgFillColor(args.vg, nvgTransRGBA(module->blipColor, module->stars[i].haloAlpha));
                         nvgBeginPath(args.vg);
                         nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
                         nvgFill(args.vg);
@@ -399,12 +487,32 @@ struct CosmosisDisplay : Widget {
                     nvgFill(args.vg);
                 }
             }
-            // draw line
+
             nvgStrokeWidth(args.vg, 2.0);
+
+            // draw Purple line
             nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
             nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, module->seqPos, 0);
-            nvgLineTo(args.vg, module->seqPos, box.size.y);
+            nvgMoveTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], 0);
+            nvgLineTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], box.size.y);
+            nvgStroke(args.vg);
+            // draw Blue line
+            nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::BLUE_SEQ]);
+            nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::BLUE_SEQ]);
+            nvgStroke(args.vg);
+            // draw Aqua line
+            nvgStrokeColor(args.vg, nvgRGB(0, 238, 219));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], 0);
+            nvgLineTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], box.size.y);
+            nvgStroke(args.vg);
+            // draw Red line
+            nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::RED_SEQ]);
+            nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::RED_SEQ]);
             nvgStroke(args.vg);
         }
 
