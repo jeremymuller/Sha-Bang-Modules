@@ -18,9 +18,19 @@ struct Point {
 };
 
 struct Constellations {
+    int constellationLength = 0;
+
     Point CONSTELLATION_ANDROMEDA[9];
     Point CONSTELLATION_AQUARIUS[14];
-    
+    Point CONSTELLATION_CENTAURUS[19];
+    Point CONSTELLATION_DRACO[17];
+    Point CONSTELLATION_GEMINI[10];
+    Point CONSTELLATION_HERCULES[19];
+    // Point CONSTELLATION_LEO
+    // Point CONSTELLATION_ORION[];
+    // Point CONSTELLATION_PEGASUS[];
+    // Point CONSTELLATION_SAGITTARIUS[];
+
     Constellations() {
         CONSTELLATION_ANDROMEDA[0].setPoint(353.3, 332.6, 12);
         CONSTELLATION_ANDROMEDA[1].setPoint(107.1, 44.6, 10);
@@ -46,29 +56,107 @@ struct Constellations {
         CONSTELLATION_AQUARIUS[11].setPoint(79.9, 216.2, 6.2);
         CONSTELLATION_AQUARIUS[12].setPoint(73.5, 160.7, 7.9);
         CONSTELLATION_AQUARIUS[13].setPoint(20, 146.1, 8.3);
-    }
 
-    // Star ANDROMEDA[2] = {a1, a2};
-    // Vec AQUARIUS[] = {};
-    // CENTAURUS
-    // DRACO
-    // GEMINI
-    // HERCULES
-    // LEO
-    // ORION
-    // PEGASUS
-    // SAGITTARIUS
+        CONSTELLATION_CENTAURUS[0].setPoint(113.4, 305.4, 12.0);
+        CONSTELLATION_CENTAURUS[1].setPoint(151.6, 288.3, 8.5);
+        CONSTELLATION_CENTAURUS[2].setPoint(313.9, 317.3, 6.1);
+        CONSTELLATION_CENTAURUS[3].setPoint(309.6, 308.7, 5.0);
+        CONSTELLATION_CENTAURUS[4].setPoint(308, 297, 6.1);
+        CONSTELLATION_CENTAURUS[5].setPoint(357.2, 246.4, 6.7);
+        CONSTELLATION_CENTAURUS[6].setPoint(301.5, 195.2, 5.0);
+        CONSTELLATION_CENTAURUS[7].setPoint(295, 210.3, 6);
+        CONSTELLATION_CENTAURUS[8].setPoint(272.6, 186.6, 5.0);
+        CONSTELLATION_CENTAURUS[9].setPoint(255.3, 175.1, 7.7);
+        CONSTELLATION_CENTAURUS[10].setPoint(172.9, 221.3, 7.6);
+        CONSTELLATION_CENTAURUS[11].setPoint(21.7, 151.2, 6.4);
+        CONSTELLATION_CENTAURUS[12].setPoint(63, 137.5, 7.7);
+        CONSTELLATION_CENTAURUS[13].setPoint(139.3, 166.5, 7.7);
+        CONSTELLATION_CENTAURUS[14].setPoint(139.3, 124.2, 5.0);
+        CONSTELLATION_CENTAURUS[15].setPoint(138.9, 115, 6.5);
+        CONSTELLATION_CENTAURUS[16].setPoint(168.9, 91.2, 5.1);
+        CONSTELLATION_CENTAURUS[17].setPoint(187.8, 64.3, 8.3);
+        CONSTELLATION_CENTAURUS[18].setPoint(101.2, 71.9, 7.7);
+
+        CONSTELLATION_DRACO[0].setPoint(150.2, 109.3, 6.9);
+        CONSTELLATION_DRACO[1].setPoint(320.3, 66.6, 6.4);
+        CONSTELLATION_DRACO[2].setPoint(362.8, 72.5, 9);
+        CONSTELLATION_DRACO[3].setPoint(333.3, 118.4, 5);
+        CONSTELLATION_DRACO[4].setPoint(313.5, 92.9, 5);
+        CONSTELLATION_DRACO[5].setPoint(194.3, 103.2, 7.8);
+        CONSTELLATION_DRACO[6].setPoint(217, 132.5, 6.5);
+        CONSTELLATION_DRACO[7].setPoint(256.6, 177.5, 8.2);
+        CONSTELLATION_DRACO[8].setPoint(336.1, 197.9, 5);
+        CONSTELLATION_DRACO[9].setPoint(344.7, 251.1, 9);
+        CONSTELLATION_DRACO[10].setPoint(347.3, 292.2, 5.2);
+        CONSTELLATION_DRACO[11].setPoint(310, 290.6, 6.1);
+        CONSTELLATION_DRACO[12].setPoint(285.4, 261.9, 5.3);
+        CONSTELLATION_DRACO[13].setPoint(264.4, 245.4, 5.5);
+        CONSTELLATION_DRACO[14].setPoint(79.1, 183.5, 6.2);
+        CONSTELLATION_DRACO[15].setPoint(46, 273.6, 7.8);
+        CONSTELLATION_DRACO[16].setPoint(13.7, 314.2, 5.8);
+
+        CONSTELLATION_GEMINI[0].setPoint(39.2, 254.6, 10);
+        CONSTELLATION_GEMINI[1].setPoint(200, 356.2, 9.7);
+        CONSTELLATION_GEMINI[2].setPoint(196.3, 325.5, 12);
+        CONSTELLATION_GEMINI[3].setPoint(156.5, 305.3, 7.8);
+        CONSTELLATION_GEMINI[4].setPoint(95.7, 279.9, 12);
+        CONSTELLATION_GEMINI[5].setPoint(232.2, 245.6, 10.9);
+        CONSTELLATION_GEMINI[6].setPoint(156.5, 174.2, 7.8);
+        CONSTELLATION_GEMINI[7].setPoint(177.7, 115.9, 9.6);
+        CONSTELLATION_GEMINI[8].setPoint(337.2, 65.4, 12);
+        CONSTELLATION_GEMINI[9].setPoint(272, 27.1, 12);
+
+        CONSTELLATION_HERCULES[0].setPoint(325.8, 38.9, 7.4);
+        CONSTELLATION_HERCULES[1].setPoint(247.2, 174.1, 6);
+        CONSTELLATION_HERCULES[2].setPoint(205.8, 185.8, 5.5);
+        CONSTELLATION_HERCULES[3].setPoint(184.1, 364.8, 8.7);
+        CONSTELLATION_HERCULES[4].setPoint(315.8, 300.9, 7.6);
+        CONSTELLATION_HERCULES[5].setPoint(290.3, 278.6, 9.3);
+        CONSTELLATION_HERCULES[6].setPoint(172.5, 252.1, 9.3);
+        CONSTELLATION_HERCULES[7].setPoint(137.8, 240.5, 6);
+        CONSTELLATION_HERCULES[8].setPoint(97.9, 222.2, 8.7);
+        CONSTELLATION_HERCULES[9].setPoint(72.3, 206.3, 6.6);
+        CONSTELLATION_HERCULES[10].setPoint(51.8, 209, 5.3);
+        CONSTELLATION_HERCULES[11].setPoint(82.4, 120.2, 6.9);
+        CONSTELLATION_HERCULES[12].setPoint(146, 122.9, 5.5);
+        CONSTELLATION_HERCULES[13].setPoint(166.3, 126.2, 8.6);
+        CONSTELLATION_HERCULES[14].setPoint(231.1, 98.5, 6.8);
+        CONSTELLATION_HERCULES[15].setPoint(242.2, 58.1, 5.4);
+        CONSTELLATION_HERCULES[16].setPoint(284.9, 22.2, 7.1);
+        CONSTELLATION_HERCULES[17].setPoint(262.4, 13.3, 5.7);
+        CONSTELLATION_HERCULES[18].setPoint(118.9, 29.1, 7.5);
+    }
 
     enum ConstellationNames {
         ANDROMEDA,
         AQUARIUS,
+        CENTAURUS,
+        DRACO,
+        GEMINI,
+        HERCULES,
         NUM_OF_CONSTELLATIONS
     };
+
+    Point *getConstellation(int c) {
+        switch (c) {
+            case ANDROMEDA:     constellationLength = LENGTHOF(CONSTELLATION_ANDROMEDA);    return CONSTELLATION_ANDROMEDA;
+            case AQUARIUS:      constellationLength = LENGTHOF(CONSTELLATION_AQUARIUS);     return CONSTELLATION_AQUARIUS;
+            case CENTAURUS:     constellationLength = LENGTHOF(CONSTELLATION_CENTAURUS);    return CONSTELLATION_CENTAURUS;
+            case DRACO:         constellationLength = LENGTHOF(CONSTELLATION_DRACO);        return CONSTELLATION_DRACO;
+            case GEMINI:        constellationLength = LENGTHOF(CONSTELLATION_GEMINI);       return CONSTELLATION_GEMINI;
+            case HERCULES:      constellationLength = LENGTHOF(CONSTELLATION_HERCULES);     return CONSTELLATION_HERCULES;
+            default:                                                                        return NULL;
+        }
+    }
 
     std::string constellationName(int constellation) {
         switch(constellation) {
             case ANDROMEDA:             return "Andromeda";
             case AQUARIUS:              return "Aquarius";
+            case CENTAURUS:             return "Centaurus";
+            case DRACO:                 return "Draco";
+            case GEMINI:                return "Gemini";
+            case HERCULES:              return "Hercules";
             default:                    return "";
         }
     }

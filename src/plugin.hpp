@@ -56,6 +56,22 @@ struct LeftAlignedLabel : Widget {
 	}
 };
 
+struct CenterAlignedLabel : Widget {
+    std::string text;
+    int fontSize;
+    NVGcolor color;
+    CenterAlignedLabel(int _fontSize = 13) {
+        fontSize = _fontSize;
+        box.size.y = BND_WIDGET_HEIGHT;
+    }
+    void draw(const DrawArgs &args) override {
+        nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
+        nvgFillColor(args.vg, color);
+        nvgFontSize(args.vg, fontSize);
+        nvgText(args.vg, 0, 0, text.c_str(), NULL);
+    }
+};
+
 /************************** PORTS **************************/
 
 struct TinyPJ301M : SvgPort {
@@ -357,6 +373,37 @@ struct BlueInvertKnobLabel : BlueInvertKnob {
         if (linkedModule && linkedLabel) {
             linkedLabel->text = formatCurrentValue();
             linkedLabel->color = nvgRGB(38, 0, 255);
+        }
+    }
+
+    void onChange(const event::Change &e) override {
+        RoundKnob::onChange(e);
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+        }
+    }
+
+    virtual std::string formatCurrentValue() {
+        if (paramQuantity != NULL) {
+            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct BlueInvertKnobLabelCentered : BlueInvertKnob {
+    CenterAlignedLabel *linkedLabel = NULL;
+    Module *linkedModule = NULL;
+
+    BlueInvertKnobLabelCentered() {}
+
+    void connectLabel(CenterAlignedLabel *label, Module *module) {
+        linkedLabel = label;
+        linkedModule = module;
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+            linkedLabel->color = nvgRGB(0, 0, 0);
+            // linkedLabel->color = nvgRGB(38, 0, 255);
         }
     }
 

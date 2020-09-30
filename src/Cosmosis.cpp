@@ -59,6 +59,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         RED_SEQ,
         CLOCKWISE_SEQ,
         COUNTER_CLOCKWISE_SEQ,
+        RANDOM_SEQ,
         NUM_SEQ_MODES
     };
     enum ParamIds {
@@ -71,6 +72,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         OCTAVE_PARAM,
         SIZE_PARAM,
         CLEAR_STARS_PARAM,
+        MODE_PARAM,
         NUM_PARAMS
     };
     enum InputIds {
@@ -83,14 +85,21 @@ struct Cosmosis : Module, Constellations, Quantize {
     };
     enum LightIds {
         PAUSE_LIGHT,
+        PURPLE_LIGHT,
+        BLUE_LIGHT,
+        AQUA_LIGHT,
+        RED_LIGHT,
         NUM_LIGHTS
     };
 
     dsp::SchmittTrigger playTrig, clearTrig;
     dsp::PulseGenerator gatePulsePoly[16];
     Star *stars = new Star[MAX_STARS];
+    Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
     int visibleStars = 0;
-    int currentSeqMode;
+    int currentSeqMode = 0;
+    int clockWiseIndex = 0;
+    int currentConstellation = 0;
     NVGcolor blipColor;
     float *seqPos = new float[NUM_SEQ_MODES];
     float seqSpeed = 1.0;
@@ -107,21 +116,25 @@ struct Cosmosis : Module, Constellations, Quantize {
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
+        configParam(PATTERN_PARAM, 0.0, Constellations::NUM_OF_CONSTELLATIONS-1, 0.0, "Constellation");
         configParam(OCTAVE_PARAM, -5.0, 5.0, 0.0, "Octave");
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation");
         configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
+        configParam(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode");
 
-        setSeqMode(AQUA_SEQ);
+        setConstellation(0);
 
-        seqPos[PURPLE_SEQ] = 0;
-        seqPos[BLUE_SEQ] = 0;
-        seqPos[AQUA_SEQ] = DISPLAY_SIZE;
-        seqPos[RED_SEQ] = DISPLAY_SIZE;
+        // resetSeq();
 
-        for (int i = 0; i < 9; i++) {
-            Vec pos = Vec(CONSTELLATION_ANDROMEDA[i].x, CONSTELLATION_ANDROMEDA[i].y);
-            addStar(pos, i, CONSTELLATION_ANDROMEDA[i].r);
-        }
+        // Point *constellation = Constellations::getConstellation(Constellations::ANDROMEDA);
+        // for (int i = 0; i < Constellations::constellationLength; i++) {
+        //     Vec pos = Vec(constellation[i].x, constellation[i].y);
+        //     addStar(pos, i, constellation[i].r);
+        // }
+        // for (int i = 0; i < 9; i++) {
+        //     Vec pos = Vec(CONSTELLATION_ANDROMEDA[i].x, CONSTELLATION_ANDROMEDA[i].y);
+        //     addStar(pos, i, CONSTELLATION_ANDROMEDA[i].r);
+        // }
     }
 
     ~Cosmosis () {
@@ -152,9 +165,20 @@ struct Cosmosis : Module, Constellations, Quantize {
                 removeAllStars();
             }
 
+            int mode = params[MODE_PARAM].getValue();
+            if (mode != currentSeqMode) {
+                setSeqMode(mode);
+            }
+
             pitchChoice = params[PITCH_PARAM].getValue();
             float scl = std::pow(2, params[SPEED_PARAM].getValue());
             seqSpeed = scl * (INTERNAL_SAMP_TIME / args.sampleRate * 60.0);
+
+            int paramVal = params[PATTERN_PARAM].getValue();
+            if (currentConstellation != paramVal) {
+                currentConstellation = paramVal;
+                setConstellation(paramVal);
+            }
 
             resizeConstellation();
         }
@@ -167,17 +191,20 @@ struct Cosmosis : Module, Constellations, Quantize {
 
             lights[PAUSE_LIGHT].setBrightness(isPlaying ? 1.0 : 0.0);
 
+            if (currentSeqMode < CLOCKWISE_SEQ) {
+                lights[PURPLE_LIGHT].setBrightness(currentSeqMode == PURPLE_SEQ ? 1.0 : 0.0);
+                lights[BLUE_LIGHT].setBrightness(currentSeqMode == BLUE_SEQ ? 1.0 : 0.0);
+                lights[AQUA_LIGHT].setBrightness(currentSeqMode == AQUA_SEQ ? 1.0 : 0.0);
+                lights[RED_LIGHT].setBrightness(currentSeqMode == RED_SEQ ? 1.0 : 0.0);
+            } else {
+                lights[PURPLE_LIGHT].setBrightness(1.0);
+                lights[BLUE_LIGHT].setBrightness(1.0);
+                lights[AQUA_LIGHT].setBrightness(1.0);
+                lights[RED_LIGHT].setBrightness(1.0);
+            }
+
             if (isPlaying) {
-                switch (currentSeqMode) {
-                    case PURPLE_SEQ:
-                    case BLUE_SEQ:
-                        seqPos[currentSeqMode] += seqSpeed;
-                        break;
-                    case AQUA_SEQ:
-                    case RED_SEQ:
-                        seqPos[currentSeqMode] -= seqSpeed;
-                        break;
-                }
+                advanceSeqPos();
                 checkSeqEdges();
                 // if (seqPos[currentSeqMode] > DISPLAY_SIZE) {
                 //     seqPos[currentSeqMode] = 0;
@@ -218,32 +245,96 @@ struct Cosmosis : Module, Constellations, Quantize {
 
     }
 
-    void setSeqMode(int mode) {
-        currentSeqMode = mode;
-        switch (currentSeqMode) {
+    void setConstellation(int patt) {
+        resetSeq();
+        removeAllStars();
+
+        // for (int i = 0; i < 9; i++) {
+        //     Vec pos = Vec(CONSTELLATION_ANDROMEDA[i].x, CONSTELLATION_ANDROMEDA[i].y);
+        //     addStar(pos, i, CONSTELLATION_ANDROMEDA[i].r);
+        // }
+
+
+        Point *constellation = Constellations::getConstellation(patt);
+        for (int i = 0; i < Constellations::constellationLength; i++) {
+            Vec pos = Vec(constellation[i].x, constellation[i].y);
+            addStar(pos, i, constellation[i].r);
+        }
+    }
+
+    void advanceSeqPos() {
+        // int seqMode = (currentSeqMode < CLOCKWISE_SEQ) ? currentSeqMode : clockWiseIndex;
+        int seqMode = getSeqMode();
+        switch (seqMode) {
             case PURPLE_SEQ:
                 blipColor = nvgRGB(213, 153, 255);
+                seqPos[PURPLE_SEQ] += seqSpeed;
                 break;
             case BLUE_SEQ:
                 blipColor = nvgRGB(165, 152, 255);
+                seqPos[BLUE_SEQ] += seqSpeed;
                 break;
             case AQUA_SEQ:
                 blipColor = nvgRGB(104, 245, 255);
+                seqPos[AQUA_SEQ] -= seqSpeed;
                 break;
             case RED_SEQ:
                 blipColor = nvgRGB(255, 101, 101);
+                seqPos[RED_SEQ] -= seqSpeed;
                 break;
         }
 
-        // nvgRGB(213, 153, 255);
-        // nvgRGB(165, 152, 255);
-        // nvgRGB(104, 245, 255);
-        // nvgRGB(255, 101, 101);
+    }
+
+    int getSeqMode() {
+        if (currentSeqMode < CLOCKWISE_SEQ) return currentSeqMode;
+        else return clockWiseIndex;
+    }
+
+    void setSeqMode(int mode) {
+        resetSeq();
+        currentSeqMode = mode;
+    }
+
+    void resetSeq() {
+        seqPos[PURPLE_SEQ] = 0;
+        seqPos[BLUE_SEQ] = 0;
+        seqPos[AQUA_SEQ] = DISPLAY_SIZE;
+        seqPos[RED_SEQ] = DISPLAY_SIZE;
+        for (int i = 0; i < MAX_STARS; i++) {
+            stars[i].alreadyTriggered = false;
+        }
+    }
+
+    void checkSeqEdges() {
+        bool reset = false;
+        if (seqPos[PURPLE_SEQ] > DISPLAY_SIZE) {
+            seqPos[PURPLE_SEQ] = 0;
+            reset = true;
+        } else if (seqPos[BLUE_SEQ] > DISPLAY_SIZE) {
+            seqPos[BLUE_SEQ] = 0;
+            reset = true;
+        } else if (seqPos[AQUA_SEQ] < 0) {
+            seqPos[AQUA_SEQ] = DISPLAY_SIZE;
+            reset = true;
+        } else if (seqPos[RED_SEQ] < 0) {
+            seqPos[RED_SEQ] = DISPLAY_SIZE;
+            reset = true;
+        }
+
+        if (reset) {
+            if (currentSeqMode == CLOCKWISE_SEQ) clockWiseIndex = (clockWiseIndex+1) % 4;
+            else if (currentSeqMode == COUNTER_CLOCKWISE_SEQ) clockWiseIndex = (clockWiseIndex ? clockWiseIndex : 4) - 1;
+            else if (currentSeqMode == RANDOM_SEQ) clockWiseIndex = static_cast<int>(random::uniform() * 4);
+            for (int i = 0; i < MAX_STARS; i++) {
+                stars[i].alreadyTriggered = false;
+            }
+        }
     }
 
     void resizeConstellation() {
         // TODO: put limits on this
-        Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
+        // Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
         for (int i = 0; i < MAX_STARS; i++) {
             if (stars[i].visible) {
                 Vec pos = stars[i].box.getCenter();
@@ -267,9 +358,10 @@ struct Cosmosis : Module, Constellations, Quantize {
     bool isStarTrigger(int index) {
         if (!stars[index].alreadyTriggered) {
             Vec pos = stars[index].getPos();
-            switch (currentSeqMode) {
-                case PURPLE_SEQ:
-                return seqPos[PURPLE_SEQ] > pos.x ? true : false;
+            // int seqMode = (currentSeqMode < CLOCKWISE_SEQ) ? currentSeqMode : clockWiseIndex;
+            int seqMode = getSeqMode();
+            switch (seqMode) {
+                case PURPLE_SEQ:    return seqPos[PURPLE_SEQ] > pos.x ? true : false;
                 case BLUE_SEQ:      return seqPos[BLUE_SEQ] > pos.y ? true : false;
                 case AQUA_SEQ:      return seqPos[AQUA_SEQ] < pos.x ? true : false;
                 case RED_SEQ:       return seqPos[RED_SEQ] < pos.y ? true : false;
@@ -281,13 +373,24 @@ struct Cosmosis : Module, Constellations, Quantize {
     }
 
     void addStar(Vec pos, int index) {
+        // this one is called when a user clicks somewhere
         visibleStars++;
         stars[index].setPos(pos);
         stars[index].radius = randRange(5, 10);
         stars[index].visible = true;
         stars[index].locked = false;
-        stars[index].posOffset = Vec(0, 0);
-        stars[index].alreadyTriggered = pos.x < seqPos[currentSeqMode] ? true : false;
+        int seqMode = getSeqMode();
+        stars[index].alreadyTriggered = pos.x < seqPos[seqMode] ? true : false;
+
+        Vec mag = pos.minus(center);
+        float maxDist = sqrt(mag.x * mag.x + mag.y * mag.y) * 0.5;
+        mag = mag.normalize();
+        float m = rescale(params[SIZE_PARAM].getValue(), 0, 1, maxDist, 0);
+        mag = mag.mult(m);
+        stars[index].setPos(pos.plus(mag));
+        stars[index].posOffset = mag;
+
+        // stars[index].posOffset = Vec(0, 0);
     }
 
     void addStar(Vec pos, int index, float _radius) {
@@ -310,34 +413,13 @@ struct Cosmosis : Module, Constellations, Quantize {
         }
     }
 
-    void checkSeqEdges() {
-        bool reset = false;
-        if (seqPos[PURPLE_SEQ] > DISPLAY_SIZE) {
-            seqPos[PURPLE_SEQ] = 0;
-            reset = true;
-        } else if (seqPos[BLUE_SEQ] > DISPLAY_SIZE) {
-            seqPos[BLUE_SEQ] = 0;
-            reset = true;
-        } else if (seqPos[AQUA_SEQ] < 0) {
-            seqPos[AQUA_SEQ] = DISPLAY_SIZE;
-            reset = true;
-        } else if (seqPos[RED_SEQ] < 0) {
-            seqPos[RED_SEQ] = DISPLAY_SIZE;
-            reset = true;
-        }
-
-        if (reset) {
-            for (int i = 0; i < MAX_STARS; i++) {
-                stars[i].alreadyTriggered = false;
-            }
-        }
-    }
-
     float getVolts(Star star) {
         if (pitchChoice){
             float margin = 7.0;
             Vec pos = star.getPos();
-            switch (currentSeqMode) {
+            // int seqMode = (currentSeqMode < CLOCKWISE_SEQ) ? currentSeqMode : clockWiseIndex;
+            int seqMode = getSeqMode();
+            switch (seqMode) {
                 case PURPLE_SEQ:    return rescale(pos.y, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
                 case BLUE_SEQ:      return rescale(pos.x, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
                 case AQUA_SEQ:      return rescale(pos.y, DISPLAY_SIZE - margin, margin, 0.0, 2.0);
@@ -395,7 +477,7 @@ struct CosmosisDisplay : Widget {
             int nextAvailableIndex = 0;
             for (int i = 0; i < MAX_STARS; i++) {
                 if (module->stars[i].visible) {
-                    Vec starPos = module->stars[i].box.getCenter();
+                    Vec starPos = module->stars[i].getPos();
                     float d = dist(inits, starPos);
                     float r = module->stars[i].radius;
                     if (d < r && !clickedOnStar) {
@@ -463,6 +545,14 @@ struct CosmosisDisplay : Widget {
         nvgFill(args.vg);
 
         if (module != NULL) {
+            // name of constellation
+            std::string text = module->Constellations::constellationName(module->currentConstellation);
+            nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
+            nvgFontSize(args.vg, 12);
+            nvgText(args.vg, 5, 12, text.c_str(), NULL);
+
             // draw stars
             for (int i = 0; i < MAX_STARS; i++) {
                 if (module->stars[i].visible) {
@@ -519,6 +609,24 @@ struct CosmosisDisplay : Widget {
     }
 };
 
+struct ModeKnob : BlueInvertKnobLabelCentered {
+	ModeKnob(){}
+	std::string formatCurrentValue() override {
+		if(paramQuantity != NULL){
+			switch(int(paramQuantity->getValue())){
+				case Cosmosis::PURPLE_SEQ:              return "→";
+				case Cosmosis::BLUE_SEQ:                return "↓";
+				case Cosmosis::AQUA_SEQ:                return "←";
+				case Cosmosis::RED_SEQ:                 return "↑";
+				case Cosmosis::CLOCKWISE_SEQ:           return "→";
+                case Cosmosis::COUNTER_CLOCKWISE_SEQ:   return "←";
+                case Cosmosis::RANDOM_SEQ:              return "R";
+			}
+		}
+		return "";
+	}
+};
+
 struct CosmosisWidget : ModuleWidget {
     CosmosisWidget(Cosmosis *module) {
         setModule(module);
@@ -538,10 +646,16 @@ struct CosmosisWidget : ModuleWidget {
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
 
+        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(120.2 - 3.21, 229.2 - 3.21), module, Cosmosis::PURPLE_LIGHT));
+        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(130.7 - 3.21, 219.5 - 3.21), module, Cosmosis::BLUE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(141.3 - 3.21, 229.2 - 3.21), module, Cosmosis::AQUA_LIGHT));
+        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(130.7 - 3.21, 239 - 3.21), module, Cosmosis::RED_LIGHT));
+
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 78.1), module, Cosmosis::PLAY_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(61.2, 78.1), module, Cosmosis::SPEED_PARAM));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(96, 78.1), module, Cosmosis::PATTERN_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(130.7, 78.1), module, Cosmosis::SIZE_PARAM));
-        addParam(createParamCentered<DefaultButton>(Vec(130.7, 201.8), module, Cosmosis::CLEAR_STARS_PARAM));
+        addParam(createParamCentered<DefaultButton>(Vec(96, 201.8), module, Cosmosis::CLEAR_STARS_PARAM));
 
         // note and scale knobs
         BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(26.4, 122.3), module, Cosmosis::ROOT_NOTE_PARAM));
@@ -560,8 +674,17 @@ struct CosmosisWidget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
+        ModeKnob *modeKnob = dynamic_cast<ModeKnob *>(createParamCentered<ModeKnob>(Vec(130.7, 201.8), module, Cosmosis::MODE_PARAM));
+        CenterAlignedLabel *const modeLabel = new CenterAlignedLabel;
+        modeLabel->box.pos = Vec(130.7, 232.8);
+        modeLabel->text = "";
+        modeKnob->connectLabel(modeLabel, module);
+        addChild(modeLabel);
+        addParam(modeKnob);
+
         addParam(createParamCentered<Jeremy_HSwitchBlue>(Vec(83.2, 122.8), module, Cosmosis::PITCH_PARAM));
         addParam(createParamCentered<BlueInvertKnob>(Vec(130.7, 121.9), module, Cosmosis::OCTAVE_PARAM));
+        // addParam(createParamCentered<BlueInvertKnob>(Vec(61.2, 201.8), module, Cosmosis::MODE_PARAM));
 
         addOutput(createOutputCentered<PJ301MPort>(Vec(32.1, 343.2), module, Cosmosis::GATE_OUT));
         addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Cosmosis::VOLT_OUT));
