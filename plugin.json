@@ -48,6 +48,11 @@
           "tags": ["Blank", "Visual"]
       },
       {
+          "slug": "QubitCrusher",
+          "name": "QubitCrusher",
+          "tags": ["Digital", "Distortion", "Effect"]
+      },
+      {
           "slug": "Ntest",
           "name": "Ntest"
       }

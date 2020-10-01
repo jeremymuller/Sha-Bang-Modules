@@ -15,6 +15,7 @@ void init(Plugin* p) {
 	p->addModel(modelNeutrinode);
 	p->addModel(modelCosmosis);
 	p->addModel(modelJeremyBlankPanel);
+	p->addModel(modelQubitCrusher);
 	p->addModel(modelNtest);
 
 	// Any other plugin initialization may go here.

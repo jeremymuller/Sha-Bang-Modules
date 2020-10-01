@@ -17,6 +17,7 @@ extern Model *modelRandGates;
 extern Model *modelNeutrinode;
 extern Model *modelCosmosis;
 extern Model *modelJeremyBlankPanel;
+extern Model *modelQubitCrusher;
 extern Model *modelNtest;
 
 /************************** INLINE FUNCTIONS **************************/
