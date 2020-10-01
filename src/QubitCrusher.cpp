@@ -21,7 +21,22 @@ struct QubitCrusher : Module {
     }
 
     void process(const ProcessArgs &args) override {
+        int channels = std::max(inputs[MAIN_INPUT].getChannels(), 1);
 
+        for (int c = 0; c < channels; c++) {
+            float in = inputs[MAIN_INPUT].getVoltage(c);
+            in = rescale(in, -5.0, 5.0, 0.0, 1.0);
+            float scl = std::pow(2, 2.0) - 1;
+            in = static_cast<int>(in * scl);
+            in /= scl;
+            in = rescale(in, 0.0, 1.0, -5.0, 5.0);
+
+            // TODO: add DC offset
+            // rack::dsp::BiquadFilter hip = rack::dsp::BiquadFilter();
+            // hip.setParamters(HIGHPASS_1POLE, 5.0);
+            outputs[MAIN_OUTPUT].setVoltage(in, c);
+        }
+        outputs[MAIN_OUTPUT].setChannels(channels);
     }
 };
 
