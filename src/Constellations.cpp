@@ -26,8 +26,8 @@ struct Constellations {
     Point CONSTELLATION_DRACO[17];
     Point CONSTELLATION_GEMINI[10];
     Point CONSTELLATION_HERCULES[19];
-    // Point CONSTELLATION_LEO
-    // Point CONSTELLATION_ORION[];
+    Point CONSTELLATION_LEO[9];
+    Point CONSTELLATION_ORION[20];
     // Point CONSTELLATION_PEGASUS[];
     // Point CONSTELLATION_SAGITTARIUS[];
 
@@ -125,6 +125,37 @@ struct Constellations {
         CONSTELLATION_HERCULES[16].setPoint(284.9, 22.2, 7.1);
         CONSTELLATION_HERCULES[17].setPoint(262.4, 13.3, 5.7);
         CONSTELLATION_HERCULES[18].setPoint(118.9, 29.1, 7.5);
+
+        CONSTELLATION_LEO[0].setPoint(363, 131.1, 6.6);
+        CONSTELLATION_LEO[1].setPoint(342.4, 106.3, 5.7);
+        CONSTELLATION_LEO[2].setPoint(302.3, 271.8, 11.7);
+        CONSTELLATION_LEO[3].setPoint(305, 215.5, 7.8);
+        CONSTELLATION_LEO[4].setPoint(279.2, 136.6, 6.9);
+        CONSTELLATION_LEO[5].setPoint(271.6, 178.1, 7.7);
+        CONSTELLATION_LEO[6].setPoint(117.1, 221.6, 8.2);
+        CONSTELLATION_LEO[7].setPoint(122.5, 163.1, 8.2);
+        CONSTELLATION_LEO[8].setPoint(16.7, 223.4, 9.6);
+
+        CONSTELLATION_ORION[0].setPoint(239.8, 287.2, 5.7);
+        CONSTELLATION_ORION[1].setPoint(226.9, 296, 7.7);
+        CONSTELLATION_ORION[2].setPoint(208.3, 301.2, 6.7);
+        CONSTELLATION_ORION[3].setPoint(191.1, 296, 7.7);
+        CONSTELLATION_ORION[4].setPoint(157.7, 287.2, 5.7);
+        CONSTELLATION_ORION[5].setPoint(147.4, 275, 5.5);
+        CONSTELLATION_ORION[6].setPoint(356.2, 126.7, 6.2);
+        CONSTELLATION_ORION[7].setPoint(353.2, 102.1, 6);
+        CONSTELLATION_ORION[8].setPoint(294.5, 92.3, 9.3);
+        CONSTELLATION_ORION[9].setPoint(289.3, 78.3, 5.4);
+        CONSTELLATION_ORION[10].setPoint(238.8, 104.5, 5.0);
+        CONSTELLATION_ORION[11].setPoint(213.4, 122.1, 12.0);
+        CONSTELLATION_ORION[12].setPoint(239.8, 177.7, 11.6);
+        CONSTELLATION_ORION[13].setPoint(200.3, 205.2, 9.9);
+        CONSTELLATION_ORION[14].setPoint(126.5, 185.9, 7.7);
+        CONSTELLATION_ORION[15].setPoint(118, 173.6, 8.1);
+        CONSTELLATION_ORION[16].setPoint(110.2, 160.6, 7.6);
+        CONSTELLATION_ORION[17].setPoint(53.6, 225, 7.4);
+        CONSTELLATION_ORION[18].setPoint(40.7, 233.2, 12.0);
+        CONSTELLATION_ORION[19].setPoint(24.4, 139.7, 10.3);
     }
 
     enum ConstellationNames {
@@ -134,6 +165,8 @@ struct Constellations {
         DRACO,
         GEMINI,
         HERCULES,
+        LEO,
+        ORION,
         NUM_OF_CONSTELLATIONS
     };
 
@@ -145,19 +178,23 @@ struct Constellations {
             case DRACO:         constellationLength = LENGTHOF(CONSTELLATION_DRACO);        return CONSTELLATION_DRACO;
             case GEMINI:        constellationLength = LENGTHOF(CONSTELLATION_GEMINI);       return CONSTELLATION_GEMINI;
             case HERCULES:      constellationLength = LENGTHOF(CONSTELLATION_HERCULES);     return CONSTELLATION_HERCULES;
+            case LEO:           constellationLength = LENGTHOF(CONSTELLATION_LEO);          return CONSTELLATION_LEO;
+            case ORION:         constellationLength = LENGTHOF(CONSTELLATION_ORION);        return CONSTELLATION_ORION;
             default:                                                                        return NULL;
         }
     }
 
     std::string constellationName(int constellation) {
         switch(constellation) {
-            case ANDROMEDA:             return "Andromeda";
-            case AQUARIUS:              return "Aquarius";
-            case CENTAURUS:             return "Centaurus";
-            case DRACO:                 return "Draco";
-            case GEMINI:                return "Gemini";
-            case HERCULES:              return "Hercules";
-            default:                    return "";
+            case ANDROMEDA:     return "Andromeda";
+            case AQUARIUS:      return "Aquarius";
+            case CENTAURUS:     return "Centaurus";
+            case DRACO:         return "Draco";
+            case GEMINI:        return "Gemini";
+            case HERCULES:      return "Hercules";
+            case LEO:           return "Leo";
+            case ORION:         return "Orion";
+            default:            return "";
         }
     }
 };
