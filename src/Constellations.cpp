@@ -28,8 +28,8 @@ struct Constellations {
     Point CONSTELLATION_HERCULES[19];
     Point CONSTELLATION_LEO[9];
     Point CONSTELLATION_ORION[20];
-    // Point CONSTELLATION_PEGASUS[];
-    // Point CONSTELLATION_SAGITTARIUS[];
+    Point CONSTELLATION_PEGASUS[15];
+    Point CONSTELLATION_SAGITTARIUS[23];
 
     Constellations() {
         CONSTELLATION_ANDROMEDA[0].setPoint(353.3, 332.6, 12);
@@ -156,6 +156,46 @@ struct Constellations {
         CONSTELLATION_ORION[17].setPoint(53.6, 225, 7.4);
         CONSTELLATION_ORION[18].setPoint(40.7, 233.2, 12.0);
         CONSTELLATION_ORION[19].setPoint(24.4, 139.7, 10.3);
+
+        CONSTELLATION_PEGASUS[0].setPoint(15.6, 206.3, 5.7);
+        CONSTELLATION_PEGASUS[1].setPoint(158.2, 216.3, 6.6);
+        CONSTELLATION_PEGASUS[2].setPoint(195.2, 244, 5);
+        CONSTELLATION_PEGASUS[3].setPoint(205.1, 254, 5.3);
+        CONSTELLATION_PEGASUS[4].setPoint(272.2, 293.2, 5.8);
+        CONSTELLATION_PEGASUS[5].setPoint(325.4, 259.8, 6.8);
+        CONSTELLATION_PEGASUS[6].setPoint(320.9, 194.8, 6.1);
+        CONSTELLATION_PEGASUS[7].setPoint(363.7, 170.1, 5);
+        CONSTELLATION_PEGASUS[8].setPoint(315, 125.5, 5);
+        CONSTELLATION_PEGASUS[9].setPoint(272.2, 130.1, 5.8);
+        CONSTELLATION_PEGASUS[10].setPoint(195.9, 147.2, 6);
+        CONSTELLATION_PEGASUS[11].setPoint(189, 138.1, 6.4);
+        CONSTELLATION_PEGASUS[12].setPoint(204.3, 89.7, 7.5);
+        CONSTELLATION_PEGASUS[13].setPoint(163.4, 108.5, 7.9);
+        CONSTELLATION_PEGASUS[14].setPoint(45, 87.4, 7.6);
+
+        CONSTELLATION_SAGITTARIUS[0].setPoint(359.2, 162.4, 5.2);
+        CONSTELLATION_SAGITTARIUS[1].setPoint(301.6, 76.4, 10);
+        CONSTELLATION_SAGITTARIUS[2].setPoint(166.2, 81.4, 7.3);
+        CONSTELLATION_SAGITTARIUS[3].setPoint(152.8, 69.6, 6.3);
+        CONSTELLATION_SAGITTARIUS[4].setPoint(128, 48.6, 6.1);
+        CONSTELLATION_SAGITTARIUS[5].setPoint(116.3, 36.7, 7.5);
+        CONSTELLATION_SAGITTARIUS[6].setPoint(273.3, 254.1, 7.4);
+        CONSTELLATION_SAGITTARIUS[7].setPoint(260.6, 228.4, 9.2);
+        CONSTELLATION_SAGITTARIUS[8].setPoint(308.8, 188.3, 7.3);
+        CONSTELLATION_SAGITTARIUS[9].setPoint(273.3, 174.2, 7.5);
+        CONSTELLATION_SAGITTARIUS[10].setPoint(260.6, 124.4, 9.3);
+        CONSTELLATION_SAGITTARIUS[11].setPoint(213.6, 139.6, 7.8);
+        CONSTELLATION_SAGITTARIUS[12].setPoint(189, 132.7, 10.6);
+        CONSTELLATION_SAGITTARIUS[13].setPoint(171.6, 170.3, 10.9);
+        CONSTELLATION_SAGITTARIUS[14].setPoint(158.2, 147.9, 8.7);
+        CONSTELLATION_SAGITTARIUS[15].setPoint(84.4, 118.8, 7);
+        CONSTELLATION_SAGITTARIUS[16].setPoint(125.5, 294.8, 7.7);
+        CONSTELLATION_SAGITTARIUS[17].setPoint(128, 342, 9);
+        CONSTELLATION_SAGITTARIUS[18].setPoint(56.8, 313.4, 9.4);
+        CONSTELLATION_SAGITTARIUS[19].setPoint(38.2, 232.6, 5);
+        CONSTELLATION_SAGITTARIUS[20].setPoint(36.4, 241.6, 7.9);
+        CONSTELLATION_SAGITTARIUS[21].setPoint(33.8, 148.1, 5.3);
+        CONSTELLATION_SAGITTARIUS[22].setPoint(20.3, 158, 7.3);
     }
 
     enum ConstellationNames {
@@ -167,6 +207,8 @@ struct Constellations {
         HERCULES,
         LEO,
         ORION,
+        PEGASUS,
+        SAGITTARIUS,
         NUM_OF_CONSTELLATIONS
     };
 
@@ -180,6 +222,8 @@ struct Constellations {
             case HERCULES:      constellationLength = LENGTHOF(CONSTELLATION_HERCULES);     return CONSTELLATION_HERCULES;
             case LEO:           constellationLength = LENGTHOF(CONSTELLATION_LEO);          return CONSTELLATION_LEO;
             case ORION:         constellationLength = LENGTHOF(CONSTELLATION_ORION);        return CONSTELLATION_ORION;
+            case PEGASUS:       constellationLength = LENGTHOF(CONSTELLATION_PEGASUS);      return CONSTELLATION_PEGASUS;
+            case SAGITTARIUS:   constellationLength = LENGTHOF(CONSTELLATION_SAGITTARIUS);  return CONSTELLATION_SAGITTARIUS;
             default:                                                                        return NULL;
         }
     }
@@ -194,6 +238,8 @@ struct Constellations {
             case HERCULES:      return "Hercules";
             case LEO:           return "Leo";
             case ORION:         return "Orion";
+            case PEGASUS:       return "Pegasus";
+            case SAGITTARIUS:   return "Sagittarius";
             default:            return "";
         }
     }
