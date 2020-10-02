@@ -7,6 +7,7 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 * [Cosmosis](#cosmosis)
 * [Neutrinode](#neutrinode)
 * [PolyrhythmClock](#polyrhythm-clock)
+* [QubitCrusher](#qubitcrusher)
 * [RandGates](#randgates)
 * [StochSeq](#stochseq)
 * [StochSeq4](#stochseq4)
@@ -75,6 +76,12 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 - `TUPLET 3` outputs the ratio compared to `TUPLET 2`.
   
 TODO: See the image below if this is confusing.
+
+---
+
+### Qubit Crusher
+
+*TODO*
 
 ---
 ### RandGates
