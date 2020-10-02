@@ -46,6 +46,11 @@
           "slug": "JeremyBlankPanel",
           "name": "Blank Panel of Jeremy",
           "tags": ["Blank", "Visual"]
+      },
+      {
+          "slug": "QubitCrusher",
+          "name": "QubitCrusher",
+          "tags": ["Digital", "Distortion", "Effect"]
       }
   ]
 }
