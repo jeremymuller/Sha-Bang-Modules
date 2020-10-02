@@ -7,7 +7,7 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 * [Cosmosis](#cosmosis)
 * [Neutrinode](#neutrinode)
 * [PolyrhythmClock](#polyrhythm-clock)
-* [QubitCrusher](#qubitcrusher)
+* [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates)
 * [StochSeq](#stochseq)
 * [StochSeq4](#stochseq4)
