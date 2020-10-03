@@ -38,25 +38,29 @@ struct JeremyBlankPanelWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(24, 2)));
         addChild(createWidget<JeremyScrew>(Vec(24, box.size.y - 14)));
 
-        int randColor = static_cast<int>(random::uniform() * 4);
-        switch(randColor) { // 1.606
-            case 0:
-                addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
-                break;
-            case 1:
-                addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
-                break;
-            case 2:
-                addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
-                break;
-            case 3:
-                addChild(createLight<SmallLight<JeremyRedLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
-                addChild(createLight<SmallLight<JeremyRedLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
-                break;
-        }
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
+
+        // Old stuff
+        // int randColor = static_cast<int>(random::uniform() * 4);
+        // switch(randColor) { // 1.606
+        //     case 0:
+        //         addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+        //         addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
+        //         break;
+        //     case 1:
+        //         addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+        //         addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
+        //         break;
+        //     case 2:
+        //         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+        //         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
+        //         break;
+        //     case 3:
+        //         addChild(createLight<SmallLight<JeremyRedLight>>(Vec(19.8 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::LEFTEYE));
+        //         addChild(createLight<SmallLight<JeremyRedLight>>(Vec(28.1 - 3.21, 180.9 - 3.21), module, JeremyBlankPanel::RIGHTEYE));
+        //         break;
+        // }
     }
 };
 
