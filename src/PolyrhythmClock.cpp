@@ -29,11 +29,11 @@ struct PolyrhythmClock : Module {
     };
 
     dsp::SchmittTrigger toggleTrig;
-    dsp::PulseGenerator masterPulse;
+    dsp::PulseGenerator gatePulses[4];
+    bool tupletGates[4] = {};
     bool clockOn = false;
     float phases[4] = {};
     float randoms[4];
-    bool tupletGates[4] = {};
     float currentRhythmFraction[3] = {};
     float phase = 0;
     float phaseTuplet1 = 0;
@@ -72,9 +72,9 @@ struct PolyrhythmClock : Module {
             // TODO: this is awkward, i think it can be better
             if (i > 0) {
                 if (randoms[i] < params[TUPLETS_RAND_PARAM + i-1].getValue())
-                    tupletGates[i] = (phases[i] < 0.5);
+                    if (phases[i] == 0.0) gatePulses[i].trigger(1e-3f);
             } else {
-                tupletGates[i] = (phases[i] < 0.5);
+                if (phases[i] == 0.0) gatePulses[i].trigger(1e-3f);
             }
         }
     }
@@ -131,6 +131,10 @@ struct PolyrhythmClock : Module {
 
         } else {
             resetPhases();
+        }
+
+        for (int i = 0; i < 4; i++) {
+            tupletGates[i] = gatePulses[i].process(1.0 / args.sampleRate);
         }
 
         outputs[MASTER_PULSE_OUTPUT].setVoltage(tupletGates[0] ? 10.0 : 0.0);
