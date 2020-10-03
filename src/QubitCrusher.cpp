@@ -25,6 +25,10 @@ struct QubitCrusher : Module {
     }
 
     void process(const ProcessArgs &args) override {
+        if (!inputs[MAIN_INPUT].isConnected()) {
+            return;
+        }
+
         // this works for the most part but I may try a different way
         int channels = std::max(inputs[MAIN_INPUT].getChannels(), 1);
         float bitRate = params[BITS_PARAM].getValue();

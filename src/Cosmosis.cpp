@@ -6,6 +6,7 @@
 
 struct Star {
     Rect box;
+    Vec originalPos;
     Vec posOffset;
     NVGcolor color = nvgRGB(255, 255, 255);
     float radius;
@@ -28,13 +29,16 @@ struct Star {
     }
 
     void setPos(Vec pos) {
-        box.pos.x = pos.x;
-        box.pos.y = pos.y;
+        // originalPos.x = pos.x;
+        // originalPos.y = pos.y;
+        // box.pos = originalPos.minus(posOffset);
+        box.pos = pos;
     }
 
     Vec getPos() {
         // returns position with offset
         return box.pos.minus(posOffset);
+        // return box.pos;
     }
 
     void blip() {
@@ -69,13 +73,18 @@ struct Cosmosis : Module, Constellations, Quantize {
         SCALE_PARAM,
         PITCH_PARAM,
         PATTERN_PARAM,
-        OCTAVE_PARAM,
         SIZE_PARAM,
         CLEAR_STARS_PARAM,
         MODE_PARAM,
-        NUM_PARAMS
+        RANDOM_POS_PARAM,
+        RANDOM_RAD_PARAM,
+        RANDOM_SIZE_PARAM,
+        OCTAVE_PARAM = MODE_PARAM + 4,
+        NUM_PARAMS = OCTAVE_PARAM + 4
     };
     enum InputIds {
+        RANDOM_POS_INPUT,
+        RANDOM_RAD_INPUT,
         NUM_INPUTS
     };
     enum OutputIds {
@@ -92,7 +101,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger playTrig, clearTrig;
+    dsp::SchmittTrigger playTrig, clearTrig, rndPosTrig, rndRadTrig;
     dsp::PulseGenerator gatePulsePoly[16];
     Star *stars = new Star[MAX_STARS];
     Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
@@ -100,6 +109,8 @@ struct Cosmosis : Module, Constellations, Quantize {
     int currentSeqMode = 0;
     int clockWiseIndex = 0;
     int currentConstellation = 0;
+    std::string constellationText = "";
+    float maxDist;
     NVGcolor blipColor;
     float *seqPos = new float[NUM_SEQ_MODES];
     float seqSpeed = 1.0;
@@ -113,14 +124,24 @@ struct Cosmosis : Module, Constellations, Quantize {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(SPEED_PARAM, -2.0, 2.0, 0.0);
         configParam(PLAY_PARAM, 0.0, 1.0, 0.0);
+        configParam(RANDOM_POS_PARAM, 0.0, 1.0, 0.0, "Randomize position");
+        configParam(RANDOM_RAD_PARAM, 0.0, 1.0, 0.0, "Randomize radius");
+        configParam(RANDOM_SIZE_PARAM, 0.0, 1.0, 0.0, "Randomize constellation size");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
         configParam(PATTERN_PARAM, 0.0, Constellations::NUM_OF_CONSTELLATIONS-1, 0.0, "Constellation");
-        configParam(OCTAVE_PARAM, -5.0, 5.0, 0.0, "Octave");
+        configParam(OCTAVE_PARAM + PURPLE_SEQ, -5.0, 5.0, 0.0, "Purple Octave");
+        configParam(OCTAVE_PARAM + BLUE_SEQ, -5.0, 5.0, 0.0, "Blue Octave");
+        configParam(OCTAVE_PARAM + AQUA_SEQ, -5.0, 5.0, 0.0, "Aqua Octave");
+        configParam(OCTAVE_PARAM + RED_SEQ, -5.0, 5.0, 0.0, "Red Octave");
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation");
         configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
         configParam(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode");
+
+        Vec corner = Vec(0, 0);
+        Vec dir = corner.minus(center);
+        maxDist = sqrt(dir.x * dir.x + dir.y * dir.y) * 0.5;
 
         setConstellation(0);
 
@@ -145,7 +166,27 @@ struct Cosmosis : Module, Constellations, Quantize {
     json_t *dataToJson() override {
         json_t *rootJ = json_object();
 
+        json_t *starsJ = json_array();
+        for (int i = 0; i < MAX_STARS; i++) {
+            json_t *dataJ = json_array();
+
+            json_t *starVisibleJ = json_boolean(stars[i].visible);
+            json_t *starPosXJ = json_real(stars[i].box.pos.x);
+            json_t *starPosYJ = json_real(stars[i].box.pos.y);
+            json_t *starRadiusJ = json_real(stars[i].radius);
+
+            json_array_append_new(dataJ, starVisibleJ);
+            json_array_append_new(dataJ, starPosXJ);
+            json_array_append_new(dataJ, starPosYJ);
+            json_array_append_new(dataJ, starRadiusJ);
+
+            json_array_append_new(starsJ, dataJ);
+        }
+
+        json_object_set_new(rootJ, "constellationText", json_string(constellationText.c_str())); // errors here
+        json_object_set_new(rootJ, "currentConstellation", json_integer(currentConstellation));
         json_object_set_new(rootJ, "channels", json_integer(channels));
+        json_object_set_new(rootJ, "stars", starsJ);
 
         return rootJ;
     }
@@ -153,6 +194,29 @@ struct Cosmosis : Module, Constellations, Quantize {
     void dataFromJson(json_t *rootJ) override {
         json_t *channelsJ = json_object_get(rootJ, "channels");
         if (channelsJ) channels = json_integer_value(channelsJ);
+
+        json_t *currConstJ = json_object_get(rootJ, "currentConstellation");
+        if (currConstJ) currentConstellation = json_integer_value(currConstJ);
+
+        json_t *textJ = json_object_get(rootJ, "constellationText");
+        if (textJ) constellationText = json_string_value(textJ);
+
+        json_t *starsJ = json_object_get(rootJ, "stars");
+        if (starsJ) {
+            for (int i = 0; i < MAX_STARS; i++) {
+                json_t *dataJ = json_array_get(starsJ, i);
+                if (dataJ) {
+                    json_t *starVisibleJ = json_array_get(dataJ, 0);
+                    json_t *starPosXJ = json_array_get(dataJ, 1);
+                    json_t *starPosYJ = json_array_get(dataJ, 2);
+                    json_t * starRadiusJ = json_array_get(dataJ, 3);
+                    if (starVisibleJ) stars[i].visible = json_boolean_value(starVisibleJ);
+                    if (starPosXJ) stars[i].box.pos.x = json_real_value(starPosXJ);
+                    if (starPosYJ) stars[i].box.pos.y = json_real_value(starPosYJ);
+                    if (starRadiusJ) stars[i].radius = json_real_value(starRadiusJ);
+                }
+            }
+        }
     }
 
     void process(const ProcessArgs &args) override {
@@ -164,7 +228,12 @@ struct Cosmosis : Module, Constellations, Quantize {
             if (clearTrig.process(params[CLEAR_STARS_PARAM].getValue())) {
                 removeAllStars();
             }
-
+            if (rndPosTrig.process(params[RANDOM_POS_PARAM].getValue()) + inputs[RANDOM_POS_INPUT].getVoltage()) {
+                randomizePosition();
+            }
+            if (rndRadTrig.process(params[RANDOM_RAD_PARAM].getValue()) + inputs[RANDOM_RAD_INPUT].getVoltage()) {
+                randomizeRadii();
+            }
             int mode = params[MODE_PARAM].getValue();
             if (mode != currentSeqMode) {
                 setSeqMode(mode);
@@ -213,7 +282,7 @@ struct Cosmosis : Module, Constellations, Quantize {
                 //     }
                 // }
 
-                int oct = params[OCTAVE_PARAM].getValue();
+                int oct = params[OCTAVE_PARAM + getSeqMode()].getValue();
                 // change the MAX_STARS to the current length of selected constellation
                 for (int i = 0; i < MAX_STARS; i++) {
                     if (stars[i].visible && isStarTrigger(i)) {
@@ -254,7 +323,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         //     addStar(pos, i, CONSTELLATION_ANDROMEDA[i].r);
         // }
 
-
+        constellationText = Constellations::constellationName(patt);
         Point *constellation = Constellations::getConstellation(patt);
         for (int i = 0; i < Constellations::constellationLength; i++) {
             Vec pos = Vec(constellation[i].x, constellation[i].y);
@@ -333,8 +402,8 @@ struct Cosmosis : Module, Constellations, Quantize {
     }
 
     void resizeConstellation() {
-        // TODO: put limits on this
-        // Vec center = Vec(DISPLAY_SIZE/2.0, DISPLAY_SIZE/2.0);
+        // TODO: for a future version
+        // when resizing and trying to add stars it's weird
         for (int i = 0; i < MAX_STARS; i++) {
             if (stars[i].visible) {
                 Vec pos = stars[i].box.getCenter();
@@ -344,6 +413,7 @@ struct Cosmosis : Module, Constellations, Quantize {
                 float m = rescale(params[SIZE_PARAM].getValue(), 0, 1, maxDist, 0);
                 mag = mag.mult(m);
                 stars[i].posOffset = mag;
+                stars[i].setPos(pos);
             } else {
                 stars[i].posOffset = Vec(0, 0);
             }
@@ -410,6 +480,43 @@ struct Cosmosis : Module, Constellations, Quantize {
     void removeAllStars() {
         for (int i = 0; i < MAX_STARS; i++) {
             removeStar(i);
+        }
+        constellationText = "";
+    }
+
+    void randomizeRadii() {
+        for (int i = 0; i < MAX_STARS; i++) {
+            if (stars[i].visible) {
+                stars[i].radius = randRange(5.0, 12.0);
+            }
+        }
+        constellationText = "";
+    }
+
+    void randomizePosition() {
+        for (int i = 0; i < MAX_STARS; i++) {
+            if (stars[i].visible) {
+                float r = stars[i].radius;
+                float x = randRange(r, DISPLAY_SIZE - r);
+                float y = randRange(r, DISPLAY_SIZE - r);
+                stars[i].setPos(Vec(x, y));
+            }
+            constellationText = "";
+        }
+    }
+
+    void randomizeSize() {
+        float r = random::uniform();
+        for (int i = 0; i < MAX_STARS; i++) {
+            if (stars[i].visible) {
+                Vec pos = stars[i].box.getCenter();
+                Vec dir = pos.minus(center);
+                // float maxDist = sqrt(mag.x * mag.x + mag.y * mag.y) * 0.5;
+                dir = dir.normalize();
+                float m = rescale(r, 0, 1, maxDist, 0);
+                dir = dir.mult(m);
+                stars[i].setPos(pos.minus(dir));
+            }
         }
     }
 
@@ -546,7 +653,7 @@ struct CosmosisDisplay : Widget {
 
         if (module != NULL) {
             // name of constellation
-            std::string text = module->Constellations::constellationName(module->currentConstellation);
+            std::string text = module->constellationText;
             nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
             nvgFillColor(args.vg, nvgRGB(255, 255, 255));
             // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
@@ -646,16 +753,16 @@ struct CosmosisWidget : ModuleWidget {
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
 
-        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(120.2 - 3.21, 229.2 - 3.21), module, Cosmosis::PURPLE_LIGHT));
-        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(130.7 - 3.21, 219.5 - 3.21), module, Cosmosis::BLUE_LIGHT));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(141.3 - 3.21, 229.2 - 3.21), module, Cosmosis::AQUA_LIGHT));
-        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(130.7 - 3.21, 239 - 3.21), module, Cosmosis::RED_LIGHT));
+        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(15.9 - 3.21, 276.8 - 3.21), module, Cosmosis::PURPLE_LIGHT));
+        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(26.4 - 3.21, 267.1 - 3.21), module, Cosmosis::BLUE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(37 - 3.21, 276.8 - 3.21), module, Cosmosis::AQUA_LIGHT));
+        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(26.4 - 3.21, 286.6 - 3.21), module, Cosmosis::RED_LIGHT));
 
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 78.1), module, Cosmosis::PLAY_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(61.2, 78.1), module, Cosmosis::SPEED_PARAM));
         addParam(createParamCentered<BlueInvertKnob>(Vec(96, 78.1), module, Cosmosis::PATTERN_PARAM));
-        addParam(createParamCentered<BlueKnob>(Vec(130.7, 78.1), module, Cosmosis::SIZE_PARAM));
-        addParam(createParamCentered<DefaultButton>(Vec(96, 201.8), module, Cosmosis::CLEAR_STARS_PARAM));
+        // addParam(createParamCentered<BlueKnob>(Vec(130.7, 78.1), module, Cosmosis::SIZE_PARAM));
+        addParam(createParamCentered<DefaultButton>(Vec(130.7, 78.1), module, Cosmosis::CLEAR_STARS_PARAM));
 
         // note and scale knobs
         BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(26.4, 122.3), module, Cosmosis::ROOT_NOTE_PARAM));
@@ -674,17 +781,25 @@ struct CosmosisWidget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
-        ModeKnob *modeKnob = dynamic_cast<ModeKnob *>(createParamCentered<ModeKnob>(Vec(130.7, 201.8), module, Cosmosis::MODE_PARAM));
+        ModeKnob *modeKnob = dynamic_cast<ModeKnob *>(createParamCentered<ModeKnob>(Vec(26.4, 249.4), module, Cosmosis::MODE_PARAM));
         CenterAlignedLabel *const modeLabel = new CenterAlignedLabel;
-        modeLabel->box.pos = Vec(130.7, 232.8);
+        modeLabel->box.pos = Vec(26.4, 280.4);
         modeLabel->text = "";
         modeKnob->connectLabel(modeLabel, module);
         addChild(modeLabel);
         addParam(modeKnob);
 
+        addParam(createParamCentered<TinyBlueButton>(Vec(108.9, 243.7), module, Cosmosis::RANDOM_POS_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(108.9, 272.7), module, Cosmosis::RANDOM_RAD_PARAM));
         addParam(createParamCentered<Jeremy_HSwitchBlue>(Vec(83.2, 122.8), module, Cosmosis::PITCH_PARAM));
-        addParam(createParamCentered<BlueInvertKnob>(Vec(130.7, 121.9), module, Cosmosis::OCTAVE_PARAM));
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(26.4, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::PURPLE_SEQ));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(61.2, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::BLUE_SEQ));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(96, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::AQUA_SEQ));
+        addParam(createParamCentered<RedInvertKnob>(Vec(130.7, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::RED_SEQ));
         // addParam(createParamCentered<BlueInvertKnob>(Vec(61.2, 201.8), module, Cosmosis::MODE_PARAM));
+
+        addInput(createInputCentered<PJ301MPort>(Vec(80.7, 243.5), module, Cosmosis::RANDOM_POS_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(80.7, 272.7), module, Cosmosis::RANDOM_RAD_INPUT));
 
         addOutput(createOutputCentered<PJ301MPort>(Vec(32.1, 343.2), module, Cosmosis::GATE_OUT));
         addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Cosmosis::VOLT_OUT));
