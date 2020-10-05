@@ -29,6 +29,20 @@ Click anywhere to add/drag new stars. To remove stars click/drag them out of the
 ##### BUTTONS:
 - `PLAY` starts the sequencer.
 - `CLR` removes all stars.
+- `POS` randomizes positions of stars.
+- `RAD` randomizes the radii of stars.
+##### INPUTS:
+- `POS` accepts gate that triggers randomizing positions of stars.
+- `RAD` accepts gate that triggers randomizing radii of stars.
+##### KNOBS:
+- `SPEED` tempo of sequencer.
+- `PATT` sets the constellation pattern.
+- Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
+- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
+- `OCT` controls the octaves of individual sequencers.
+##### SWITCH:
+##### OUTPUTS:
+
 
 
 ---
@@ -49,7 +63,7 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 - `BPM` tempo of all nodes.
 - `SPEED` is the velocity of movement of nodes when `MOVE` is switched on.
 - Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
-  - Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
+- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
 - `OCT` controls the octaves of individual nodes.
 ##### SWITCHES:
 - `MOVE` each node will randomly move around the dispay area. 
