@@ -4,6 +4,8 @@ A collection of innovative, probabilistic, animated, and rhythmically complex mo
 
 *TODO: videos*
 
+![modulesall](/docs/Modules_ALL.png)
+
 ## Contents:
 
 * [Cosmosis](#cosmosis)
