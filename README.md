@@ -16,6 +16,8 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 
 ### Cosmosis
 
+![Cosmosis](/docs/Cosmosis.png)
+
 *A continuous sequencer based on constellations where time can move left->right, right->left, up->down, and down->up.*
 
 Click anywhere to add/drag new stars. To remove stars click/drag them out of the dark display area.
@@ -81,9 +83,23 @@ TODO: See the image below if this is confusing.
 
 ### Qubit Crusher
 
-*TODO*
+![QubitCrusher](/docs/QubitCrusher.png)
+
+*A bit crusher and downsampler using fractional rates with the ability to modulate bit rate & sample rate, or randomly trigger new bit rates & sample rates.*
+
+##### INPUTS:
+- `IN` input signal to be processed.
+- `TRG`s both inputs accept gates that trigger random bit rates and/or sample rates.
+- Inputs connected to `MOD` knob accept modulation sources (i.e. LFO).
+##### KNOBS:
+- `BITS` sets bit rate. This is overridden by `TRG` input.
+- `SAMP` sets sample rate. This is overriden by `TRG` input.
+- `MOD`s set the amount of modulation from modulation signal.
+##### OUTPUT:
+- `OUT` output signal.
 
 ---
+
 ### RandGates
 
 ![RandGates](/docs/RandGates.png)
@@ -102,6 +118,8 @@ TODO: See the image below if this is confusing.
 
 ### StochSeq
 
+![StochSeq](/docs/StochSeq.png)
+
 *A sequencer that uses stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
 
 Click and/or drag to draw your own patterns!
@@ -114,15 +132,16 @@ Click and/or drag to draw your own patterns!
 - `PATT` selects from preset patterns.
 - `SPREAD` determines the pitch spread of the `V/OCT` output. 
   - Center will always be the same pitch. 
-  - Right of center: 100% = higher pitch, 0% = lower pitch. 
-  - Left of center: 100% = lower pitch, 0% = higher pitch.
+  - Right of center: 0% to 100% in sliders correspond to low to high pitches.
+  - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
 ##### BUTTONS:
 - `RND` randomizes all probabilities.
 - `INV` inverts all probabilities.
 - `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
-- `V/OCT` outputs TODO..........
+- `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event. 
+- `GATES` outputs correspond to each position in the sequence.
 
 ---
 
@@ -132,6 +151,28 @@ Click and/or drag to draw your own patterns!
 
 *A sequencer that uses four independent stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
 
-*TODO*
+Click and/or drag to draw your own patterns!
+
+##### INPUTS:
+- `MCLK` controls timing of all patterns (overrides all individual clocks).
+- `CLK` controls timing of individual patterns.
+- `RST` resets sequences to beginning of timeline.
+- `RND` gate input randomizes all probabilities.
+- `INV` gate input inverts all probabilities.
+- `DIM` gate input cuts the current pattern in half and repeats.
+##### KNOBS:
+- `LEN` length of the individual sequence.
+- `PATT` selects from preset patterns.
+- `SPREAD` determines the pitch spread of the `V/OCT` output. 
+  - Center will always be the same pitch. 
+  - Right of center: 0% to 100% in sliders correspond to low to high pitches.
+  - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
+##### BUTTONS:
+- `RND` randomizes all probabilities.
+- `INV` inverts all probabilities.
+- `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
+##### OUTPUTS:
+- `GATE` outputs a pulse based on the probability of the current individual sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
+- `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
 
 ---
