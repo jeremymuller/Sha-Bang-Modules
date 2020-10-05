@@ -1,6 +1,8 @@
 # Sha#Bang! Modules
 
-A collection of innovative, probabilistic, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller). :hash: :exclamation:
+A collection of innovative, probabilistic, animated, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller).
+
+*TODO: videos*
 
 ## Contents:
 
