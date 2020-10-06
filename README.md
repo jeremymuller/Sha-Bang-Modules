@@ -1,6 +1,6 @@
 # Sha#Bang! Modules
 
-A collection of innovative, probabilistic, animated, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller).
+A collection of innovative, probabilistic, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller).
 
 *TODO: videos*
 
@@ -40,10 +40,12 @@ Click anywhere to add/drag new stars. To remove stars click/drag them out of the
 - Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
 - Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
 - `OCT` controls the octaves of individual sequencers.
+- `MODE` sets which direction time will traverse the stars.
 ##### SWITCH:
+- `PITCH` left side will take pitch from the radius of particles. The right side will take pitch based on the X or Y position (width or height respectively) in the display. If the `MODE` is set to either Blue or Red, in which case time travels down or up, pitch is taken from the horizontal position of the stars. The left switch is good if you'd like to generate randomness in the pitches, however, if you want more control over the pitch then select the right switch.
 ##### OUTPUTS:
-
-
+- `GATES` output pulses.
+- `V/OCT` outputs ±5 volts.
 
 ---
 
