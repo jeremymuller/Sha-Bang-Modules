@@ -50,7 +50,7 @@
       {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
-          "tags": ["Digital", "Distortion", "Effect"]
+          "tags": ["Digital", "Distortion", "Effect", "Sample and hold"]
       }
   ]
 }
