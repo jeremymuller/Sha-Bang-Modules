@@ -96,8 +96,6 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 - `TUPLET 1` outputs the ratio compared to the bpm.
 - `TUPLET 2` outputs the ratio compared to `TUPLET 1`.
 - `TUPLET 3` outputs the ratio compared to `TUPLET 2`.
-  
-TODO: See the image below if this is confusing.
 
 ---
 
