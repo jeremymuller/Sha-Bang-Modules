@@ -2,7 +2,7 @@
   "slug": "Sha-Bang-Modules",
   "name": "Sha#Bang! Modules",
   "version": "1.0.0",
-  "license": "proprietary",
+  "license": "BSD-3-Clause",
   "author": "Jeremy Muller",
   "authorEmail": "jeremy@jeremymuller.com",
   "authorUrl": "http://jeremymuller.com",
