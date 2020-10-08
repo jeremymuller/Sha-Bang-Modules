@@ -4,7 +4,7 @@ A collection of innovative, probabilistic, and rhythmically complex modules for 
 
 *TODO: videos*
 
-![modulesall](/docs/Modules_ALL.png)
+![modulesall](/docs/Modules_ALL.gif)
 
 ## Contents:
 
