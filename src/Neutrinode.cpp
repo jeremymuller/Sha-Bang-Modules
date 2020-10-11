@@ -928,17 +928,18 @@ struct NeutrinodeWidget : ModuleWidget {
         addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Neutrinode::VOLTS_ALL_OUTPUTS));
     }
 
-    void appendContextMenu(Menu *menu) override {
-        Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
-        MenuEntry *spacerLabel = new MenuEntry();
-        menu->addChild(spacerLabel);
+    // TODO: issue with polyphony menu
+    // void appendContextMenu(Menu *menu) override {
+    //     Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
+    //     MenuEntry *spacerLabel = new MenuEntry();
+    //     menu->addChild(spacerLabel);
 
-        ChannelItem *channelItem = new ChannelItem;
-        channelItem->text = "Polyphony channels";
-        channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
-        channelItem->module = module;
-        menu->addChild(channelItem);
-    }
+    //     ChannelItem *channelItem = new ChannelItem;
+    //     channelItem->text = "Polyphony channels";
+    //     channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
+    //     channelItem->module = module;
+    //     menu->addChild(channelItem);
+    // }
 };
 
 Model *modelNeutrinode = createModel<Neutrinode, NeutrinodeWidget>("Neutrinode");
