@@ -2,6 +2,8 @@
 
 A collection of innovative, probabilistic, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller).
 
+Add these modules to VCVRack through the [Rack library](https://library.vcvrack.com/?brand=Sha%23Bang!%20Modules).
+
 *TODO: videos*
 
 ![modulesall](/docs/Modules_ALL.gif)
