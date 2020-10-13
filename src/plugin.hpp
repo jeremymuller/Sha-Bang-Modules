@@ -74,6 +74,30 @@ struct CenterAlignedLabel : Widget {
 
 /************************** PORTS **************************/
 
+struct TinyPortPurple : SvgPort {
+    TinyPortPurple() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPortPurple.svg")));
+    }
+};
+
+struct TinyPortBlue : SvgPort {
+    TinyPortBlue() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPortBlue.svg")));
+    }
+};
+
+struct TinyPortAqua : SvgPort {
+    TinyPortAqua() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPortAqua.svg")));
+    }
+};
+
+struct TinyPortRed : SvgPort {
+    TinyPortRed() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPortRed.svg")));
+    }
+};
+
 struct TinyPJ301M : SvgPort {
     TinyPJ301M() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPJ301M.svg")));

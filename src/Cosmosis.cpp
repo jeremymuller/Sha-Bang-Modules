@@ -460,6 +460,8 @@ struct Cosmosis : Module, Constellations, Quantize {
         stars[index].setPos(pos.plus(mag));
         stars[index].posOffset = mag;
 
+        constellationText = "";
+
         // stars[index].posOffset = Vec(0, 0);
     }
 
@@ -475,12 +477,14 @@ struct Cosmosis : Module, Constellations, Quantize {
         visibleStars--;
         stars[index].visible = false;
         stars[index].locked = true;
+        constellationText = "";
     }
 
     void removeAllStars() {
         for (int i = 0; i < MAX_STARS; i++) {
             removeStar(i);
         }
+        visibleStars = 0;
         constellationText = "";
     }
 
@@ -600,10 +604,10 @@ struct CosmosisDisplay : Widget {
                 }
             }
 
-            if (!clickedOnStar) {
-                if (module->visibleStars < MAX_STARS) {
-                    module->addStar(inits, nextAvailableIndex);
-                }
+            if (!clickedOnStar && (module->visibleStars < MAX_STARS)) {
+                module->addStar(inits, nextAvailableIndex);
+                // if (module->visibleStars < MAX_STARS) {
+                // }
             }
 
         }

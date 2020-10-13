@@ -512,10 +512,6 @@ struct Neutrinode : Module, Quantize {
 
         for (int i = 0; i < NUM_OF_NODES; i++) {
             nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
-            // nodes[i].pulses[index].isConnected = false;
-            // nodes[i].pulses[index].visible = true;
-            // Pulse pulse;
-            // nodes[i].pulses.push_back(pulse);
         }
     }
 
@@ -528,10 +524,6 @@ struct Neutrinode : Module, Quantize {
 
         for (int i = 0; i < NUM_OF_NODES; i++) {
             nodes[i].pulses[index].setPos(nodes[i].box.getCenter());
-            // nodes[i].pulses[index].isConnected = false;
-            // nodes[i].pulses[index].visible = true;
-            // Pulse pulse;
-            // nodes[i].pulses.push_back(pulse);
         }
     }
 
