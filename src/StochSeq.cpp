@@ -5,7 +5,7 @@
 #define NUM_OF_SLIDERS 32
 #define NUM_OF_LIGHTS 32
 
-struct StochSeq : Module {
+struct StochSeq : Module, Quantize {
 	enum ParamIds {
 		PATTERN_PARAM,
 		RANDOM_PARAM,
@@ -13,6 +13,8 @@ struct StochSeq : Module {
 		DIMINUTION_PARAM,
 		LENGTH_PARAM,
 		SPREAD_PARAM,
+		ROOT_NOTE_PARAM,
+        SCALE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -55,6 +57,8 @@ struct StochSeq : Module {
 		configParam(DIMINUTION_PARAM, 0.0, 1.0, 0.0, "diminish pattern");
 		configParam(LENGTH_PARAM, 1.0, 32.0, 32.0, "seq length");
 		configParam(SPREAD_PARAM, -4.0, 4.0, 1.0, "spread");
+		configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
+		configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
 
 		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 			gateProbabilities[i] = random::uniform();
@@ -139,6 +143,9 @@ struct StochSeq : Module {
 	}
 
 	 void clockStep() {
+		int rootNote = params[ROOT_NOTE_PARAM].getValue();
+		int scale = params[SCALE_PARAM].getValue();
+
 		seqLength = (int)params[LENGTH_PARAM].getValue();
 		gateIndex = (gateIndex + 1) % seqLength;
 		lightBlink = false;
@@ -152,7 +159,9 @@ struct StochSeq : Module {
 		}
 
 		float spread = params[SPREAD_PARAM].getValue();
-		pitchVoltage = prob * (2 * spread) - spread;
+		float volts = prob * (2 * spread) - spread;
+		pitchVoltage = Quantize::quantizeRawVoltage(volts, rootNote, scale);
+		// pitchVoltage = prob * (2 * spread) - spread;
 	}
 
 	void resetSeqToEnd() {
@@ -360,18 +369,34 @@ struct StochSeqWidget : ModuleWidget {
 		addChild(createWidget<JeremyScrew>(Vec(457.1, 2)));
 		addChild(createWidget<JeremyScrew>(Vec(457.1, box.size.y-14)));
 
-		addParam(createParamCentered<BlueInvertKnob>(Vec(105.9, 237.3), module, StochSeq::LENGTH_PARAM));
-		addParam(createParamCentered<BlueInvertKnob>(Vec(140.5, 237.3), module, StochSeq::PATTERN_PARAM));
-		addParam(createParamCentered<DefaultButton>(Vec(175, 237.3), module, StochSeq::RANDOM_PARAM));
-		addParam(createParamCentered<DefaultButton>(Vec(209.5, 237.3), module, StochSeq::INVERT_PARAM));
-		addParam(createParamCentered<DefaultButton>(Vec(244.1, 237.3), module, StochSeq::DIMINUTION_PARAM));
-		addParam(createParamCentered<BlueKnob>(Vec(437.2, 237.3), module, StochSeq::SPREAD_PARAM));
+		addParam(createParamCentered<BlueInvertKnob>(Vec(105.9, 228.7), module, StochSeq::LENGTH_PARAM));
+		addParam(createParamCentered<BlueInvertKnob>(Vec(140.5, 228.7), module, StochSeq::PATTERN_PARAM));
+		addParam(createParamCentered<DefaultButton>(Vec(175, 228.7), module, StochSeq::RANDOM_PARAM));
+		addParam(createParamCentered<DefaultButton>(Vec(209.5, 228.7), module, StochSeq::INVERT_PARAM));
+		addParam(createParamCentered<DefaultButton>(Vec(244.1, 228.7), module, StochSeq::DIMINUTION_PARAM));
+		addParam(createParamCentered<BlueKnob>(Vec(399.5, 256.8), module, StochSeq::SPREAD_PARAM));
 
+		// note and scale knobs
+		BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(282, 228.7), module, StochSeq::ROOT_NOTE_PARAM));
+		LeftAlignedLabel *const noteLabel = new LeftAlignedLabel;
+		noteLabel->box.pos = Vec(297.9, 232.3);
+		noteLabel->text = "";
+		noteKnob->connectLabel(noteLabel, module);
+		addChild(noteLabel);
+		addParam(noteKnob);
 
-		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 237.3), module, StochSeq::CLOCK_INPUT));
-		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 237.3), module, StochSeq::RESET_INPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(345.5, 237.3), module, StochSeq::GATE_MAIN_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(399.5, 237.3), module, StochSeq::VOLT_OUTPUT));
+		BlueScaleKnob *scaleKnob = dynamic_cast<BlueScaleKnob *>(createParamCentered<BlueScaleKnob>(Vec(282, 256.8), module, StochSeq::SCALE_PARAM));
+		LeftAlignedLabel *const scaleLabel = new LeftAlignedLabel;
+		scaleLabel->box.pos = Vec(297.9, 260.4);
+		scaleLabel->text = "";
+		scaleKnob->connectLabel(scaleLabel, module);
+		addChild(scaleLabel);
+		addParam(scaleKnob);
+
+		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 228.7), module, StochSeq::CLOCK_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 228.7), module, StochSeq::RESET_INPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(360.7, 228.7), module, StochSeq::GATE_MAIN_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(399.5, 228.7), module, StochSeq::VOLT_OUTPUT));
 
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
