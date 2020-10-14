@@ -40,7 +40,7 @@ Click anywhere to add/drag new stars. To remove stars click/drag them out of the
 - `SPEED` tempo of sequencer.
 - `PATT` sets the constellation pattern.
 - Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
-- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
+- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord).
 - `OCT` controls the octaves of individual sequencers.
 - `MODE` sets which direction time will traverse the stars.
 ##### SWITCH:
@@ -67,10 +67,10 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 - `BPM` tempo of all nodes.
 - `SPEED` is the velocity of movement of nodes when `MOVE` is switched on.
 - Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
-- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord). 
+- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord).
 - `OCT` controls the octaves of individual nodes.
 ##### SWITCHES:
-- `MOVE` each node will randomly move around the dispay area. 
+- `MOVE` each node will randomly move around the dispay area.
 - `PITCH` left side will take pitch from the radius of particles. The right side will take pitch based on the Y position (height) in the display. The left switch is good if you'd like to generate randomness in the pitches, however, if you want more control over the pitch then select the right switch.
 ##### OUTPUTS:
 - `GATES` and `V/OCT` output only from the corresponding node color.
@@ -150,17 +150,19 @@ Click and/or drag to draw your own patterns!
 ##### KNOBS:
 - `LEN` length of the sequence.
 - `PATT` selects from preset patterns.
-- `SPREAD` determines the pitch spread of the `V/OCT` output. 
-  - Center will always be the same pitch. 
+- `SPREAD` determines the pitch spread of the `V/OCT` output.
+  - Center will always be the same pitch.
   - Right of center: 0% to 100% in sliders correspond to low to high pitches.
   - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
+- Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
+- Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord).
 ##### BUTTONS:
 - `RND` randomizes all probabilities.
 - `INV` inverts all probabilities.
 - `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
-- `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event. 
+- `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
 - `GATES` outputs correspond to each position in the sequence.
 
 ---
@@ -183,10 +185,11 @@ Click and/or drag to draw your own patterns!
 ##### KNOBS:
 - `LEN` length of the individual sequence.
 - `PATT` selects from preset patterns.
-- `SPREAD` determines the pitch spread of the `V/OCT` output. 
-  - Center will always be the same pitch. 
+- `SPREAD` determines the pitch spread of the `V/OCT` output.
+  - Center will always be the same pitch.
   - Right of center: 0% to 100% in sliders correspond to low to high pitches.
   - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
+- Two knobs control the root note and the scale just like [StochSeq](#stochseq).
 ##### BUTTONS:
 - `RND` randomizes all probabilities.
 - `INV` inverts all probabilities.
