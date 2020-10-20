@@ -198,6 +198,10 @@ struct Neutrinode : Module, Quantize {
         NUM_PARAMS = OCTAVE_PARAMS + NUM_OF_NODES
     };
     enum InputIds {
+        PLAY_INPUT,
+        BPM_INPUT,
+        MOVE_INPUT,
+        PITCH_CV_INPUT,
         NUM_INPUTS
     };
     enum OutputIds {
@@ -212,9 +216,9 @@ struct Neutrinode : Module, Quantize {
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger rndTrig, clearTrig, pauseTrig;
+    dsp::SchmittTrigger moveTrig, rndTrig, clearTrig, pauseTrig;
     dsp::PulseGenerator gatePulsesAll[16];
-    float allPitches[16] = {}; // <-- this is weird when two nodes collide on one particle
+    // float allPitches[16] = {}; // <-- this is weird when two nodes collide on one particle
     Node *nodes = new Node[NUM_OF_NODES];
     Particle *particles = new Particle[MAX_PARTICLES];
     int visibleParticles = 0;
@@ -222,6 +226,7 @@ struct Neutrinode : Module, Quantize {
     bool movement = false;
     bool pitchChoice = false;
     bool toggleStart = true;
+    bool nodeCollisionMode = true;
     float clockStep;
     float maxConnectedDist = 150;
     float pulseSpeed = 1.0 / APP->engine->getSampleRate() * maxConnectedDist;
@@ -238,7 +243,7 @@ struct Neutrinode : Module, Quantize {
         configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(PITCH_PARAM, 0.0, 1.0, 0.0);
+        configParam(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode");
         configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
         configParam(ON_PARAM + PURPLE_NODE, 0.0, 1.0, 0.0, "toggle purple node");
@@ -262,6 +267,11 @@ struct Neutrinode : Module, Quantize {
         nodes[1].box.pos = Vec(randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE-16), randRange(16, DISPLAY_SIZE/2.0-16));
         nodes[2].box.pos = Vec(randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE/2.0-16), randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE/2.0-16));
         nodes[3].box.pos = Vec(randRange(16, DISPLAY_SIZE/2.0-16), randRange(DISPLAY_SIZE/2.0+16, DISPLAY_SIZE-16));
+
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            nodes[i].vel.x = randRange(1);
+            nodes[i].vel.y = randRange(1);
+        }
     }
 
     ~Neutrinode() {
@@ -307,7 +317,8 @@ struct Neutrinode : Module, Quantize {
             json_array_append_new(particlesJ, pDataJ);
         }
 
-        // json_object_set_new(rootJ, "start", json_boolean(toggleStart));
+        json_object_set_new(rootJ, "start", json_boolean(toggleStart));
+        json_object_set_new(rootJ, "collisions", json_boolean(nodeCollisionMode));
         json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "nodes", nodesJ);
         json_object_set_new(rootJ, "particles", particlesJ);
@@ -319,9 +330,11 @@ struct Neutrinode : Module, Quantize {
         json_t *channelsJ = json_object_get(rootJ, "channels");
         if (channelsJ) channels = json_integer_value(channelsJ);
 
-        // json_t *startJ = json_object_get(rootJ, "start");
-        // if (startJ) toggleStart = json_boolean_value(startJ);
+        json_t *startJ = json_object_get(rootJ, "start");
+        if (startJ) toggleStart = json_boolean_value(startJ);
 
+        json_t *collisionsJ = json_object_get(rootJ, "collisions");
+        if (collisionsJ) nodeCollisionMode = json_boolean_value(collisionsJ);
 
         // data from nodes
         json_t *nodesJ = json_object_get(rootJ, "nodes");
@@ -369,17 +382,6 @@ struct Neutrinode : Module, Quantize {
     }
 
     void process(const ProcessArgs &args) override {
-        // outputs[GATE_OUTPUTS + PURPLE_NODE].setChannels(channels);
-        // outputs[GATE_OUTPUTS + BLUE_NODE].setChannels(channels);
-        // outputs[GATE_OUTPUTS + AQUA_NODE].setChannels(channels);
-        // outputs[GATE_OUTPUTS + RED_NODE].setChannels(channels);
-        // outputs[VOLT_OUTPUTS + PURPLE_NODE].setChannels(channels);
-        // outputs[VOLT_OUTPUTS + BLUE_NODE].setChannels(channels);
-        // outputs[VOLT_OUTPUTS + AQUA_NODE].setChannels(channels);
-        // outputs[VOLT_OUTPUTS + RED_NODE].setChannels(channels);
-        // outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-        // outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
-
         // checks param knobs every 4th sample
         if (checkParams == 0) {
             // if (rndTrig.process(params[RND_PARTICLES_PARAM].getValue())) {
@@ -388,13 +390,16 @@ struct Neutrinode : Module, Quantize {
             if (clearTrig.process(params[CLEAR_PARTICLES_PARAM].getValue())) {
                 clearParticles();
             }
-            if (pauseTrig.process(params[PLAY_PARAM].getValue())) {
+            if (pauseTrig.process(params[PLAY_PARAM].getValue() + inputs[PLAY_INPUT].getVoltage())) {
                 toggleStart = !toggleStart;
             }
-            movement = params[MOVE_PARAM].getValue();
+            if (moveTrig.process(params[MOVE_PARAM].getValue() + inputs[MOVE_INPUT].getVoltage())) {
+                movement = !movement;
+            }
+            // movement = params[MOVE_PARAM].getValue();
             pitchChoice = params[PITCH_PARAM].getValue();
-            
-            clockStep = params[BPM_PARAM].getValue() / 60.0;
+
+            clockStep = (params[BPM_PARAM].getValue() + (inputs[BPM_INPUT].getVoltage() * 5.0)) / 60.0;
             clockStep = (clockStep / (args.sampleRate / INTERNAL_SAMP_TIME)) / 2;
             pulseSpeed = clockStep * maxConnectedDist * 2;
         }
@@ -408,18 +413,24 @@ struct Neutrinode : Module, Quantize {
             if (movement) {
                 if (moveNodes == 0) {
                     updateNodePos();
+                    if (nodeCollisionMode) checkCollisions();
                 }
                 moveNodes = (moveNodes+1) % static_cast<int>(args.sampleRate/60.0/INTERNAL_SAMP_TIME); // check 60 hz
             }
 
             int polyChannelIndex = 0;
-            int rootNote = params[ROOT_NOTE_PARAM].getValue();
+            int rootNote = 0;
+            if (inputs[PITCH_CV_INPUT].isConnected()) {
+                rootNote = static_cast<int>(inputs[PITCH_CV_INPUT].getVoltage(0) * 12) % 12;
+            } else {
+                rootNote = params[ROOT_NOTE_PARAM].getValue();
+            }
+            // int rootNote = params[ROOT_NOTE_PARAM].getValue();
             int scale = params[SCALE_PARAM].getValue();
             outputs[GATES_ALL_OUTPUTS].setChannels(channels);
             outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 nodes[i].start = toggleStart;
-
 
                 if (nodes[i].toggleTrig.process(params[ON_PARAM+i].getValue())) {
                     nodes[i].start = !nodes[i].start;
@@ -429,9 +440,8 @@ struct Neutrinode : Module, Quantize {
                 if (nodes[i].visible && nodes[i].start) {
                     int oct = params[OCTAVE_PARAMS + i].getValue();
 
-                    // when using 16 channels it doesn't work for All outputs
                     for (int j = 0; j < MAX_PARTICLES; j++) {
-                        if (particles[j].visible) {
+                        if (particles[j].visible && nodes[i].pulses[j].isConnected) {
                             Vec p = particles[j].box.getCenter();
                             nodes[i].sendPulse(p, j, pulseSpeed);
                             if (nodes[i].pulses[j].triggered) {
@@ -548,15 +558,35 @@ struct Neutrinode : Module, Quantize {
             }
         }
         visibleParticles = 0;
-        // particles.clear();
-        // nodes[i].pulses.clear();
+    }
+
+    void checkCollisions() {
+        for (int i = 0; i < NUM_OF_NODES; i++) {
+            if (nodes[i].visible) {
+                for (int j = 0; j < NUM_OF_NODES; j++) {
+                    if (i != j) {
+                        Vec v1 = nodes[i].box.getCenter();
+                        Vec v2 = nodes[j].box.getCenter();
+                        float d = dist(v1, v2);
+                        if (d < 31) {
+                            Vec tempVel = nodes[j].vel;
+                            nodes[j].vel = nodes[i].vel;
+                            nodes[i].vel = tempVel;
+
+                            // update positions
+                            nodes[i].box.pos = nodes[i].box.pos.plus(nodes[i].vel);
+                            nodes[j].box.pos = nodes[j].box.pos.plus(nodes[j].vel);
+                        }
+                    }
+
+                }
+            }
+        }
     }
 
     void updateNodePos() {
         float speed = std::pow(2.0, params[SPEED_PARAM].getValue());
         for (int i = 0; i < NUM_OF_NODES; i++) {
-            // nodes[i].acc.x = randRange(-speed, speed);
-            // nodes[i].acc.y = randRange(-speed, speed);
             nodes[i].acc.x = randRange(-0.075, 0.075);
             nodes[i].acc.y = randRange(-0.075, 0.075);
 
@@ -597,6 +627,32 @@ struct ChannelItem : MenuItem {
 		}
 		return menu;
 	}
+};
+
+struct CollisionModeValueItem : MenuItem {
+    Neutrinode *module;
+    bool nodeCollisions;
+    void onAction(const event::Action &e) override {
+        module->nodeCollisionMode = nodeCollisions;
+    }
+};
+
+struct CollisionModeItem : MenuItem {
+    Neutrinode *module;
+    Menu *createChildMenu() override {
+        Menu *menu = new Menu;
+        std::vector<std::string> collModes = {"on", "off"};
+        for (int i = 0; i < 2; i++) {
+            CollisionModeValueItem *item = new CollisionModeValueItem;
+            item->text = collModes[i];
+            bool isOn = (i == 0) ? true : false;
+            item->rightText = CHECKMARK(module->nodeCollisionMode == isOn);
+            item->module = module;
+            item->nodeCollisions = isOn;
+            menu->addChild(item);
+        }
+        return menu;
+    }
 };
 
 struct NeutrinodeDisplay : Widget {
@@ -861,10 +917,16 @@ struct NeutrinodeWidget : ModuleWidget {
         // addChild(createWidget<JeremyScrew>(Vec(431, 2)));
         // addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
 
-        addParam(createParamCentered<PurpleButton>(Vec(26.4, 78.1), module, Neutrinode::PLAY_PARAM));
-        addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 78.1), module, Neutrinode::BPM_PARAM));
-        addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 78.1), module, Neutrinode::MOVE_PARAM));
-        addParam(createParamCentered<PurpleKnob>(Vec(130.7, 78.1), module, Neutrinode::SPEED_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(26.4, 65.3), module, Neutrinode::PLAY_PARAM));
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(61.2, 65.3), module, Neutrinode::BPM_PARAM));
+        addParam(createParamCentered<PurpleButton>(Vec(96, 65.3), module, Neutrinode::MOVE_PARAM));
+        addParam(createParamCentered<PurpleKnob>(Vec(130.7, 65.3), module, Neutrinode::SPEED_PARAM));
+
+        // inputs
+        addInput(createInputCentered<TinyPJ301M>(Vec(26.4, 90.7), module, Neutrinode::PLAY_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(61.2, 90.7), module, Neutrinode::BPM_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(96, 90.7), module, Neutrinode::MOVE_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(72.3, 122.8), module, Neutrinode::PITCH_CV_INPUT));
 
         // note and scale knobs
         PurpleNoteKnob *noteKnob = dynamic_cast<PurpleNoteKnob *>(createParamCentered<PurpleNoteKnob>(Vec(26.4, 122.3), module, Neutrinode::ROOT_NOTE_PARAM));
@@ -883,11 +945,8 @@ struct NeutrinodeWidget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
-        // addParam(createParamCentered<PurpleInvertKnob>(Vec(26.4, 136.7), module, Neutrinode::ROOT_NOTE_PARAM));
-        // addParam(createParamCentered<PurpleInvertKnob>(Vec(58.8, 136.7), module, Neutrinode::SCALE_PARAM));
-        addParam(createParamCentered<Jeremy_HSwitch>(Vec(91.5, 122.8), module, Neutrinode::PITCH_PARAM));
-
-        addParam(createParamCentered<PurpleButton>(Vec(130.7, 122.3), module, Neutrinode::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<Jeremy_HSwitch>(Vec(111.4, 122.8), module, Neutrinode::PITCH_PARAM));
+        addParam(createParamCentered<TinyPurpleButton>(Vec(130.7, 91.4), module, Neutrinode::CLEAR_PARTICLES_PARAM));
         // addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
         // addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
 
@@ -921,17 +980,23 @@ struct NeutrinodeWidget : ModuleWidget {
     }
 
     // TODO: issue with polyphony menu
-    // void appendContextMenu(Menu *menu) override {
-    //     Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
-    //     MenuEntry *spacerLabel = new MenuEntry();
-    //     menu->addChild(spacerLabel);
+    void appendContextMenu(Menu *menu) override {
+        Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
+        menu->addChild(new MenuEntry);
 
-    //     ChannelItem *channelItem = new ChannelItem;
-    //     channelItem->text = "Polyphony channels";
-    //     channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
-    //     channelItem->module = module;
-    //     menu->addChild(channelItem);
-    // }
+        CollisionModeItem *collisionModeItem = new CollisionModeItem;
+        collisionModeItem->text = "Collisions";
+        if (module->nodeCollisionMode) collisionModeItem->rightText = std::string("on") + " " + RIGHT_ARROW;
+        else collisionModeItem->rightText = std::string("off") + " " + RIGHT_ARROW;
+        collisionModeItem->module = module;
+        menu->addChild(collisionModeItem);
+
+        // ChannelItem *channelItem = new ChannelItem;
+        // channelItem->text = "Polyphony channels";
+        // channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
+        // channelItem->module = module;
+        // menu->addChild(channelItem);
+    }
 };
 
 Model *modelNeutrinode = createModel<Neutrinode, NeutrinodeWidget>("Neutrinode");

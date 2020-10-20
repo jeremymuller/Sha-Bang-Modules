@@ -7,20 +7,25 @@
   "authorEmail": "jeremy@jeremymuller.com",
   "authorUrl": "http://jeremymuller.com",
   "pluginUrl": "",
-  "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules",
+  "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#shabang-modules",
   "sourceUrl": "https://github.com/jeremymuller/Sha-Bang-Modules",
   "donateUrl": "https://www.paypal.me/jeremysmuller",
   "changelogUrl": "",
   "modules": [
       {
-          "slug": "StochSeq",
-          "name": "Stochastic Sequencer 1",
-          "tags": ["Sequencer", "Visual"]
+          "slug": "Cosmosis",
+          "name": "Cosmosis",
+          "tags": ["Visual", "Sequencer", "Polyphonic"]
       },
       {
-          "slug": "StochSeq4",
-          "name": "Stochastic Sequencer 4",
-          "tags": ["Sequencer", "Visual"]
+          "slug": "JeremyBlankPanel",
+          "name": "Blank Panel of Jeremy",
+          "tags": ["Blank", "Visual"]
+      },
+      {
+          "slug": "Neutrinode",
+          "name": "Neutrinode",
+          "tags": ["Visual", "Sequencer", "Polyphonic"]
       },
       {
           "slug": "PolyrhythmClock",
@@ -33,24 +38,19 @@
           "tags": ["Switch"]
       },
       {
-          "slug": "Neutrinode",
-          "name": "Neutrinode",
-          "tags": ["Visual", "Sequencer", "Polyphonic"]
-      },
-      {
-          "slug": "Cosmosis",
-          "name": "Cosmosis",
-          "tags": ["Visual", "Sequencer", "Polyphonic"]
-      },
-      {
-          "slug": "JeremyBlankPanel",
-          "name": "Blank Panel of Jeremy",
-          "tags": ["Blank", "Visual"]
-      },
-      {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
           "tags": ["Digital", "Distortion", "Effect", "Sample and hold"]
+      },
+      {
+          "slug": "StochSeq",
+          "name": "Stochastic Sequencer 1",
+          "tags": ["Sequencer", "Visual"]
+      },
+      {
+          "slug": "StochSeq4",
+          "name": "Stochastic Sequencer 4",
+          "tags": ["Sequencer", "Visual"]
       }
   ]
 }

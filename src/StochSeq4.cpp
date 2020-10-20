@@ -353,7 +353,31 @@ struct StochSeq4Display : Widget {
         // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         // nvgFill(args.vg);
 
-        if (module == NULL) return;
+        if (module == NULL) {
+            // draw stuff for preview
+			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
+			for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+				// grid
+				nvgStrokeWidth(args.vg, (i % 4 == 0 ? 2 : 0.5));
+				nvgBeginPath(args.vg);
+				nvgMoveTo(args.vg, i * SLIDER_WIDTH, 0);
+				nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
+				nvgStroke(args.vg);
+
+				// random sliders
+				float rHeight = (box.size.y-SLIDER_TOP) * random::uniform();
+				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+				nvgBeginPath(args.vg);
+				nvgRect(args.vg, i * SLIDER_WIDTH, rHeight, SLIDER_WIDTH, box.size.y - rHeight);
+				nvgFill(args.vg);
+
+				nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+				nvgBeginPath(args.vg);
+				nvgRect(args.vg, i * SLIDER_WIDTH, rHeight, SLIDER_WIDTH, SLIDER_TOP);
+				nvgFill(args.vg);
+			}
+            return;
+        }
 
         // sliders
         nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
