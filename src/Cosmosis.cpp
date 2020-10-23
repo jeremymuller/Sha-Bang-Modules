@@ -235,10 +235,10 @@ struct Cosmosis : Module, Constellations, Quantize {
             if (clearTrig.process(params[CLEAR_STARS_PARAM].getValue())) {
                 removeAllStars();
             }
-            if (rndPosTrig.process(params[RANDOM_POS_PARAM].getValue()) + inputs[RANDOM_POS_INPUT].getVoltage()) {
+            if (rndPosTrig.process(params[RANDOM_POS_PARAM].getValue() + inputs[RANDOM_POS_INPUT].getVoltage())) {
                 randomizePosition();
             }
-            if (rndRadTrig.process(params[RANDOM_RAD_PARAM].getValue()) + inputs[RANDOM_RAD_INPUT].getVoltage()) {
+            if (rndRadTrig.process(params[RANDOM_RAD_PARAM].getValue() + inputs[RANDOM_RAD_INPUT].getVoltage())) {
                 randomizeRadii();
             }
             int mode = params[MODE_PARAM].getValue();
