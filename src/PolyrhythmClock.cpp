@@ -1,6 +1,12 @@
 #include "plugin.hpp"
 
 struct PolyrhythmClock : Module {
+    enum BPMModes {
+        BPM_CV,
+        BPM_P12,
+        BPM_P24,
+        NUM_BPM_MODES
+    };
     enum ParamIds {
         CLOCK_TOGGLE_PARAM,
         BPM_PARAM,
@@ -14,6 +20,7 @@ struct PolyrhythmClock : Module {
         NUM_PARAMS = TUPLETS_RAND_PARAM + 3
     };
     enum InputIds {
+        EXT_CLOCK_INPUT,
         NUM_INPUTS
     };
     enum OutputIds {
@@ -28,10 +35,18 @@ struct PolyrhythmClock : Module {
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger toggleTrig;
+    dsp::SchmittTrigger toggleTrig, bpmInputTrig;
     dsp::PulseGenerator gatePulses[4];
     bool tupletGates[4] = {};
     bool clockOn = false;
+    int bpmInputMode = BPM_CV;
+    int extPulseIndex = 0;
+    int extIntervalTime = 0; // keeps track of number of samples lapsed
+    int ppqn = 0;
+    float period = 0.0;
+    int timeOut = 1; // seconds
+    float currentBPM = 120.0;
+    float clockFreq = 2.0; // Hz
     float phases[4] = {};
     float randoms[4];
     float currentRhythmFraction[3] = {};
@@ -85,23 +100,67 @@ struct PolyrhythmClock : Module {
         }
     }
 
+    json_t *dataToJson() override {
+        json_t *rootJ = json_object();
+
+        json_object_set_new(rootJ, "extmode", json_integer(bpmInputMode));
+
+        return rootJ;
+    }
+
+    void dataFromJson(json_t *rootJ) override {
+        json_t *extmodeJ = json_object_get(rootJ, "extmode");
+        if (extmodeJ) bpmInputMode = json_integer_value(extmodeJ);
+    }
+
     void process(const ProcessArgs& args) override {
 
         if (toggleTrig.process(params[CLOCK_TOGGLE_PARAM].getValue())) {
             clockOn = !clockOn;
         }
 
-        // clockOn = (params[CLOCK_TOGGLE_PARAM].getValue() == 1) ? true : false;
-        // bool gateIn = false;
-        // bool tupletGates[4] = {};
         lights[TOGGLE_LIGHT].setBrightness(clockOn ? 1.0 : 0.0);
 
         for (int i = 0; i < 4; i++) {
             tupletGates[i] = false;
         }
 
+        // This could possibly be cleaned up in a later version
+        bool bpmDetect = false;
+        if (inputs[EXT_CLOCK_INPUT].isConnected()) {
+            if (bpmInputMode == BPM_CV) {
+                clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
+            } else if (bpmInputMode == BPM_P12) {
+                ppqn = 12;
+                bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
+                if (bpmDetect)
+                    clockOn = true;
+            } else {
+                ppqn = 24;
+                bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
+                if (bpmDetect)
+                    clockOn = true;
+            }
+        } else {
+            float bpmParam = params[BPM_PARAM].getValue();
+            clockFreq = std::pow(2.0, bpmParam);
+        }
+        currentBPM = clockFreq * 60;
+
         if (clockOn) {
-            float clockTime = std::pow(2.0, params[BPM_PARAM].getValue());
+            if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
+                period += args.sampleTime;
+                if (period > timeOut) clockOn = false;
+                if (bpmDetect) {
+                    if (extPulseIndex > 1) {
+                        clockFreq = (1.0 / period) / (float)ppqn;
+                    }
+
+                    extPulseIndex++;
+                    if (extPulseIndex >= ppqn) extPulseIndex = 0;
+                    period = 0.0;
+                }
+            }
 
             float frac1 = params[TUPLET1_RHYTHM_PARAM].getValue() / params[TUPLET1_DUR_PARAM].getValue();
             float frac2 = params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
@@ -119,13 +178,14 @@ struct PolyrhythmClock : Module {
                 phases[3] = 0.0;
             }
 
-            phases[0] += clockTime * args.sampleTime;
-            clockTime *= currentRhythmFraction[0];
-            phases[1] += clockTime * args.sampleTime;
-            clockTime *= params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
-            phases[2] += clockTime * args.sampleTime;
-            clockTime *= params[TUPLET3_RHYTHM_PARAM].getValue() / params[TUPLET3_DUR_PARAM].getValue();
-            phases[3] += clockTime * args.sampleTime;
+            // calculate embedded tuplets
+            phases[0] += clockFreq * args.sampleTime;
+            float accFreq = clockFreq * currentRhythmFraction[0];
+            phases[1] += accFreq * args.sampleTime;
+            accFreq *= params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
+            phases[2] += accFreq * args.sampleTime;
+            accFreq *= params[TUPLET3_RHYTHM_PARAM].getValue() / params[TUPLET3_DUR_PARAM].getValue();
+            phases[3] += accFreq * args.sampleTime;
 
             checkPhases();
 
@@ -144,6 +204,32 @@ struct PolyrhythmClock : Module {
     }
 };
 
+struct ExternalClockModeValueItem : MenuItem {
+    PolyrhythmClock *module;
+    PolyrhythmClock::BPMModes bpmMode;
+    void onAction(const event::Action &e) override {
+        module->bpmInputMode = bpmMode;
+    }
+};
+
+struct ExternalClockModeItem : MenuItem {
+    PolyrhythmClock *module;
+    Menu *createChildMenu() override {
+        Menu *menu = new Menu;
+        std::vector<std::string> bpmModeNames = {"CV", "12 PPQN", "24 PPQN"};
+        for (int i = 0; i < PolyrhythmClock::NUM_BPM_MODES; i++) {
+            PolyrhythmClock::BPMModes bpmMode = (PolyrhythmClock::BPMModes) i;
+            ExternalClockModeValueItem *item = new ExternalClockModeValueItem;
+            item->text = bpmModeNames[i];
+            item->rightText = CHECKMARK(module->bpmInputMode == bpmMode);
+            item->module = module;
+            item->bpmMode = bpmMode;
+            menu->addChild(item);
+        }
+        return menu;
+    }
+};
+
 struct BPMDisplay : Widget {
     std::string text;
     int fontSize;
@@ -155,10 +241,10 @@ struct BPMDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
-        int bpm = int(std::pow(2.0, module->params[PolyrhythmClock::BPM_PARAM].getValue()) * 60);
+        // int bpm = int(std::pow(2.0, module->params[PolyrhythmClock::BPM_PARAM].getValue()) * 60);
+        int bpm = static_cast<int>(round(module->currentBPM));
         text = std::to_string(bpm) + " bpm";
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
-        // nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
         nvgFillColor(args.vg, nvgRGB(128, 0, 219));
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, 0, 0, text.c_str(), NULL);
@@ -253,6 +339,8 @@ struct PolyrhythmClockWidget : ModuleWidget {
 
         addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
         addParam(createParamCentered<PurpleKnob>(Vec(45, 76.7), module, PolyrhythmClock::BPM_PARAM));
+        // external clock
+        addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 76.7), module, PolyrhythmClock::EXT_CLOCK_INPUT));
 
         // tuplet 1
         addParam(createParamCentered<BlueInvertKnob>(Vec(19.9, 173.6), module, PolyrhythmClock::TUPLET1_RHYTHM_PARAM));
@@ -271,6 +359,17 @@ struct PolyrhythmClockWidget : ModuleWidget {
         addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 195.8), module, PolyrhythmClock::TUPLET1_OUTPUT));
         addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 271.1), module, PolyrhythmClock::TUPLET2_OUTPUT));
         addOutput(createOutputCentered<TinyPJ301M>(Vec(45, 344.3), module, PolyrhythmClock::TUPLET3_OUTPUT));
+    }
+
+    void appendContextMenu(Menu *menu) override {
+        PolyrhythmClock *module = dynamic_cast<PolyrhythmClock*>(this->module);
+        menu->addChild(new MenuEntry);
+
+        ExternalClockModeItem *extClockModeItem = new ExternalClockModeItem;
+        extClockModeItem->text = "External Clock Mode";
+        extClockModeItem->rightText = RIGHT_ARROW;
+        extClockModeItem->module = module;
+        menu->addChild(extClockModeItem);
     }
 };
 
