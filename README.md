@@ -34,6 +34,10 @@ Click anywhere to add/drag new stars. To remove stars click/drag them out of the
 - `POS` randomizes positions of stars.
 - `RAD` randomizes the radii of stars.
 ##### INPUTS:
+- `PLAY` trigger starts/stops the sequencer.
+- `SPEED` control voltage manipulates the current speed.
+- `RESET` trigger resets the current sequence position.
+- Root note input will accept V/OCT to set the root note.
 - `POS` accepts gate that triggers randomizing positions of stars.
 - `RAD` accepts gate that triggers randomizing radii of stars.
 ##### KNOBS:
@@ -59,10 +63,18 @@ Click anywhere to add/drag new stars. To remove stars click/drag them out of the
 
 Click on nodes to position them. Click anywhere else to add/drag new particles. To remove particles click/drag them out of the dark display area.
 
+##### RIGHT-CLICK MENU:
+- Collisions are turned on or off for the nodes.
 ##### BUTTONS:
 - `PLAY` turns on/off all nodes.
+- `MOVE` each node will randomly move around the dispay area.
 - `CLR` removes all particles.
 - `ON` turns on/off individual nodes.
+##### INPUTS:
+- `PLAY` trigger starts/stops the generator.
+- `BPM` control voltage manipulates the current bpm.
+- `MOVE` trigger turns on/off the random movement of nodes.
+- Root note input will accept V/OCT to set the root note.
 ##### KNOBS:
 - `BPM` tempo of all nodes.
 - `SPEED` is the velocity of movement of nodes when `MOVE` is switched on.
@@ -70,7 +82,6 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 - Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord).
 - `OCT` controls the octaves of individual nodes.
 ##### SWITCHES:
-- `MOVE` each node will randomly move around the dispay area.
 - `PITCH` left side will take pitch from the radius of particles. The right side will take pitch based on the Y position (height) in the display. The left switch is good if you'd like to generate randomness in the pitches, however, if you want more control over the pitch then select the right switch.
 ##### OUTPUTS:
 - `GATES` and `V/OCT` output only from the corresponding node color.
