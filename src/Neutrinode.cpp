@@ -806,13 +806,13 @@ struct NeutrinodeDisplay : Widget {
     }
 
     void draw(const DrawArgs &args) override {
-        //background
-        nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-        nvgBeginPath(args.vg);
-        nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-        nvgFill(args.vg);
 
         if (module != NULL) {
+            //background
+            nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+            nvgFill(args.vg);
             // draw nodes
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
