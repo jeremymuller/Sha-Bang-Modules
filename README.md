@@ -87,7 +87,16 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 *A clock featuring three layers of embedded rhythms. It's easy to multiply and/or divide the clock with virtually any rhythm you want using this clock.*
 
-- button turns it on
+##### RIGHT-CLICK MENU:
+- External Clock Mode:
+  - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
+  - `12 PPQN` controls bpm based on 12 pulses per quarter note.
+  - `24 PPQN` controls bpm based on 24 pulses per quarter note.
+- If the mode is set to either of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
+##### INPUT:
+- `EXT` is an external clock to control the PolyrhythmClock determined by the External Clock Mode.
+##### BUTTON:
+- on or off
 ##### KNOBS:
 - large main knob at the top controls the bpm (beats per minute).
 - left-side knobs within each tuplet controls the numerator part of the fraction (or ratio).
