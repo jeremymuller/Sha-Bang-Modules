@@ -427,8 +427,6 @@ struct Neutrinode : Module, Quantize {
             }
             // int rootNote = params[ROOT_NOTE_PARAM].getValue();
             int scale = params[SCALE_PARAM].getValue();
-            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 nodes[i].start = toggleStart;
 
@@ -483,16 +481,12 @@ struct Neutrinode : Module, Quantize {
                 outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
 
+            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
 
     }
-
-    void setChannels(int channels) {
-		if (channels == this->channels)
-			return;
-		this->channels = channels;
-	}
 
     // TODO: probably won't use this
     // void randomizeParticles() {
@@ -606,7 +600,7 @@ struct ChannelValueItem : MenuItem {
     Neutrinode *module;
     int channels;
     void onAction(const event::Action &e) override {
-        module->setChannels(channels);
+        module->channels = channels;
     }
 };
 
@@ -991,11 +985,11 @@ struct NeutrinodeWidget : ModuleWidget {
         collisionModeItem->module = module;
         menu->addChild(collisionModeItem);
 
-        // ChannelItem *channelItem = new ChannelItem;
-        // channelItem->text = "Polyphony channels";
-        // channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
-        // channelItem->module = module;
-        // menu->addChild(channelItem);
+        ChannelItem *channelItem = new ChannelItem;
+        channelItem->text = "Polyphony channels";
+        channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
+        channelItem->module = module;
+        menu->addChild(channelItem);
     }
 };
 
