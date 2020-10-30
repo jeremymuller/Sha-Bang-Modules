@@ -54,7 +54,7 @@ struct Attractor {
     NVGcolor color;
     bool locked = true;
     bool visible = true;
-
+    dsp::SchmittTrigger toggleTrig;
 
     Attractor() {
         box.pos.x = 30;
@@ -89,11 +89,13 @@ struct Orbitones : Module {
     enum ParamIds {
         REMOVE_PARTICLE_PARAM,
         CLEAR_PARTICLES_PARAM,
-        ON_PARAMS = CLEAR_PARTICLES_PARAM + NUM_ATTRACTORS,
+        MOVE_ATTRACTORS_PARAM,
+        ON_PARAMS = MOVE_ATTRACTORS_PARAM + NUM_ATTRACTORS,
         GRAVITY_PARAMS = ON_PARAMS + NUM_ATTRACTORS,
 		NUM_PARAMS = GRAVITY_PARAMS + NUM_ATTRACTORS
 	};
 	enum InputIds {
+        MOVE_ATTRACTORS_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -117,9 +119,10 @@ struct Orbitones : Module {
 		NUM_LIGHTS
 	};
 
-    dsp::SchmittTrigger removeTrig, clearTrig;
+    dsp::SchmittTrigger removeTrig, clearTrig, moveTrig;
     Attractor *attractors = new Attractor[NUM_ATTRACTORS];
     Particle *particles = new Particle[MAX_PARTICLES];
+    bool movement = false;
     int processOrbits = 0;
     int visibleParticles = 2;
     int currentParticle = 0;
@@ -128,6 +131,8 @@ struct Orbitones : Module {
     Orbitones() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(REMOVE_PARTICLE_PARAM, 0.0, 1.0, 0.0, "Remove previous particle");
+        configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
+        configParam(MOVE_ATTRACTORS_PARAM, 0.0, 1.0, 0.0, "Move attractors");
         configParam(ON_PARAMS + PURPLE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle purple attractor");
         configParam(ON_PARAMS + BLUE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle blue attractor");
         configParam(ON_PARAMS + AQUA_ATTRACTOR, 0.0, 1.0, 0.0, "toggle aqua attractor");
@@ -156,21 +161,30 @@ struct Orbitones : Module {
     }
 
     void process(const ProcessArgs &args) override {
-        // TODO
-        if (processOrbits == 0) {
-            if (removeTrig.process(params[REMOVE_PARTICLE_PARAM].getValue())) {
-                if (visibleParticles > 0) removeParticle(visibleParticles-1);
-            }
-            if (clearTrig.process(params[CLEAR_PARTICLES_PARAM].getValue())) {
-                if (visibleParticles > 0) clearParticles();
-            }
+        if (removeTrig.process(params[REMOVE_PARTICLE_PARAM].getValue())) {
+            if (visibleParticles > 0) removeParticle(visibleParticles-1);
+        }
+        if (clearTrig.process(params[CLEAR_PARTICLES_PARAM].getValue())) {
+            if (visibleParticles > 0) clearParticles();
+        }
+        if (moveTrig.process(params[MOVE_ATTRACTORS_PARAM].getValue() + inputs[MOVE_ATTRACTORS_INPUT].getVoltage())) {
+            movement = !movement;
+        }
 
+        if (processOrbits == 0) {
             if (outputs[RND_X_OUTPUT].isConnected() || outputs[RND_Y_OUTPUT].isConnected()) {
                 currentParticle = static_cast<int>(random::uniform() * visibleParticles);
             }
 
             for (int i = 0; i < NUM_ATTRACTORS; i++) {
                 attractors[i].G = params[GRAVITY_PARAMS + i].getValue();
+                if (attractors[i].toggleTrig.process(params[ON_PARAMS+i].getValue())) {
+                    attractors[i].visible = !attractors[i].visible;
+                }
+            }
+
+            if (movement) {
+                updateAttractorPos();
             }
 
             outputs[X_POLY_OUTPUT].setChannels(channels);
@@ -267,6 +281,21 @@ struct Orbitones : Module {
             particles[i].visible = false;
         }
         visibleParticles = 0;
+    }
+
+    void updateAttractorPos() {
+        for (int i = 0; i < NUM_ATTRACTORS; i++) {
+            attractors[i].acc.x = randRange(-0.075, 0.075);
+            attractors[i].acc.y = randRange(-0.075, 0.075);
+
+            attractors[i].vel = attractors[i].vel.plus(attractors[i].acc);
+            float magSq = attractors[i].vel.x * attractors[i].vel.x + attractors[i].vel.y * attractors[i].vel.y;
+            if (magSq > 1) {
+                attractors[i].vel = attractors[i].vel.normalize();
+                attractors[i].vel = attractors[i].vel.mult(-1);
+            }
+            attractors[i].box.pos = attractors[i].box.pos.plus(attractors[i].vel);
+        }
     }
 };
 
@@ -398,20 +427,25 @@ struct OrbitonesDisplay : Widget {
                 nvgBeginPath(args.vg);
                 nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
                 nvgFill(args.vg);
+
+                checkEdges(i);
             }
         }
         for (int i = 0; i < MAX_PARTICLES; i++) {
-            if (module->particles[i].visible && module->particles[i].box.pos.x > 0) {
-                Vec pos = module->particles[i].box.getCenter();
-                nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
-                nvgFill(args.vg);
+            if (module->particles[i].visible) {
+                if (module->particles[i].box.pos.x > 0 && module->particles[i].box.pos.x < DISPLAY_SIZE_WIDTH) {
+                    Vec pos = module->particles[i].box.getCenter();
+                    nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
+                    nvgFill(args.vg);
 
-                nvgFillColor(args.vg, module->particles[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                nvgFill(args.vg);
+                    nvgFillColor(args.vg, module->particles[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
+                    nvgFill(args.vg);
+
+                }
             }
         }
     }
@@ -434,8 +468,10 @@ struct OrbitonesWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(505.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(505.5, box.size.y - 14)));
 
-        addParam(createParamCentered<TinyPurpleButton>(Vec(42, 56), module, Orbitones::REMOVE_PARTICLE_PARAM));
-        addParam(createParamCentered<TinyPurpleButton>(Vec(42, 93.4), module, Orbitones::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(42, 56), module, Orbitones::REMOVE_PARTICLE_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(42, 93.4), module, Orbitones::CLEAR_PARTICLES_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(42, 130.9), module, Orbitones::MOVE_ATTRACTORS_PARAM));
+        addInput(createInputCentered<TinyPJ301M>(Vec(42, 151.3), module, Orbitones::MOVE_ATTRACTORS_INPUT));
 
         // on/off
         addParam(createParamCentered<TinyPurpleButton>(Vec(28, 196.8), module, Orbitones::ON_PARAMS + Orbitones::PURPLE_ATTRACTOR));
