@@ -137,10 +137,10 @@ struct Orbitones : Module {
         configParam(ON_PARAMS + BLUE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle blue attractor");
         configParam(ON_PARAMS + AQUA_ATTRACTOR, 0.0, 1.0, 0.0, "toggle aqua attractor");
         configParam(ON_PARAMS + RED_ATTRACTOR, 0.0, 1.0, 0.0, "toggle red attractor");
-        configParam(GRAVITY_PARAMS + PURPLE_ATTRACTOR, -1.0, 2.0, 1.0, "Purple attractor gravity");
-        configParam(GRAVITY_PARAMS + BLUE_ATTRACTOR, -1.0, 2.0, 1.0, "Blue attractor gravity");
-        configParam(GRAVITY_PARAMS + AQUA_ATTRACTOR, -1.0, 2.0, 1.0, "Aqua attractor gravity");
-        configParam(GRAVITY_PARAMS + RED_ATTRACTOR, -1.0, 2.0, 1.0, "Red attractor gravity");
+        configParam(GRAVITY_PARAMS + PURPLE_ATTRACTOR, -2.0, 2.0, 1.0, "Purple attractor gravity");
+        configParam(GRAVITY_PARAMS + BLUE_ATTRACTOR, -2.0, 2.0, 1.0, "Blue attractor gravity");
+        configParam(GRAVITY_PARAMS + AQUA_ATTRACTOR, -2.0, 2.0, 1.0, "Aqua attractor gravity");
+        configParam(GRAVITY_PARAMS + RED_ATTRACTOR, -2.0, 2.0, 1.0, "Red attractor gravity");
 
         attractors[0].color = nvgRGBA(128, 0, 219, 255);
         attractors[1].color = nvgRGBA(38, 0, 255, 255);
