@@ -481,7 +481,8 @@ struct Neutrinode : Module, Quantize {
                 outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
 
-
+            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
 
