@@ -15,17 +15,30 @@
       {
           "slug": "Cosmosis",
           "name": "Cosmosis",
+          "description": "Continuous sequencer with constellations",
           "tags": ["Visual", "Sequencer", "Polyphonic"]
       },
       {
           "slug": "JeremyBlankPanel",
-          "name": "Blank Panel of Jeremy",
+          "name": "Blank Panel",
           "tags": ["Blank", "Visual"]
       },
       {
           "slug": "Neutrinode",
           "name": "Neutrinode",
+          "description": "Node-based generator with four independent nodes to connected particles",
           "tags": ["Visual", "Sequencer", "Polyphonic"]
+      },
+      {
+          "slug": "Orbitones",
+          "name": "Orbitones",
+          "tags": ["Visual", "Low-frequency oscillator"]
+      },
+      {
+          "slug": "Photron",
+          "name": "Photron",
+          "description": "Animation with inputs",
+          "tags": ["Visual"]
       },
       {
           "slug": "PolyrhythmClock",
@@ -35,7 +48,8 @@
       {
           "slug": "RandGates",
           "name": "Random Gate Switch",
-          "tags": ["Switch"]
+          "description": "Randomly routes one of 4 inputs to the output",
+          "tags": ["Utility", "Switch", "Polyphonic"]
       },
       {
           "slug": "QubitCrusher",
@@ -45,11 +59,13 @@
       {
           "slug": "StochSeq",
           "name": "Stochastic Sequencer 1",
+          "description": "Probabilistic sequencer",
           "tags": ["Sequencer", "Visual"]
       },
       {
           "slug": "StochSeq4",
           "name": "Stochastic Sequencer 4",
+          "description": "Probabilistic sequencer with four independent voices",
           "tags": ["Sequencer", "Visual"]
       }
   ]

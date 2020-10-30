@@ -103,12 +103,16 @@ struct PolyrhythmClock : Module {
     json_t *dataToJson() override {
         json_t *rootJ = json_object();
 
+        json_object_set_new(rootJ, "clockOn", json_boolean(clockOn));
         json_object_set_new(rootJ, "extmode", json_integer(bpmInputMode));
 
         return rootJ;
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *clockOnJ = json_object_get(rootJ, "clockOn");
+        if (clockOnJ) clockOn = json_boolean_value(clockOnJ);
+
         json_t *extmodeJ = json_object_get(rootJ, "extmode");
         if (extmodeJ) bpmInputMode = json_integer_value(extmodeJ);
     }

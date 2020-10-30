@@ -481,8 +481,7 @@ struct Neutrinode : Module, Quantize {
                 outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
 
-            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
-            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
+
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
 
@@ -596,58 +595,61 @@ struct Neutrinode : Module, Quantize {
 
 };
 
-struct ChannelValueItem : MenuItem {
-    Neutrinode *module;
-    int channels;
-    void onAction(const event::Action &e) override {
-        module->channels = channels;
-    }
-};
-
-struct ChannelItem : MenuItem {
-    Neutrinode *module;
-    Menu *createChildMenu() override {
-		Menu *menu = new Menu;
-		for (int channels = 1; channels <= 16; channels++) {
-			ChannelValueItem *item = new ChannelValueItem;
-			if (channels == 1)
-				item->text = "Monophonic";
-			else
-				item->text = string::f("%d", channels);
-			item->rightText = CHECKMARK(module->channels == channels);
-			item->module = module;
-			item->channels = channels;
-			menu->addChild(item);
-		}
-		return menu;
-	}
-};
-
-struct CollisionModeValueItem : MenuItem {
-    Neutrinode *module;
-    bool nodeCollisions;
-    void onAction(const event::Action &e) override {
-        module->nodeCollisionMode = nodeCollisions;
-    }
-};
-
-struct CollisionModeItem : MenuItem {
-    Neutrinode *module;
-    Menu *createChildMenu() override {
-        Menu *menu = new Menu;
-        std::vector<std::string> collModes = {"on", "off"};
-        for (int i = 0; i < 2; i++) {
-            CollisionModeValueItem *item = new CollisionModeValueItem;
-            item->text = collModes[i];
-            bool isOn = (i == 0) ? true : false;
-            item->rightText = CHECKMARK(module->nodeCollisionMode == isOn);
-            item->module = module;
-            item->nodeCollisions = isOn;
-            menu->addChild(item);
+namespace NeutrinodeNS {
+    struct ChannelValueItem : MenuItem {
+        Neutrinode *module;
+        int channels;
+        void onAction(const event::Action &e) override {
+            module->channels = channels;
         }
-        return menu;
-    }
-};
+    };
+
+    struct ChannelItem : MenuItem {
+        Neutrinode *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            for (int channels = 1; channels <= 16; channels++) {
+                ChannelValueItem *item = new ChannelValueItem;
+                if (channels == 1)
+                    item->text = "Monophonic";
+                else
+                    item->text = string::f("%d", channels);
+                item->rightText = CHECKMARK(module->channels == channels);
+                item->module = module;
+                item->channels = channels;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+
+    struct CollisionModeValueItem : MenuItem {
+        Neutrinode *module;
+        bool nodeCollisions;
+        void onAction(const event::Action &e) override {
+            module->nodeCollisionMode = nodeCollisions;
+        }
+    };
+
+    struct CollisionModeItem : MenuItem {
+        Neutrinode *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            std::vector<std::string> collModes = {"on", "off"};
+            for (int i = 0; i < 2; i++) {
+                CollisionModeValueItem *item = new CollisionModeValueItem;
+                item->text = collModes[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->nodeCollisionMode == isOn);
+                item->module = module;
+                item->nodeCollisions = isOn;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+}
+
 
 struct NeutrinodeDisplay : Widget {
     Neutrinode *module;
@@ -973,19 +975,18 @@ struct NeutrinodeWidget : ModuleWidget {
         addOutput(createOutputCentered<PJ301MPort>(Vec(64.4, 343.2), module, Neutrinode::VOLTS_ALL_OUTPUTS));
     }
 
-    // TODO: issue with polyphony menu
     void appendContextMenu(Menu *menu) override {
         Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
         menu->addChild(new MenuEntry);
 
-        CollisionModeItem *collisionModeItem = new CollisionModeItem;
+        NeutrinodeNS::CollisionModeItem *collisionModeItem = new NeutrinodeNS::CollisionModeItem;
         collisionModeItem->text = "Collisions";
         if (module->nodeCollisionMode) collisionModeItem->rightText = std::string("on") + " " + RIGHT_ARROW;
         else collisionModeItem->rightText = std::string("off") + " " + RIGHT_ARROW;
         collisionModeItem->module = module;
         menu->addChild(collisionModeItem);
 
-        ChannelItem *channelItem = new ChannelItem;
+        NeutrinodeNS::ChannelItem *channelItem = new NeutrinodeNS::ChannelItem;
         channelItem->text = "Polyphony channels";
         channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
         channelItem->module = module;

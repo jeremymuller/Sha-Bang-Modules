@@ -534,32 +534,34 @@ struct Cosmosis : Module, Constellations, Quantize {
     }
 };
 
-struct ChannelValueItem : MenuItem {
-    Cosmosis *module;
-    int channels;
-    void onAction(const event::Action &e) override {
-        module->channels = channels;
-    }
-};
+namespace CosmosisNS {
+    struct ChannelValueItem : MenuItem {
+        Cosmosis *module;
+        int channels;
+        void onAction(const event::Action &e) override {
+            module->channels = channels;
+        }
+    };
 
-struct ChannelItem : MenuItem {
-    Cosmosis *module;
-    Menu *createChildMenu() override {
-		Menu *menu = new Menu;
-		for (int channels = 1; channels <= 16; channels++) {
-			ChannelValueItem *item = new ChannelValueItem;
-			if (channels == 1)
-				item->text = "Monophonic";
-			else
-				item->text = string::f("%d", channels);
-			item->rightText = CHECKMARK(module->channels == channels);
-			item->module = module;
-			item->channels = channels;
-			menu->addChild(item);
-		}
-		return menu;
-	}
-};
+    struct ChannelItem : MenuItem {
+        Cosmosis *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            for (int channels = 1; channels <= 16; channels++) {
+                ChannelValueItem *item = new ChannelValueItem;
+                if (channels == 1)
+                    item->text = "Monophonic";
+                else
+                    item->text = string::f("%d", channels);
+                item->rightText = CHECKMARK(module->channels == channels);
+                item->module = module;
+                item->channels = channels;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+}
 
 struct CosmosisDisplay : Widget {
     Cosmosis *module;
@@ -809,7 +811,7 @@ struct CosmosisWidget : ModuleWidget {
         // MenuLabel *spacerLabel = new MenuLabel();
         menu->addChild(new MenuEntry);
 
-        ChannelItem *channelItem = new ChannelItem;
+        CosmosisNS::ChannelItem *channelItem = new CosmosisNS::ChannelItem;
         channelItem->text = "Polyphony channels";
         channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
         channelItem->module = module;

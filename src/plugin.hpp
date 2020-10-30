@@ -18,11 +18,22 @@ extern Model *modelNeutrinode;
 extern Model *modelCosmosis;
 extern Model *modelJeremyBlankPanel;
 extern Model *modelQubitCrusher;
+extern Model *modelPhotron;
+extern Model *modelOrbitones;
 
 /************************** INLINE FUNCTIONS **************************/
 
 inline float dist(Vec a, Vec b) { // returns distance between two points
     return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
+}
+
+inline Vec limit(Vec a, float max) { // returns vec with limit
+    float magSq = a.x*a.x + a.y*a.y;
+    if (magSq > max*max) {
+        Vec n = a.normalize();
+        return n.mult(max);
+    }
+    return a;
 }
 
 inline float mag(Vec a) { // returns magnitude of vector

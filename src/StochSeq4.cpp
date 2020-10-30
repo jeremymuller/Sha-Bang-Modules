@@ -9,7 +9,7 @@ struct Sequencer {
     dsp::SchmittTrigger dimTrig;
     dsp::SchmittTrigger randomTrig;
     dsp::SchmittTrigger invertTrig;
-    dsp::PulseGenerator gatePulse;
+    bool gatePulse = false;
     int seqLength;
     int gateIndex;
     int currentPattern = 0;
@@ -27,11 +27,11 @@ struct Sequencer {
     void clockStep(int l, float spread) {
         seqLength = l;
         gateIndex = (gateIndex + 1) % seqLength;
-
+        gatePulse = false;
         // gate
         float prob = gateProbabilities[gateIndex];
         if (random::uniform() < prob) {
-            gatePulse.trigger(1e-3);
+            gatePulse = true;
         }
 
         // pitch
@@ -201,11 +201,9 @@ struct StochSeq4 : Module, Quantize {
         int rootNote = params[ROOT_NOTE_PARAM].getValue();
         int scale = params[SCALE_PARAM].getValue();
         for (int i = 0; i < NUM_SEQS; i++) {
-            bool pulse = seqs[i].gatePulse.process(1 / args.sampleRate);
-            float gateVolt = pulse ? 10.0 : 0.0;
             float pitchVoltage = Quantize::quantizeRawVoltage(seqs[i].volts, rootNote, scale);
 
-            outputs[GATES_OUTPUT + i].setVoltage(gateVolt);
+            outputs[GATES_OUTPUT + i].setVoltage(seqs[i].gatePulse ? 10.0 : 0.0);
             outputs[VOLTS_OUTPUT + i].setVoltage(pitchVoltage);
         }
     }

@@ -18,6 +18,9 @@ struct StochSeq : Module, Quantize {
 		NUM_PARAMS
 	};
 	enum InputIds {
+		RANDOM_INPUT,
+		INVERT_INPUT,
+		DIMINUTION_INPUT,
 		CLOCK_INPUT,
 		RESET_INPUT,
 		NUM_INPUTS
@@ -38,7 +41,7 @@ struct StochSeq : Module, Quantize {
 	dsp::SchmittTrigger dimTrig;
 	dsp::SchmittTrigger randomTrig;
 	dsp::SchmittTrigger invertTrig;
-	dsp::PulseGenerator gatePulse;
+	bool gatePulse;
 	int seqLength = NUM_OF_SLIDERS;
 	int gateIndex = -1;
 	int currentGateOut = gateIndex;
@@ -110,13 +113,13 @@ struct StochSeq : Module, Quantize {
 			currentPattern = patt;
 			genPatterns(patt);
 		}
-		if (randomTrig.process(params[RANDOM_PARAM].getValue())) {
+		if (randomTrig.process(params[RANDOM_PARAM].getValue() + inputs[RANDOM_INPUT].getVoltage())) {
 			genPatterns(100);
 		}
-		if (invertTrig.process(params[INVERT_PARAM].getValue())) {
+		if (invertTrig.process(params[INVERT_PARAM].getValue() + inputs[INVERT_INPUT].getVoltage())) {
 			invert();
 		}
-		if (dimTrig.process(params[DIMINUTION_PARAM].getValue())) {
+		if (dimTrig.process(params[DIMINUTION_PARAM].getValue() + inputs[DIMINUTION_INPUT].getVoltage())) {
 			diminish();
 		}
 		if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage())) {
@@ -127,8 +130,7 @@ struct StochSeq : Module, Quantize {
 			clockStep();
 		}
 
-		bool pulse = gatePulse.process(1 / args.sampleRate);
-		float gateVolt = pulse ? 10.0 : 0.0;
+		float gateVolt = gatePulse ? 10.0 : 0.0;
 		// float blink = lightBlink ? 1.0 : 0.0;
 		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt);
 		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt);
@@ -136,7 +138,7 @@ struct StochSeq : Module, Quantize {
 		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
 			if (currentGateOut == i)
-				lights[LIGHTS + i].setSmoothBrightness(lightBlink ? 1.0 : 0.0, args.sampleTime * 30);
+				lights[LIGHTS + i].setSmoothBrightness((lightBlink ? 1.0 : 0.0), args.sampleTime * 30);
 			else
 				lights[LIGHTS + i].setBrightness(0.0);
 		}
@@ -149,10 +151,11 @@ struct StochSeq : Module, Quantize {
 		seqLength = (int)params[LENGTH_PARAM].getValue();
 		gateIndex = (gateIndex + 1) % seqLength;
 		lightBlink = false;
+		gatePulse = false;
 
 		float prob = gateProbabilities[gateIndex];
 		if (random::uniform() < prob) {
-			gatePulse.trigger(1e-3f);
+			gatePulse = true;
 			currentGateOut = gateIndex;
 			lightBlink = true;
 			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
@@ -418,6 +421,9 @@ struct StochSeqWidget : ModuleWidget {
 		addChild(scaleLabel);
 		addParam(scaleKnob);
 
+		addInput(createInputCentered<PJ301MPort>(Vec(175, 256.8), module, StochSeq::RANDOM_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(209.5, 256.8), module, StochSeq::INVERT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(244.1, 256.8), module, StochSeq::DIMINUTION_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 228.7), module, StochSeq::CLOCK_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 228.7), module, StochSeq::RESET_INPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(360.7, 228.7), module, StochSeq::GATE_MAIN_OUTPUT));
