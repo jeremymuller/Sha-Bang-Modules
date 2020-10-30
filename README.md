@@ -12,6 +12,8 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 * [Cosmosis](#cosmosis)
 * [Neutrinode](#neutrinode)
+* [Orbitones](#orbitones)
+* [Photron](#photron)
 * [PolyrhythmClock](#polyrhythm-clock)
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates)
@@ -89,6 +91,25 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 *:warning: There are a maximum of 16 particles (for 16 polyphonic channels) per node. However, when using the `ALL` outputs, there is potential to reach that maximum (16 x 4 = 64) in which case it does voice stealing.*
 
+
+---
+
+### Orbitones
+
+*LFO blah blah...todo*
+
+---
+
+### Photron
+
+![Photron](/docs/Photron.png)
+
+*An animated visualizer with inputs. Uses color flocking based on the Craig Reynolds boids flocking algorithm.*
+
+##### BUTTON:
+- color version or black & white version
+##### INPUTS:
+- TODO
 
 ---
 
