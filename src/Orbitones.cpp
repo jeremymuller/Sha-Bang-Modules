@@ -15,8 +15,8 @@ struct Particle {
     bool visible;
 
     Particle() {
-        box.pos.x = 100;
-        box.pos.y = 100;
+        box.pos.x = randRange(0, DISPLAY_SIZE_WIDTH);
+        box.pos.y = randRange(0, DISPLAY_SIZE_HEIGHT);
         Vec v = Vec(randRange(-1.0, 1.0), randRange(-1.0, 1.0));
         vel = v.normalize();
         acc = Vec(0.0, 0.0);
@@ -38,8 +38,8 @@ struct Particle {
 
     void update() {
         vel = vel.plus(acc);
-        vel = limit(vel, 2.0);
         box.pos = box.pos.plus(vel);
+        vel = limit(vel, 12.0);
         acc = acc.mult(0.0);
     }
 };
@@ -47,6 +47,7 @@ struct Particle {
 struct Attractor {
     float mass;
     float G;
+    float gravityScl;
     Rect box;
     Vec vel;
     Vec acc;
@@ -61,19 +62,22 @@ struct Attractor {
         box.pos.y = 30;
 
         mass = 15.5;
-        G = 1.0;
+        G = 30.0;
+        gravityScl = 1.0;
     }
 
     Vec attract(Particle p) {
         Vec force = box.pos.minus(p.box.pos);
         float d = mag(force);
 
-        d = clamp(d, 5.0, 25.0);
+        d = clamp(d, 10.0, 50.0);
 
         force = force.normalize();
 
-        float strength = (G * mass * p.mass) / (d * d);
+        float strength = (G * gravityScl )* (mass * p.mass) / (d * d);
         force = force.mult(strength);
+        // if (d < 15) force = force.mult(0.1);
+        if (d < 15) force = Vec(0.0, 0.0); // weaken forces so particle doesn't get sucked into blackhole
         return force;
     }
 };
@@ -90,12 +94,14 @@ struct Orbitones : Module {
         REMOVE_PARTICLE_PARAM,
         CLEAR_PARTICLES_PARAM,
         MOVE_ATTRACTORS_PARAM,
-        ON_PARAMS = MOVE_ATTRACTORS_PARAM + NUM_ATTRACTORS,
+        GLOBAL_GRAVITY_PARAM,
+        ON_PARAMS = GLOBAL_GRAVITY_PARAM + NUM_ATTRACTORS,
         GRAVITY_PARAMS = ON_PARAMS + NUM_ATTRACTORS,
 		NUM_PARAMS = GRAVITY_PARAMS + NUM_ATTRACTORS
 	};
 	enum InputIds {
         MOVE_ATTRACTORS_INPUT,
+        GLOBAL_GRAVITY_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -107,8 +113,6 @@ struct Orbitones : Module {
         VEL_Y_POLY_OUTPUT,
         AVG_X_OUTPUT,
         AVG_Y_OUTPUT,
-        RND_X_OUTPUT,
-        RND_Y_OUTPUT,
         MAX_X_OUTPUT,
         MAX_Y_OUTPUT,
         MIN_X_OUTPUT,
@@ -125,7 +129,6 @@ struct Orbitones : Module {
     bool movement = false;
     int processOrbits = 0;
     int visibleParticles = 2;
-    int currentParticle = 0;
     int channels = 1;
 
     Orbitones() {
@@ -133,14 +136,15 @@ struct Orbitones : Module {
         configParam(REMOVE_PARTICLE_PARAM, 0.0, 1.0, 0.0, "Remove previous particle");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
         configParam(MOVE_ATTRACTORS_PARAM, 0.0, 1.0, 0.0, "Move attractors");
+        configParam(GLOBAL_GRAVITY_PARAM, 1.0, 50.0, 30.0, "Global gravity");
         configParam(ON_PARAMS + PURPLE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle purple attractor");
         configParam(ON_PARAMS + BLUE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle blue attractor");
         configParam(ON_PARAMS + AQUA_ATTRACTOR, 0.0, 1.0, 0.0, "toggle aqua attractor");
         configParam(ON_PARAMS + RED_ATTRACTOR, 0.0, 1.0, 0.0, "toggle red attractor");
-        configParam(GRAVITY_PARAMS + PURPLE_ATTRACTOR, -2.0, 2.0, 1.0, "Purple attractor gravity");
-        configParam(GRAVITY_PARAMS + BLUE_ATTRACTOR, -2.0, 2.0, 1.0, "Blue attractor gravity");
-        configParam(GRAVITY_PARAMS + AQUA_ATTRACTOR, -2.0, 2.0, 1.0, "Aqua attractor gravity");
-        configParam(GRAVITY_PARAMS + RED_ATTRACTOR, -2.0, 2.0, 1.0, "Red attractor gravity");
+        configParam(GRAVITY_PARAMS + PURPLE_ATTRACTOR, -1.0, 2.0, 1.0, "Purple attractor gravity");
+        configParam(GRAVITY_PARAMS + BLUE_ATTRACTOR, -1.0, 2.0, 1.0, "Blue attractor gravity");
+        configParam(GRAVITY_PARAMS + AQUA_ATTRACTOR, -1.0, 2.0, 1.0, "Aqua attractor gravity");
+        configParam(GRAVITY_PARAMS + RED_ATTRACTOR, -1.0, 2.0, 1.0, "Red attractor gravity");
 
         attractors[0].color = nvgRGBA(128, 0, 219, 255);
         attractors[1].color = nvgRGBA(38, 0, 255, 255);
@@ -160,6 +164,102 @@ struct Orbitones : Module {
         delete[] particles;
     }
 
+    json_t *dataToJson() override {
+        json_t *rootJ = json_object();
+
+        // attractors data
+        json_t *attractorsJ = json_array();
+        for (int i = 0; i < NUM_ATTRACTORS; i++) {
+            json_t *dataJ = json_array();
+            json_t *attractorVisibleJ = json_boolean(attractors[i].visible);
+            json_t *attractorPosXJ = json_real(attractors[i].box.pos.x);
+            json_t *attractorPosYJ = json_real(attractors[i].box.pos.y);
+
+            json_array_append_new(dataJ, attractorVisibleJ);
+            json_array_append_new(dataJ, attractorPosXJ);
+            json_array_append_new(dataJ, attractorPosYJ);
+
+            // append
+            json_array_append_new(attractorsJ, dataJ);
+        }
+
+        json_t *particlesJ = json_array();
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            json_t *pDataJ = json_array();
+            json_t *particleVisibleJ = json_boolean(particles[i].visible);
+            json_t *particlePosXJ = json_real(particles[i].box.pos.x);
+            json_t *particlePosYJ = json_real(particles[i].box.pos.y);
+            json_t *particleRadJ = json_real(particles[i].radius);
+            json_t *particleMassJ = json_real(particles[i].mass);
+
+            json_array_append_new(pDataJ, particleVisibleJ);
+            json_array_append_new(pDataJ, particlePosXJ);
+            json_array_append_new(pDataJ, particlePosYJ);
+            json_array_append_new(pDataJ, particleRadJ);
+            json_array_append_new(pDataJ, particleMassJ);
+
+            json_array_append_new(particlesJ, pDataJ);
+        }
+
+        json_object_set_new(rootJ, "move", json_boolean(movement));
+        json_object_set_new(rootJ, "channels", json_integer(channels));
+        json_object_set_new(rootJ, "visibleParticles", json_integer(visibleParticles));
+        json_object_set_new(rootJ, "attractors", attractorsJ);
+        json_object_set_new(rootJ, "particles", particlesJ);
+
+        return rootJ;
+    }
+
+    void dataFromJson(json_t *rootJ) override {
+        json_t *channelsJ = json_object_get(rootJ, "channels");
+        if (channelsJ) channels = json_integer_value(channelsJ);
+
+        json_t *moveJ = json_object_get(rootJ, "move");
+        if (moveJ) movement = json_boolean_value(moveJ);
+
+        json_t *visibleParticlesJ = json_object_get(rootJ, "visibleParticles");
+        if (visibleParticlesJ) visibleParticles = json_integer_value(visibleParticlesJ);
+
+        // data from attractors
+        json_t *attractorsJ = json_object_get(rootJ, "attractors");
+        if (attractorsJ) {
+            for (int i = 0; i < NUM_ATTRACTORS; i++) {
+                json_t *dataJ = json_array_get(attractorsJ, i);
+                if (dataJ) {
+                    json_t *attractorsVisibleJ = json_array_get(dataJ, 0);
+                    json_t *attractorsPosXJ = json_array_get(dataJ, 1);
+                    json_t *attractorsPosYJ = json_array_get(dataJ, 2);
+                    if (attractorsVisibleJ) attractors[i].visible = json_boolean_value(attractorsVisibleJ);
+                    if (attractorsPosXJ) attractors[i].box.pos.x = json_real_value(attractorsPosXJ);
+                    if (attractorsPosYJ) attractors[i].box.pos.y = json_real_value(attractorsPosYJ);
+                }
+            }
+        }
+        // data from particles
+        json_t *particlesJ = json_object_get(rootJ, "particles");
+        if (particlesJ) {
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                json_t *pDataJ = json_array_get(particlesJ, i);
+                if (pDataJ) {
+                    json_t *particleVisibleJ = json_array_get(pDataJ, 0);
+                    json_t *particlePosXJ = json_array_get(pDataJ, 1);
+                    json_t *particlePosYJ = json_array_get(pDataJ, 2);
+                    json_t *particleRadJ = json_array_get(pDataJ, 3);
+                    json_t *particleMassJ = json_array_get(pDataJ, 4);
+                    if (particleVisibleJ) {
+                        particles[i].visible = json_boolean_value(particleVisibleJ);
+                        if (particles[i].visible) {
+                            if (particlePosXJ) particles[i].box.pos.x = json_real_value(particlePosXJ);
+                            if (particlePosYJ) particles[i].box.pos.y = json_real_value(particlePosYJ);
+                            if (particleRadJ) particles[i].radius = json_real_value(particleRadJ);
+                            if (particleMassJ) particles[i].mass = json_real_value(particleMassJ);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void process(const ProcessArgs &args) override {
         if (removeTrig.process(params[REMOVE_PARTICLE_PARAM].getValue())) {
             if (visibleParticles > 0) removeParticle(visibleParticles-1);
@@ -170,14 +270,13 @@ struct Orbitones : Module {
         if (moveTrig.process(params[MOVE_ATTRACTORS_PARAM].getValue() + inputs[MOVE_ATTRACTORS_INPUT].getVoltage())) {
             movement = !movement;
         }
-
+        
         if (processOrbits == 0) {
-            if (outputs[RND_X_OUTPUT].isConnected() || outputs[RND_Y_OUTPUT].isConnected()) {
-                currentParticle = static_cast<int>(random::uniform() * visibleParticles);
-            }
-
             for (int i = 0; i < NUM_ATTRACTORS; i++) {
-                attractors[i].G = params[GRAVITY_PARAMS + i].getValue();
+                attractors[i].G = params[GLOBAL_GRAVITY_PARAM].getValue();
+                // TODO: CV input?
+                if (inputs[GLOBAL_GRAVITY_INPUT].isConnected()) attractors[i].G += inputs[GLOBAL_GRAVITY_INPUT].getVoltage();
+                attractors[i].gravityScl = params[GRAVITY_PARAMS + i].getValue();
                 if (attractors[i].toggleTrig.process(params[ON_PARAMS+i].getValue())) {
                     attractors[i].visible = !attractors[i].visible;
                 }
@@ -208,13 +307,13 @@ struct Orbitones : Module {
                         if (attractors[j].visible) {
                             Vec force = attractors[j].attract(particles[i]);
                             particles[i].applyForce(force);
-                            particles[i].update();
                         }
                     }
+                    particles[i].update();
                     float voltsX = rescale(particles[i].box.pos.x, 0, DISPLAY_SIZE_WIDTH, -5.0, 5.0);
                     float voltsY = rescale(particles[i].box.pos.y, DISPLAY_SIZE_HEIGHT, 0, -5.0, 5.0);
-                    float voltsVelX = rescale(particles[i].vel.x, -2.0, 2.0, -5.0, 5.0);
-                    float voltsVelY = rescale(particles[i].vel.y, 2.0, -2.0, -5.0, 5.0);
+                    float voltsVelX = rescale(particles[i].vel.x, -12.0, 12.0, -5.0, 5.0);
+                    float voltsVelY = rescale(particles[i].vel.y, 12.0, -12.0, -5.0, 5.0);
                     outputs[X_POLY_OUTPUT].setVoltage(voltsX, i);
                     outputs[Y_POLY_OUTPUT].setVoltage(voltsY, i);
                     outputs[NEG_X_POLY_OUTPUT].setVoltage(-voltsX, i);
@@ -235,26 +334,6 @@ struct Orbitones : Module {
             outputs[MIN_Y_OUTPUT].setVoltage(minY);
             outputs[AVG_X_OUTPUT].setVoltage(currentAvgX);
             outputs[AVG_Y_OUTPUT].setVoltage(currentAvgY);
-
-            // for (int i = 0; i < NUM_ATTRACTORS; i++) {
-            //     if (attractors[i].visible) {
-            //         for (int j = 0; j < MAX_PARTICLES; j++) {
-            //             if (particles[j].visible) {
-            //                 Vec force = attractors[i].attract(particles[j]);
-            //                 particles[j].applyForce(force);
-            //                 particles[j].update();
-            //             }
-            //             float margin = 7.0;
-            //             float voltsX = rescale(particles[j].box.pos.x, 0, DISPLAY_SIZE_WIDTH, -5.0, 5.0);
-
-            //             float voltsY = rescale(particles[j].box.pos.y, DISPLAY_SIZE_HEIGHT, 0, -5.0, 5.0);
-            //             outputs[X_POLY_OUTPUT].setVoltage(voltsX, j);
-            //             outputs[Y_POLY_OUTPUT].setVoltage(voltsY, j);
-            //             outputs[NEG_X_POLY_OUTPUT].setVoltage(-voltsX, j);
-            //             outputs[NEG_Y_POLY_OUTPUT].setVoltage(-voltsY, j);
-            //         }
-            //     }
-            // }
         }
         processOrbits = (processOrbits + 1) % static_cast<int>(args.sampleRate / INTERNAL_SAMP_TIME); // check 60 hz;
     }
@@ -472,6 +551,8 @@ struct OrbitonesWidget : ModuleWidget {
         addParam(createParamCentered<TinyBlueButton>(Vec(42, 93.4), module, Orbitones::CLEAR_PARTICLES_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(42, 130.9), module, Orbitones::MOVE_ATTRACTORS_PARAM));
         addInput(createInputCentered<TinyPJ301M>(Vec(42, 151.3), module, Orbitones::MOVE_ATTRACTORS_INPUT));
+        
+
 
         // on/off
         addParam(createParamCentered<TinyPurpleButton>(Vec(28, 196.8), module, Orbitones::ON_PARAMS + Orbitones::PURPLE_ATTRACTOR));
@@ -484,6 +565,9 @@ struct OrbitonesWidget : ModuleWidget {
         addParam(createParamCentered<TinyBlueKnob>(Vec(39.9, 250.4), module, Orbitones::GRAVITY_PARAMS + Orbitones::BLUE_ATTRACTOR));
         addParam(createParamCentered<TinyAquaKnob>(Vec(16, 274.3), module, Orbitones::GRAVITY_PARAMS + Orbitones::AQUA_ATTRACTOR));
         addParam(createParamCentered<TinyRedKnob>(Vec(39.9, 274.3), module, Orbitones::GRAVITY_PARAMS + Orbitones::RED_ATTRACTOR));
+        // global gravity
+        addParam(createParamCentered<BlueKnob>(Vec(16, 307.9), module, Orbitones::GLOBAL_GRAVITY_PARAM));
+        addInput(createInputCentered<TinyPJ301M>(Vec(39.9, 307.9), module, Orbitones::GLOBAL_GRAVITY_INPUT));
 
         // poly outs
         addOutput(createOutputCentered<PJ301MPort>(Vec(498.1, 266.8), module, Orbitones::X_POLY_OUTPUT));

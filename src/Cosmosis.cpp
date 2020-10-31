@@ -808,7 +808,6 @@ struct CosmosisWidget : ModuleWidget {
     void appendContextMenu(Menu *menu) override {
         Cosmosis *module = dynamic_cast<Cosmosis*>(this->module);
 
-        // MenuLabel *spacerLabel = new MenuLabel();
         menu->addChild(new MenuEntry);
 
         CosmosisNS::ChannelItem *channelItem = new CosmosisNS::ChannelItem;
