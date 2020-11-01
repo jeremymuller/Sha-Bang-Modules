@@ -96,6 +96,8 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 ### Orbitones
 
+![Orbitones](/docs/Orbitones.gif)
+
 *LFO blah blah...todo*
 
 ---
