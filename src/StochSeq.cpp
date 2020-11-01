@@ -431,7 +431,6 @@ struct StochSeqWidget : ModuleWidget {
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
-			// TODO: a sine wave instead?
 			float x = 196 * i / NUM_OF_LIGHTS + 5;
 			
 			float y = ((-std::sin(2.0 * M_PI * i / NUM_OF_LIGHTS) * 0.5 + 0.5) * 50 + 15);

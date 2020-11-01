@@ -58,7 +58,6 @@ struct PolyrhythmClock : Module {
     PolyrhythmClock() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
-        // TODO: fix the mouse hover for bpm
         configParam(BPM_PARAM, -2.0, 6.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
         configParam(TUPLET1_RHYTHM_PARAM, 1.0, 13.0, 1.0);
         configParam(TUPLET1_DUR_PARAM, 1.0, 13.0, 1.0);

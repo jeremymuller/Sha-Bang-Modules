@@ -342,14 +342,6 @@ struct StochSeq4Display : Widget {
     }
 
     void draw(const DrawArgs& args) override {
-        // TODO
-
-        //background
-        // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-        // nvgBeginPath(args.vg);
-        // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-        // nvgFill(args.vg);
-
         if (module == NULL) {
             // draw stuff for preview
 			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
@@ -413,7 +405,6 @@ struct StochSeq4Display : Widget {
 
         // seq position
         if (module->seqs[seqId].gateIndex >= 0) {
-            // TODO: set color for each sequencer
             nvgStrokeWidth(args.vg, 2.0);
             // nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
             switch (seqId) {

@@ -405,8 +405,6 @@ struct Neutrinode : Module, Quantize {
         }
         checkParams = (checkParams+1) % 4;
 
-        // TODO: This doesn't need to happen every sample, might try every 700 samples
-
         if (processNodes == 0) {
             lights[PAUSE_LIGHT].setBrightness(toggleStart ? 1.0 : 0.0);
 
@@ -487,25 +485,6 @@ struct Neutrinode : Module, Quantize {
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
 
     }
-
-    // TODO: probably won't use this
-    // void randomizeParticles() {
-    //     if (particles.size() < 1) {
-    //         for (int i = 0; i < 4; i++) {
-    //             Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
-    //             particles.push_back(p);
-    //             for (int i = 0; i < NUM_OF_NODES; i++) {
-    //                 Pulse pulse;
-    //                 nodes[i].pulses.push_back(pulse);
-    //             }
-    //         }
-    //     } else {
-    //         for (unsigned int i = 0; i < particles.size(); i++) {
-    //             particles[i].box.pos.x = randRange(15, DISPLAY_SIZE - 15);
-    //             particles[i].box.pos.y = randRange(15, DISPLAY_SIZE - 15);
-    //         }
-    //     }
-    // }
 
     void addParticle(Vec pos, int index) {
         visibleParticles++;

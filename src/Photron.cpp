@@ -320,7 +320,6 @@ struct Photron : Module {
         if (blocksJ) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
-                    // TODO ????
                     int i = x + y * cols;
                     json_t *rgbJ = json_array_get(blocksJ, i);
                     if (rgbJ) {

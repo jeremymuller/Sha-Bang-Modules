@@ -104,7 +104,6 @@ struct Quantize {
             default: return voltsIn;
         }
 
-        // TODO: make a 2-octave version of this...so volts can range from 0-2?
         int octave = static_cast<int>(floorf(voltsIn));
         voltsIn = voltsIn - octave;
         float distanceToNote = 10.0;

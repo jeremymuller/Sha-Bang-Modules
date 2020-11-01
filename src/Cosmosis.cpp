@@ -792,7 +792,6 @@ struct CosmosisWidget : ModuleWidget {
         addParam(createParamCentered<BlueInvertKnob>(Vec(61.2, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::BLUE_SEQ));
         addParam(createParamCentered<AquaInvertKnob>(Vec(96, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::AQUA_SEQ));
         addParam(createParamCentered<RedInvertKnob>(Vec(130.7, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::RED_SEQ));
-        // addParam(createParamCentered<BlueInvertKnob>(Vec(61.2, 201.8), module, Cosmosis::MODE_PARAM));
 
         addInput(createInputCentered<TinyPJ301M>(Vec(26.4, 90.7), module, Cosmosis::EXT_PLAY_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(61.2, 90.7), module, Cosmosis::SPEED_INPUT));
