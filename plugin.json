@@ -32,7 +32,8 @@
       {
           "slug": "Orbitones",
           "name": "Orbitones",
-          "tags": ["Visual", "Low-frequency oscillator"]
+          "description": "Physics-based LFO with four independent attractors",
+          "tags": ["Visual", "Low-frequency oscillator", "Polyphonic"]
       },
       {
           "slug": "Photron",
@@ -43,7 +44,8 @@
       {
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
-          "tags": ["Clock generator", "Clock modulator"]
+          "description": "Clock with 3 layers of embedded rhythms",
+          "tags": ["Clock generator", "Clock modulator", "Random"]
       },
       {
           "slug": "RandGates",
@@ -54,6 +56,7 @@
       {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
+          "description": "Bit crusher and downsampler with randomization",
           "tags": ["Digital", "Distortion", "Effect", "Sample and hold"]
       },
       {
