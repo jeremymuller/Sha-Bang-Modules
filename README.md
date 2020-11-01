@@ -30,6 +30,8 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 Click anywhere to add/drag new stars. To remove stars click/drag them out of the dark display area.
 
+##### RIGHT-CLICK MENU:
+- Polyphony.
 ##### BUTTONS:
 - `PLAY` starts the sequencer.
 - `CLR` removes all stars.
@@ -67,6 +69,7 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 ##### RIGHT-CLICK MENU:
 - Collisions are turned on or off for the nodes.
+- Polyphony.
 ##### BUTTONS:
 - `PLAY` turns on/off all nodes.
 - `MOVE` each node will randomly move around the dispay area.
@@ -99,6 +102,31 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 ![Orbitones](/docs/Orbitones.gif)
 
 *LFO blah blah...todo*
+
+Click on the attractors to move position them where you want. Click anywhere else to add particles.
+
+##### RIGHT-CLICK MENU:
+- Polyphony.
+##### BUTTONS:
+- `RMV` removes one particle.
+- `CLR` clears all particles.
+- `MOVE` trigger turns on/off the random movement of attractors.
+##### KNOBS:
+- `ON` turns on/off individual attractors.
+- `G` scales the individual attractors' gravity.
+- `G` (big knob) main gravity control for all attractors.
+##### INPUTS:
+- `MOVE` trigger turns on/off the random movement of attractors.
+- `G` TODO!!!!!!!!
+##### OUTPUTS:
+- `MONO OUTS`:
+  - `AVG` average x/y voltage of all particles.
+  - `MAX` maximum x/y voltage of all particles.
+  - `MIN` minimum x/y voltage of all particles.
+- `POLY OUTS`:
+  - `X Y` positions correspond to ±5 volts.
+  - `-X -Y` opposite positions correspond to ±5 volts.
+  - `velX velY` velocities correspond to ±5 volts.
 
 ---
 
