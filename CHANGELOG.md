@@ -1,3 +1,10 @@
+v1.1.0 ()
+- New module Orbitones
+- New module Photron
+- Added inputs to StochSeq to control `RND`, `INV`, and `DIM`
+- Fixed Polyphony menu in Neutrinode
+- Updated Docs
+
 v1.0.2 (10-24-2020)
 - Added inputs to control `PLAY`, `BPM`, `MOVE`, and root note for Neutrinode
 - Added collisions mode (on/off) for Neutrinode nodes
