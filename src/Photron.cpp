@@ -383,34 +383,29 @@ struct Photron : Module {
     }
 
     void resetBlocks() {
-        switch (resetIndex) {
-            case 0:
-                for (int y = 0; y < rows; y++) {
-                    for (int x = 0; x < cols; x++) {
-                        blocks[y][x].reset();
+        if (resetIndex == 0) {
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+                    blocks[y][x].reset();
+                }
+            }
+        } else {
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+                    if (x < cols/2.0) {
+                        if (y < rows/2.0)
+                            blocks[y][x].setColor(128, 0, 219); // purple
+                        else
+                            blocks[y][x].setColor(0, 238, 255); // aqua
+                    }
+                    else {
+                        if (y < rows/2.0)
+                            blocks[y][x].setColor(38, 0, 255); // blue
+                        else
+                            blocks[y][x].setColor(255, 0, 0); // red
                     }
                 }
-                break;
-            case 1:
-                for (int y = 0; y < rows; y++) {
-                    for (int x = 0; x < cols; x++) {
-                        if (x < cols/2.0) {
-                            if (y < rows/2.0)
-                                blocks[y][x].setColor(128, 0, 219); // purple
-                            else
-                                blocks[y][x].setColor(0, 238, 255); // aqua
-                        }
-                        else {
-                            if (y < rows/2.0)
-                                blocks[y][x].setColor(38, 0, 255); // blue
-                            else
-                                blocks[y][x].setColor(255, 0, 0); // red
-                        }
-                    }
-                }
-                break;
-            // TODO: others? or just two?
-            
+            }           
         }
 
         resetIndex = (resetIndex+1) % 2;
