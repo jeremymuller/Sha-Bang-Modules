@@ -117,7 +117,7 @@ Click on the attractors to move position them where you want. Click anywhere els
 - `G` (big knob) main gravity control for all attractors.
 ##### INPUTS:
 - `MOVE` trigger turns on/off the random movement of attractors.
-- `G` TODO!!!!!!!!
+- `G` takes a CV using this formula: `G` * 2<sup>V</sup>.
 ##### OUTPUTS:
 - `MONO OUTS`:
   - `AVG` average x/y voltage of all particles.
@@ -137,9 +137,16 @@ Click on the attractors to move position them where you want. Click anywhere els
 *An animated visualizer with inputs. Uses color flocking based on the Craig Reynolds boids flocking algorithm.*
 
 ##### BUTTON:
-- color version or black & white version
+- color version or black & white version.
 ##### INPUTS:
-- TODO
+- Top 3 inputs (zero volts is default values):
+  - CV controls the separation of colors between adjacent blocks. Higher voltage = more separation.
+  - CV controls the alignment of block colors which is their rate of change. Higher voltage = more alignment and thus their color velocities will become the same.
+  - CV controls the cohesion of block colors which is converging on a single color. Higher voltage = more cohesion and thus their colors will quickly become the same and Photron will look like one color.
+- Bottom 3 inputs are triggers:
+  - color version of black & white version.
+  - invert colors.
+  - reinitialize all blocks (alternates between randomizing all colors or 4 colors in 4 quadrants).
 
 ---
 
