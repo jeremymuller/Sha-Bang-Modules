@@ -13,6 +13,12 @@
   "changelogUrl": "",
   "modules": [
       {
+          "slug": "AbsorptionSpectrum",
+          "name": "Absorption Spectrum",
+          "description": "Hydrogen absorption spectrum",
+          "tags": ["Blank", "Visual"]
+      },
+      {
           "slug": "Cosmosis",
           "name": "Cosmosis",
           "description": "Continuous sequencer with constellations",
@@ -44,7 +50,7 @@
       {
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
-          "description": "Clock with 3 layers of embedded rhythms",
+          "description": "Clock with 3 layers of embedded rhythms and randomization",
           "tags": ["Clock generator", "Clock modulator", "Random"]
       },
       {

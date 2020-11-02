@@ -349,7 +349,7 @@ struct Photron : Module {
         if (sr == 0) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
-                    // TODO: clamp these input values
+                    // TODO: clamp these input values?
                     blocks[y][x].sepInput = inputs[SEPARATE_INPUT].getVoltage();
                     blocks[y][x].aliInput = inputs[ALIGN_INPUT].getVoltage();
                     blocks[y][x].cohInput = inputs[COHESION_INPUT].getVoltage();

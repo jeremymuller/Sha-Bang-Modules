@@ -3,7 +3,7 @@
 #define DISPLAY_SIZE_WIDTH 427
 #define DISPLAY_SIZE_HEIGHT 378
 #define MAX_PARTICLES 16
-#define INTERNAL_SAMP_TIME 60.0 // TODO: figure out 60Hz regardless of SR
+#define INTERNAL_SAMP_TIME 60.0
 
 struct Particle {
     Rect box;
@@ -74,7 +74,7 @@ struct Attractor {
 
         force = force.normalize();
 
-        float strength = (G * gravityScl )* (mass * p.mass) / (d * d);
+        float strength = (G * gravityScl) * (mass * p.mass) / (d * d);
         force = force.mult(strength);
         // if (d < 15) force = force.mult(0.1);
         if (d < 15) force = Vec(0.0, 0.0); // weaken forces so particle doesn't get sucked into blackhole
@@ -273,9 +273,11 @@ struct Orbitones : Module {
         
         if (processOrbits == 0) {
             for (int i = 0; i < NUM_ATTRACTORS; i++) {
-                attractors[i].G = params[GLOBAL_GRAVITY_PARAM].getValue();
-                // TODO: CV input?
-                if (inputs[GLOBAL_GRAVITY_INPUT].isConnected()) attractors[i].G += inputs[GLOBAL_GRAVITY_INPUT].getVoltage();
+                if (inputs[GLOBAL_GRAVITY_INPUT].isConnected()) {
+                    attractors[i].G = params[GLOBAL_GRAVITY_PARAM].getValue() * std::pow(2.0, inputs[GLOBAL_GRAVITY_INPUT].getVoltage());
+                } else {
+                    attractors[i].G = params[GLOBAL_GRAVITY_PARAM].getValue();
+                }
                 attractors[i].gravityScl = params[GRAVITY_PARAMS + i].getValue();
                 if (attractors[i].toggleTrig.process(params[ON_PARAMS+i].getValue())) {
                     attractors[i].visible = !attractors[i].visible;
