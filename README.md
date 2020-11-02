@@ -101,7 +101,7 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 ![Orbitones](/docs/Orbitones.gif)
 
-*LFO blah blah...todo*
+*Physics-based animted LFO with 4 independent attractors.*
 
 Click on the attractors to move position them where you want. Click anywhere else to add particles.
 
