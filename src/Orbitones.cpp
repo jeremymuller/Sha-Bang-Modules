@@ -373,7 +373,7 @@ struct Orbitones : Module {
             float magSq = attractors[i].vel.x * attractors[i].vel.x + attractors[i].vel.y * attractors[i].vel.y;
             if (magSq > 1) {
                 attractors[i].vel = attractors[i].vel.normalize();
-                attractors[i].vel = attractors[i].vel.mult(-1);
+                attractors[i].vel = attractors[i].vel.mult(0.9);
             }
             attractors[i].box.pos = attractors[i].box.pos.plus(attractors[i].vel);
         }
