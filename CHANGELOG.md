@@ -1,4 +1,4 @@
-v1.1.0 ()
+v1.1.0 (11-02-2020)
 - New module Orbitones
 - New module Photron
 - New module Absorption Spectrum
