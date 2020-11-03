@@ -124,9 +124,9 @@ Click on the attractors to move position them where you want. Click anywhere els
   - `MAX` maximum x/y voltage of all particles.
   - `MIN` minimum x/y voltage of all particles.
 - `POLY OUTS`:
-  - `X Y` positions correspond to ±5 volts.
-  - `-X -Y` opposite positions correspond to ±5 volts.
-  - `velX velY` velocities correspond to ±5 volts.
+  - `X Y` positions of particles correspond to ±5 volts.
+  - `-X -Y` opposite positions of particles correspond to ±5 volts.
+  - `velX velY` velocities of particles correspond to ±5 volts.
 
 ---
 
