@@ -6,12 +6,14 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 *TODO: videos*
 
-![modulesall](/docs/Modules_ALL.gif)
+![modulesall](/docs/Modules_ALL2.gif)
 
 ## Contents:
 
 * [Cosmosis](#cosmosis)
 * [Neutrinode](#neutrinode)
+* [Orbitones](#orbitones)
+* [Photron](#photron)
 * [PolyrhythmClock](#polyrhythm-clock)
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates)
@@ -28,6 +30,8 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 Click anywhere to add/drag new stars. To remove stars click/drag them out of the dark display area.
 
+##### RIGHT-CLICK MENU:
+- Polyphony.
 ##### BUTTONS:
 - `PLAY` starts the sequencer.
 - `CLR` removes all stars.
@@ -65,6 +69,7 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 ##### RIGHT-CLICK MENU:
 - Collisions are turned on or off for the nodes.
+- Polyphony.
 ##### BUTTONS:
 - `PLAY` turns on/off all nodes.
 - `MOVE` each node will randomly move around the dispay area.
@@ -89,6 +94,59 @@ Click on nodes to position them. Click anywhere else to add/drag new particles. 
 
 *:warning: There are a maximum of 16 particles (for 16 polyphonic channels) per node. However, when using the `ALL` outputs, there is potential to reach that maximum (16 x 4 = 64) in which case it does voice stealing.*
 
+
+---
+
+### Orbitones
+
+![Orbitones](/docs/Orbitones.gif)
+
+*Physics-based animted LFO with 4 independent attractors.*
+
+Click on the attractors to move position them where you want. Click anywhere else to add particles.
+
+##### RIGHT-CLICK MENU:
+- Polyphony.
+##### BUTTONS:
+- `RMV` removes one particle.
+- `CLR` clears all particles.
+- `MOVE` trigger turns on/off the random movement of attractors.
+##### KNOBS:
+- `ON` turns on/off individual attractors.
+- `G` scales the individual attractors' gravity.
+- `G` (big knob) main gravity control for all attractors.
+##### INPUTS:
+- `MOVE` trigger turns on/off the random movement of attractors.
+- `G` takes a CV using this formula: `G` * 2<sup>V</sup>.
+##### OUTPUTS:
+- `MONO OUTS`:
+  - `AVG` average x/y voltage of all particles.
+  - `MAX` maximum x/y voltage of all particles.
+  - `MIN` minimum x/y voltage of all particles.
+- `POLY OUTS`:
+  - `X Y` positions correspond to ±5 volts.
+  - `-X -Y` opposite positions correspond to ±5 volts.
+  - `velX velY` velocities correspond to ±5 volts.
+
+---
+
+### Photron
+
+![Photron](/docs/Photron.png)
+
+*An animated visualizer with inputs. Uses color flocking based on the Craig Reynolds boids flocking algorithm.*
+
+##### BUTTON:
+- color version or black & white version.
+##### INPUTS:
+- Top 3 inputs (zero volts is default values):
+  - CV controls the separation of colors between adjacent blocks. Higher voltage = more separation.
+  - CV controls the alignment of block colors which is their rate of change. Higher voltage = more alignment and thus their color velocities will become the same.
+  - CV controls the cohesion of block colors which is converging on a single color. Higher voltage = more cohesion and thus their colors will quickly become the same and Photron will look like one color.
+- Bottom 3 inputs are triggers:
+  - color version of black & white version.
+  - invert colors.
+  - reinitialize all blocks (alternates between randomizing all colors or 4 colors in 4 quadrants).
 
 ---
 

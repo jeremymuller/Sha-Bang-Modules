@@ -243,7 +243,7 @@ struct Neutrinode : Module, Quantize {
         configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode");
+        configParam(PITCH_PARAM, 0.0, 1.0, 1.0, "Pitch mode");
         configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
         configParam(ON_PARAM + PURPLE_NODE, 0.0, 1.0, 0.0, "toggle purple node");
@@ -405,8 +405,6 @@ struct Neutrinode : Module, Quantize {
         }
         checkParams = (checkParams+1) % 4;
 
-        // TODO: This doesn't need to happen every sample, might try every 700 samples
-
         if (processNodes == 0) {
             lights[PAUSE_LIGHT].setBrightness(toggleStart ? 1.0 : 0.0);
 
@@ -459,7 +457,6 @@ struct Neutrinode : Module, Quantize {
                                 outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, polyChannelIndex);
                                 // outputs[VOLTS_ALL_OUTPUTS].setVoltage(pitch, (j % channels));
                             }
-                            if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
 
                             bool pulse = nodes[i].gatePulse[j % channels].process(1.0 / args.sampleRate);
                             outputs[GATE_OUTPUTS + i].setVoltage(pulse ? 10.0 : 0.0, (j % channels));
@@ -467,6 +464,8 @@ struct Neutrinode : Module, Quantize {
                             outputs[GATES_ALL_OUTPUTS].setVoltage(pulseAll ? 10.0 : 0.0, polyChannelIndex);
                             polyChannelIndex = (polyChannelIndex+1) % channels;
                         }
+                        if (nodes[i].pulses[j].blipTrigger) nodes[i].pulses[j].blip();
+
                     }
 
                     nodes[i].phase += clockStep;
@@ -481,30 +480,12 @@ struct Neutrinode : Module, Quantize {
                 outputs[VOLT_OUTPUTS + i].setChannels(channels);
             }
 
-
+            outputs[GATES_ALL_OUTPUTS].setChannels(channels);
+            outputs[VOLTS_ALL_OUTPUTS].setChannels(channels);
         }
         processNodes = (processNodes+1) % INTERNAL_SAMP_TIME;
 
     }
-
-    // TODO: probably won't use this
-    // void randomizeParticles() {
-    //     if (particles.size() < 1) {
-    //         for (int i = 0; i < 4; i++) {
-    //             Particle p(randRange(15, DISPLAY_SIZE - 15), randRange(15, DISPLAY_SIZE - 15));
-    //             particles.push_back(p);
-    //             for (int i = 0; i < NUM_OF_NODES; i++) {
-    //                 Pulse pulse;
-    //                 nodes[i].pulses.push_back(pulse);
-    //             }
-    //         }
-    //     } else {
-    //         for (unsigned int i = 0; i < particles.size(); i++) {
-    //             particles[i].box.pos.x = randRange(15, DISPLAY_SIZE - 15);
-    //             particles[i].box.pos.y = randRange(15, DISPLAY_SIZE - 15);
-    //         }
-    //     }
-    // }
 
     void addParticle(Vec pos, int index) {
         visibleParticles++;
@@ -943,9 +924,6 @@ struct NeutrinodeWidget : ModuleWidget {
 
         addParam(createParamCentered<Jeremy_HSwitch>(Vec(111.4, 122.8), module, Neutrinode::PITCH_PARAM));
         addParam(createParamCentered<TinyPurpleButton>(Vec(130.7, 91.4), module, Neutrinode::CLEAR_PARTICLES_PARAM));
-        // addParam(createParamCentered<PurpleButton>(Vec(130.7, 78.1), module, Neutrinode::RND_PARTICLES_PARAM));
-        // addParam(createParamCentered<PurpleButton>(Vec(130.7, 121.9), module, Neutrinode::CLEAR_PARTICLES_PARAM));
-
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3.21, 24.3 - 3.21), module, Neutrinode::PAUSE_LIGHT));
 

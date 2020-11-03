@@ -1,7 +1,7 @@
 {
   "slug": "Sha-Bang-Modules",
   "name": "Sha#Bang! Modules",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "license": "GPL-3.0-only",
   "author": "Jeremy Muller",
   "authorEmail": "jeremy@jeremymuller.com",
@@ -12,6 +12,12 @@
   "donateUrl": "https://www.paypal.me/jeremysmuller",
   "changelogUrl": "",
   "modules": [
+      {
+          "slug": "AbsorptionSpectrum",
+          "name": "Absorption Spectrum",
+          "description": "Hydrogen absorption spectrum",
+          "tags": ["Blank", "Visual"]
+      },
       {
           "slug": "Cosmosis",
           "name": "Cosmosis",
@@ -32,7 +38,8 @@
       {
           "slug": "Orbitones",
           "name": "Orbitones",
-          "tags": ["Visual", "Low-frequency oscillator"]
+          "description": "Physics-based LFO with four independent attractors",
+          "tags": ["Visual", "Low-frequency oscillator", "Polyphonic"]
       },
       {
           "slug": "Photron",
@@ -43,7 +50,8 @@
       {
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
-          "tags": ["Clock generator", "Clock modulator"]
+          "description": "Clock with 3 layers of embedded rhythms and randomization",
+          "tags": ["Clock generator", "Clock modulator", "Random"]
       },
       {
           "slug": "RandGates",
@@ -54,6 +62,7 @@
       {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
+          "description": "Bit crusher and downsampler with randomization",
           "tags": ["Digital", "Distortion", "Effect", "Sample and hold"]
       },
       {

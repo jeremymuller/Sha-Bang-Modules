@@ -41,7 +41,7 @@ struct StochSeq : Module, Quantize {
 	dsp::SchmittTrigger dimTrig;
 	dsp::SchmittTrigger randomTrig;
 	dsp::SchmittTrigger invertTrig;
-	bool gatePulse;
+	dsp::PulseGenerator gatePulse;
 	int seqLength = NUM_OF_SLIDERS;
 	int gateIndex = -1;
 	int currentGateOut = gateIndex;
@@ -130,10 +130,10 @@ struct StochSeq : Module, Quantize {
 			clockStep();
 		}
 
-		float gateVolt = gatePulse ? 10.0 : 0.0;
+		bool gateVolt = gatePulse.process(1.0 / args.sampleRate);
 		// float blink = lightBlink ? 1.0 : 0.0;
-		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt);
-		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt);
+		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt ? 10.0 : 0.0);
+		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt ? 10.0 : 0.0);
 		outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
 		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
@@ -151,11 +151,10 @@ struct StochSeq : Module, Quantize {
 		seqLength = (int)params[LENGTH_PARAM].getValue();
 		gateIndex = (gateIndex + 1) % seqLength;
 		lightBlink = false;
-		gatePulse = false;
 
 		float prob = gateProbabilities[gateIndex];
 		if (random::uniform() < prob) {
-			gatePulse = true;
+			gatePulse.trigger(1e-3);
 			currentGateOut = gateIndex;
 			lightBlink = true;
 			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
@@ -432,7 +431,6 @@ struct StochSeqWidget : ModuleWidget {
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
-			// TODO: a sine wave instead?
 			float x = 196 * i / NUM_OF_LIGHTS + 5;
 			
 			float y = ((-std::sin(2.0 * M_PI * i / NUM_OF_LIGHTS) * 0.5 + 0.5) * 50 + 15);
