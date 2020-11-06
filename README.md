@@ -222,6 +222,8 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 Click and/or drag to draw your own patterns!
 
+Watch the [video tutorial](https://youtu.be/QtNtazAv73M)
+
 ##### INPUTS:
 - `CLK` controls timing.
 - `RST` resets sequence to beginning of timeline.
@@ -252,6 +254,8 @@ Click and/or drag to draw your own patterns!
 *A sequencer that uses four independent stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
 
 Click and/or drag to draw your own patterns!
+
+Watch the [video tutorial](https://youtu.be/LBL_VYe_stU)
 
 ##### INPUTS:
 - `MCLK` controls timing of all patterns (overrides all individual clocks).
