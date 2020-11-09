@@ -263,7 +263,7 @@ struct Photron : Module {
     dsp::SchmittTrigger colorTrig, invertTrig, resetTrig;
     bool isColor = true;
     int resetIndex = 0;
-    int srIncrement = APP->engine->getSampleRate() / INTERNAL_HZ;
+    int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
     // int srIncrement = 735;
     int sr = 0;
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
@@ -379,7 +379,8 @@ struct Photron : Module {
                 }
             }
         }
-        sr = (sr+1) % srIncrement;
+        sr++;
+        if (sr > srIncrement) sr = 0;
     }
 
     void resetBlocks() {
