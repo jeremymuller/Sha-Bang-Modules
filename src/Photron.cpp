@@ -263,7 +263,7 @@ struct Photron : Module {
     dsp::SchmittTrigger colorTrig, invertTrig, resetTrig;
     bool isColor = true;
     int resetIndex = 0;
-    int srIncrement = APP->engine->getSampleRate() / INTERNAL_HZ;
+    int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
     // int srIncrement = 735;
     int sr = 0;
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
@@ -273,7 +273,7 @@ struct Photron : Module {
 
     Photron() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(COLOR_PARAM, 0.0, 1.0, 0.0);
+        configParam(COLOR_PARAM, 0.0, 1.0, 0.0, "color or b&w");
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
@@ -282,6 +282,10 @@ struct Photron : Module {
                 blocks[y][x].isSet = true;
             }
         }
+    }
+
+    void onSampleRateChange() override {
+        srIncrement = APP->engine->getSampleRate() / INTERNAL_HZ;
     }
 
     json_t *dataToJson() override {
@@ -354,6 +358,7 @@ struct Photron : Module {
                     blocks[y][x].aliInput = inputs[ALIGN_INPUT].getVoltage();
                     blocks[y][x].cohInput = inputs[COHESION_INPUT].getVoltage();
 
+                    // adjacents
                     Block west;
                     Block east;
                     Block north;
@@ -379,7 +384,9 @@ struct Photron : Module {
                 }
             }
         }
-        sr = (sr+1) % srIncrement;
+        // sr = (sr+1) % srIncrement;
+        sr++;
+        if (sr > srIncrement) sr = 0;
     }
 
     void resetBlocks() {
