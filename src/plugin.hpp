@@ -21,6 +21,7 @@ extern Model *modelQubitCrusher;
 extern Model *modelPhotron;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
+extern Model *modelTalea;
 
 /************************** INLINE FUNCTIONS **************************/
 

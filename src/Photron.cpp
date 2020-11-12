@@ -263,17 +263,18 @@ struct Photron : Module {
     dsp::SchmittTrigger colorTrig, invertTrig, resetTrig;
     bool isColor = true;
     int resetIndex = 0;
-    int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
-    // int srIncrement = 735;
-    int sr = 0;
+    int checkParams = 0;
+    // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
+    int internalHz = 60;
+    float srIncrement = APP->engine->getSampleTime() * internalHz;
+    float sr = 0;
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
     static const int rows = DISPLAY_SIZE_HEIGHT / CELL_SIZE;
     Block blocks[rows][cols];
-    Vec3 targetColor = Vec3(255.0, 0.0, 0.0);
 
     Photron() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(COLOR_PARAM, 0.0, 1.0, 0.0);
+        configParam(COLOR_PARAM, 0.0, 1.0, 0.0, "color or b&w");
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
@@ -282,6 +283,23 @@ struct Photron : Module {
                 blocks[y][x].isSet = true;
             }
         }
+    }
+
+    void onSampleRateChange() override {
+        srIncrement = APP->engine->getSampleTime() * internalHz;
+    }
+
+    void onRandomize() override {
+        resetBlocks();
+    }
+
+    void onReset() override {
+        resetBlocks();
+    }
+
+    void setHz(int hz) {
+        internalHz = hz;
+        srIncrement = APP->engine->getSampleTime() * internalHz;
     }
 
     json_t *dataToJson() override {
@@ -307,12 +325,16 @@ struct Photron : Module {
             }
         }
 
+        json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
         json_object_set_new(rootJ, "color", json_boolean(isColor));
         json_object_set_new(rootJ, "blocks", blocksJ);
         return rootJ;
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *internalHzJ = json_object_get(rootJ, "internalHz");
+        if (internalHzJ) setHz(json_integer_value(internalHzJ));
+
         json_t *colorJ = json_object_get(rootJ, "color");
         if (colorJ) isColor = json_boolean_value(colorJ);
 
@@ -336,15 +358,18 @@ struct Photron : Module {
     }
 
     void process(const ProcessArgs &args) override {
-        if (colorTrig.process(params[COLOR_PARAM].getValue() + inputs[COLOR_TRIGGER_INPUT].getVoltage())) {
-            isColor = !isColor;
+        if (checkParams == 0) {
+            if (colorTrig.process(params[COLOR_PARAM].getValue() + inputs[COLOR_TRIGGER_INPUT].getVoltage())) {
+                isColor = !isColor;
+            }
+            if (invertTrig.process(inputs[INVERT_INPUT].getVoltage())) {
+                invertColors();
+            }
+            if (resetTrig.process(inputs[RESET_INPUT].getVoltage())) {
+                resetBlocks();
+            }
         }
-        if (invertTrig.process(inputs[INVERT_INPUT].getVoltage())) {
-            invertColors();
-        }
-        if (resetTrig.process(inputs[RESET_INPUT].getVoltage())) {
-            resetBlocks();
-        }
+        checkParams = (checkParams+1) % 4;
 
         if (sr == 0) {
             for (int y = 0; y < rows; y++) {
@@ -354,6 +379,7 @@ struct Photron : Module {
                     blocks[y][x].aliInput = inputs[ALIGN_INPUT].getVoltage();
                     blocks[y][x].cohInput = inputs[COHESION_INPUT].getVoltage();
 
+                    // adjacents
                     Block west;
                     Block east;
                     Block north;
@@ -379,8 +405,10 @@ struct Photron : Module {
                 }
             }
         }
-        sr++;
-        if (sr > srIncrement) sr = 0;
+        sr += srIncrement;
+        if (sr >= 1.0) {
+            sr = 0.0;
+        }
     }
 
     void resetBlocks() {
@@ -423,8 +451,43 @@ struct Photron : Module {
     }
 };
 
+namespace PhotronNS {
+    struct HzModeValueItem : MenuItem {
+        Photron *module;
+        int hz;
+        void onAction(const event::Action &e) override {
+            module->setHz(hz);
+        }
+    };
+
+    struct HzModeItem : MenuItem {
+        Photron *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            std::vector<std::string> hzModes = {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"};
+            int hertz[] = {60, 45, 30, 20, 15, 12, 10};
+            for (int i = 0; i < 7; i++) {
+                HzModeValueItem *item = new HzModeValueItem;
+                item->text = hzModes[i];
+                item->rightText = CHECKMARK(module->internalHz == hertz[i]);
+                item->module = module;
+                item->hz = hertz[i];
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+}
+
 struct PhotronDisplay : Widget {
     Photron *module;
+
+    // void onButton(const event::Button &e) override {
+    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+    //         e.consume(this);
+            
+    //     }
+    // }
 
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
@@ -472,6 +535,17 @@ struct PhotronWidget : ModuleWidget {
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 333.8), module, Photron::COLOR_TRIGGER_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 352.1), module, Photron::INVERT_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 370.3), module, Photron::RESET_INPUT));
+    }
+
+    void appendContextMenu(Menu *menu) override {
+        Photron *module = dynamic_cast<Photron*>(this->module);
+        menu->addChild(new MenuEntry);
+
+        PhotronNS::HzModeItem *hzModeItem = new PhotronNS::HzModeItem;
+        hzModeItem->text = "Processing rate";
+        hzModeItem->rightText = string::f("%d", module->internalHz) + " Hz " + RIGHT_ARROW; 
+        hzModeItem->module = module;
+        menu->addChild(hzModeItem);
     }
 };
 
