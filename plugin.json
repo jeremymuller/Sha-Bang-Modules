@@ -1,7 +1,7 @@
 {
   "slug": "Sha-Bang-Modules",
   "name": "Sha#Bang! Modules",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "license": "GPL-3.0-only",
   "author": "Jeremy Muller",
   "authorEmail": "jeremy@jeremymuller.com",
@@ -76,12 +76,6 @@
           "name": "Stochastic Sequencer 4",
           "description": "Probabilistic sequencer with four independent voices",
           "tags": ["Sequencer", "Visual"]
-      },
-      {
-          "slug": "Talea",
-          "name": "Talea",
-          "description": "Unique arpeggiator using polyrhythms",
-          "tags": ["Arpeggiator"]
       }
   ]
 }

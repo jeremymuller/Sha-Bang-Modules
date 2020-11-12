@@ -271,7 +271,6 @@ struct Photron : Module {
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
     static const int rows = DISPLAY_SIZE_HEIGHT / CELL_SIZE;
     Block blocks[rows][cols];
-    Vec3 targetColor = Vec3(255.0, 0.0, 0.0);
 
     Photron() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -406,7 +405,6 @@ struct Photron : Module {
                 }
             }
         }
-
         sr += srIncrement;
         if (sr >= 1.0) {
             sr = 0.0;
@@ -483,6 +481,13 @@ namespace PhotronNS {
 
 struct PhotronDisplay : Widget {
     Photron *module;
+
+    // void onButton(const event::Button &e) override {
+    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+    //         e.consume(this);
+            
+    //     }
+    // }
 
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
