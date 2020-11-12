@@ -136,6 +136,8 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 *An animated visualizer with inputs. Uses color flocking based on the Craig Reynolds boids flocking algorithm.*
 
+##### RIGHT-CLICK MENU:
+- Processing rate (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
 ##### BUTTON:
 - color version or black & white version.
 ##### INPUTS:
