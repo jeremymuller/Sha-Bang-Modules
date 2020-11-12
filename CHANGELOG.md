@@ -1,3 +1,6 @@
+v1.1.1 (11-08-2020)
+- Fixed Photron CPU issue where it was use around 30%, now only ~5%
+
 v1.1.0 (11-02-2020)
 - New module Orbitones
 - New module Photron
