@@ -1,3 +1,6 @@
+v1.1.2 (11-12-2020)
+- Added right-click menu on Photron to change the processing rates
+
 v1.1.1 (11-08-2020)
 - Fixed Photron CPU issue where it was use around 30%, now only ~5%
 
