@@ -19,6 +19,7 @@ extern Model *modelCosmosis;
 extern Model *modelJeremyBlankPanel;
 extern Model *modelQubitCrusher;
 extern Model *modelPhotron;
+extern Model *modelPhotronPanel;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
