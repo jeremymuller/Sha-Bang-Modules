@@ -5,7 +5,17 @@
 #define MAX_PARTICLES 16
 #define INTERNAL_SAMP_TIME 60.0
 
-// TODO: particle trails
+struct Trail {
+    float x;
+    float y;
+    int alpha;
+    Trail() {}
+    Trail(float _x, float _y, int _alpha) {
+        x = _x;
+        y = _y;
+        alpha = _alpha;
+    }
+};
 
 struct Particle {
     Rect box;
@@ -13,9 +23,11 @@ struct Particle {
     Vec acc;
     float mass;
     NVGcolor color = nvgRGB(255, 255, 255);
+    NVGcolor trailColor;
     float radius;
     bool visible;
-    std::vector<Vec> history;
+    bool whiteTrails = true;
+    std::vector<Trail> history;
 
     Particle() {
         box.pos.x = randRange(0, DISPLAY_SIZE_WIDTH);
@@ -44,13 +56,23 @@ struct Particle {
         box.pos = box.pos.plus(vel);
         vel = limit(vel, 12.0);
         acc = acc.mult(0.0);
+
+        if (whiteTrails) {
+            trailColor = nvgRGB(255, 255, 255);
+        } else {
+            NVGcolor red = nvgRGB(255, 0, 0);
+            NVGcolor blue = nvgRGB(0, 0, 255);
+            float _u = rescale(mag(vel), 0.0, 12.0, 0.0, 1.0);
+            trailColor = nvgLerpRGBA(red, blue, _u);
+        }
     }
 
     void updateHistory() {
         // trail
         Vec v = box.getCenter();
-        history.push_back(v);
-        if (history.size() > 50) {
+        Trail t = Trail(v.x, v.y, 255);
+        history.push_back(t);
+        if (history.size() > 20) {
             history.erase(history.begin());
         }
     }
@@ -99,6 +121,12 @@ struct Attractor {
 };
 
 struct Orbitones : Module {
+    enum TrailIds {
+        TRAILS_OFF,
+        TRAILS_WHITE,
+        TRAILS_REDSHIFT_BLUESHIFT,
+        NUM_TRAIL
+    };
     enum AttractorIds {
         PURPLE_ATTRACTOR,
         BLUE_ATTRACTOR,
@@ -144,6 +172,8 @@ struct Orbitones : Module {
     Particle *particles = new Particle[MAX_PARTICLES];
     bool movement = false;
     bool drawTrails = true;
+    int currentTrailId = 1;
+    std::string trails[NUM_TRAIL] = {"off ", "white ", "red shift/blue shift "};
     int processOrbits = 0;
     int visibleParticles = 2;
     int channels = 1;
@@ -219,7 +249,7 @@ struct Orbitones : Module {
         }
 
         json_object_set_new(rootJ, "move", json_boolean(movement));
-        json_object_set_new(rootJ, "drawTrails", json_boolean(drawTrails));
+        json_object_set_new(rootJ, "trails", json_integer(currentTrailId));
         json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "visibleParticles", json_integer(visibleParticles));
         json_object_set_new(rootJ, "attractors", attractorsJ);
@@ -235,8 +265,8 @@ struct Orbitones : Module {
         json_t *moveJ = json_object_get(rootJ, "move");
         if (moveJ) movement = json_boolean_value(moveJ);
 
-        json_t *drawTrailsJ = json_object_get(rootJ, "drawTrails");
-        if (drawTrailsJ) drawTrails = json_boolean_value(drawTrailsJ);
+        json_t *trailsJ = json_object_get(rootJ, "trails");
+        if (trailsJ) setTrails(json_integer_value(trailsJ));
 
         json_t *visibleParticlesJ = json_object_get(rootJ, "visibleParticles");
         if (visibleParticlesJ) visibleParticles = json_integer_value(visibleParticlesJ);
@@ -388,6 +418,29 @@ struct Orbitones : Module {
         visibleParticles = 0;
     }
 
+    void setTrails(int trailId) {
+        if (trailId == Orbitones::TRAILS_OFF) {
+            currentTrailId = Orbitones::TRAILS_OFF;
+            drawTrails = false;
+        } else if (trailId == Orbitones::TRAILS_WHITE) {
+            currentTrailId = Orbitones::TRAILS_WHITE;
+            drawTrails = true;
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                particles[i].whiteTrails = true;
+            }
+        } else {
+            currentTrailId = Orbitones::TRAILS_REDSHIFT_BLUESHIFT;
+            drawTrails = true;
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                particles[i].whiteTrails = false;
+            }
+        }
+    }
+
+    std::string getTrailString() {
+        return trails[currentTrailId];
+    }
+
     void updateAttractorPos() {
         for (int i = 0; i < NUM_ATTRACTORS; i++) {
             attractors[i].acc.x = randRange(-0.075, 0.075);
@@ -434,9 +487,9 @@ namespace OrbitonesNS {
 
     struct DrawTrailsValueItem : MenuItem {
         Orbitones *module;
-        bool drawTrails;
+        int trailId;
         void onAction(const event::Action &e) override {
-            module->drawTrails = drawTrails;
+            module->setTrails(trailId);
         }
     };
 
@@ -444,14 +497,12 @@ namespace OrbitonesNS {
         Orbitones *module;
         Menu *createChildMenu() override {
             Menu *menu = new Menu;
-            std::vector<std::string> drawModes = {"on", "off"};
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < Orbitones::NUM_TRAIL; i++) {
                 DrawTrailsValueItem *item = new DrawTrailsValueItem;
-                item->text = (i == 0) ? "on" : "off";
-                bool isDrawing = (i == 0) ? true : false;
-                item->rightText = CHECKMARK(module->drawTrails == isDrawing);
+                item->text = module->trails[i];
+                item->rightText = CHECKMARK(module->currentTrailId == i);
                 item->module = module;
-                item->drawTrails = isDrawing;
+                item->trailId = i;
                 menu->addChild(item);
             }
             return menu;
@@ -567,18 +618,22 @@ struct OrbitonesDisplay : Widget {
                 // trails
                 if (module->drawTrails) {
                     module->particles[i].updateHistory();
-                    nvgBeginPath(args.vg);
-                    for (unsigned int j = 0; j < module->particles[i].history.size(); j++) {
-                        if (j == 0) {
-                            Vec trailPos = module->particles[i].history[j];
-                            nvgMoveTo(args.vg, trailPos.x, trailPos.y);
-                        } else {
-                            Vec trailPosPrev = module->particles[i].history[j];
-                            nvgLineTo(args.vg, trailPosPrev.x, trailPosPrev.y);
-                        }
+                    for (unsigned int j = 1; j < module->particles[i].history.size(); j++) {
+                        // TODO: edges?
+                        // TODO: colors?
+                        Trail trailPos = module->particles[i].history[j];
+                        Trail trailPosPrev = module->particles[i].history[j-1];
+                        nvgBeginPath(args.vg);
+                        nvgMoveTo(args.vg, trailPos.x, trailPos.y);
+                        nvgLineTo(args.vg, trailPosPrev.x, trailPosPrev.y);
+                        int _alpha = module->particles[i].history[j].alpha;
+                        module->particles[i].history[j].alpha -= 7;
+                        if (_alpha < 0) _alpha = 0;
+                        float trailWidth = rescale(_alpha, 255, 0, 2.0, 0.5);
+                        nvgStrokeColor(args.vg, nvgTransRGBA(module->particles[i].trailColor, _alpha));
+                        nvgStrokeWidth(args.vg, trailWidth);
+                        nvgStroke(args.vg);
                     }
-                    nvgStrokeColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
-                    nvgStroke(args.vg);
                 }
                 if (module->particles[i].box.pos.x > 0 && module->particles[i].box.pos.x < DISPLAY_SIZE_WIDTH) {
                     // particles
@@ -667,8 +722,8 @@ struct OrbitonesWidget : ModuleWidget {
         menu->addChild(channelItem);
 
         OrbitonesNS::DrawTrailsItem *drawTrailsItem = new OrbitonesNS::DrawTrailsItem;
-        drawTrailsItem->text = "Draw particle trails";
-        std::string rightText = module->drawTrails ? "on " : "off ";
+        drawTrailsItem->text = "Particle trails";
+        std::string rightText = module->getTrailString();
         drawTrailsItem->rightText = rightText + RIGHT_ARROW;
         drawTrailsItem->module = module;
         menu->addChild(drawTrailsItem);
