@@ -587,13 +587,13 @@ struct OrbitonesDisplay : Widget {
     }
 
     void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+        
         // background
         nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
-
-        if (module == NULL) return;
 
         for (int i = 0; i < Orbitones::NUM_ATTRACTORS; i++) {
             if (module->attractors[i].visible) {
