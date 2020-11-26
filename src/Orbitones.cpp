@@ -67,7 +67,7 @@ struct Particle {
         }
     }
 
-    void updateHistory() {
+    bool updateHistory() {
         // trail
         Vec v = box.getCenter();
         Trail t = Trail(v.x, v.y, 255);
@@ -75,6 +75,7 @@ struct Particle {
         if (history.size() > 20) {
             history.erase(history.begin());
         }
+        return true;
     }
 
     void clearHistory() {
@@ -588,7 +589,7 @@ struct OrbitonesDisplay : Widget {
 
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
-        
+
         // background
         nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgBeginPath(args.vg);
@@ -617,7 +618,8 @@ struct OrbitonesDisplay : Widget {
             if (module->particles[i].visible) {
                 // trails
                 if (module->drawTrails) {
-                    module->particles[i].updateHistory();
+                    bool updated = module->particles[i].updateHistory();
+                    if (!updated) break;
                     for (unsigned int j = 1; j < module->particles[i].history.size(); j++) {
                         // TODO: edges?
                         // TODO: colors?
