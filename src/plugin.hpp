@@ -283,6 +283,14 @@ struct TinyRedButton : SvgSwitch {
     }
 };
 
+struct NanoBlueButton : SvgSwitch {
+    NanoBlueButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonDown.svg")));
+    }
+};
+
 /************************** KNOBS **************************/
 
 struct PurpleKnob : RoundKnob {

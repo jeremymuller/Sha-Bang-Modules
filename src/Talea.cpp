@@ -192,7 +192,7 @@ struct Talea : Module {
     bool gates[MAX_CHANNELS];
     bool gatesHigh[MAX_CHANNELS];
     // {1 : 16:15, 2 : 9:8, 3 : 6:5, 4 : 5:4, 5 : 4:3, 6 : 7:5, 7 : 3:2, 8 : 8:5, 9 : 5:3, 10 : 9:5, 11 : 15:8, 12 : 2:1}
-    float ratios[12] = {1.0666666666666667, 1.125, 1.2, 1.25, 1.3333333333333333, 1.4, 1.5, 1.6, 1.6666666666666667, 1.8, 1.875, 2.0};
+    float ratios[13] = {1.0, 1.0666666666666667, 1.125, 1.2, 1.25, 1.3333333333333333, 1.4, 1.5, 1.6, 1.6666666666666667, 1.8, 1.875, 2.0};
     PitchSet pitchSet;
 
     Talea() {
@@ -259,6 +259,19 @@ struct Talea : Module {
             // playIndex = (pitchSet.noteCount < 1) ? 0 : (playIndex+1) % pitchSet.noteCount;
         }
         gates[index] = (phases[index] < gateLength);
+    }
+
+    float getRatioFromVolts(float _volts) {
+        int interval = static_cast<int>(std::round(_volts * 12.0));
+
+        int index;
+        if (interval < 0) {
+            index = (interval % 12 + 12) % 12;
+        } else {
+            index = interval % 12;
+        }
+        int octave = floor(_volts);
+        return ratios[index] * std::pow(2.0, octave);
     }
 
     void checkPhases(int _index) { // (overloaded)
@@ -408,10 +421,8 @@ struct Talea : Module {
                                 float fractionRhythm = 1.0;
                                 if (pitchSet.isNoteFromChannel(c)) {
                                     float volts = pitchSet.getPitchFromChannel(c);
-                                    float voltsCycle = pitchSet.getNextPitch(pitchSet.playIndeces[c]);
-                                    int note = static_cast<int>(volts * 12.0);
-                                    if (note > 0) fractionRhythm = ratios[note - 1];
-                                    // float fractionRhythm = ratios[note];
+                                    float voltsCycle = pitchSet.getNextPitch(pitchSet.playIndeces[c]); // TODO: won't use this?
+                                    fractionRhythm = getRatioFromVolts(volts);
                                     outputs[VOLTS_OUTPUT].setVoltage(volts, c);
                                     outputs[GATES_OUTPUT].setVoltage(gates[c] ? 5.0 : 0.0, c);
                                 } else {
@@ -545,10 +556,10 @@ struct TaleaWidget : ModuleWidget {
         addParam(createParamCentered<TinyBlueKnob>(Vec(11, 100), module, Talea::GATE_LENGTH_PARAM));
 
         // hold
-        addParam(createParamCentered<TinyBlueButton>(Vec(34, 100), module, Talea::HOLD_PARAM));
+        addParam(createParamCentered<NanoBlueButton>(Vec(34, 100), module, Talea::HOLD_PARAM));
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(34 - 3.21, 100 - 3.21), module, Talea::HOLD_LIGHT));
         // polyrhythm mode
-        addParam(createParamCentered<TinyBlueButton>(Vec(11, 128.8), module, Talea::POLYRHYTHM_MODE_PARAM));
+        addParam(createParamCentered<NanoBlueButton>(Vec(11, 128.8), module, Talea::POLYRHYTHM_MODE_PARAM));
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(11 - 3.21, 128.8 - 3.21), module, Talea::POLYRHYTHM_MODE_LIGHT));
 
         TaleaNS::TaleaModeKnob *modeKnob = dynamic_cast<TaleaNS::TaleaModeKnob *>(createParamCentered<TaleaNS::TaleaModeKnob>(Vec(22.5, 151.6), module, Talea::MODE_PARAM));
