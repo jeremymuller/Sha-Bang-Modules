@@ -109,6 +109,10 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
+- Particle trails: 
+  - off
+  - white
+  - red/blue shift (based on velocity of particles)
 ##### BUTTONS:
 - `RMV` removes one particle.
 - `CLR` clears all particles.
