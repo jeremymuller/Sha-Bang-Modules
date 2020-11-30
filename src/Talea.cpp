@@ -22,6 +22,7 @@ struct PitchSet {
     };
 
     int noteCount = 0;
+    int transposition = 0;
     int playIndeces[MAX_CHANNELS];
     Note *sortedNotes = new Note[MAX_CHANNELS];
     Note *notesAsPlayed = new Note[MAX_CHANNELS];
@@ -54,6 +55,7 @@ struct PitchSet {
         if (noteCount == 1) {
             sortedNotes[0] = n;
             notesAsPlayed[0] = n;
+            transposition = static_cast<int>(std::round(n.pitch * 12.0));
         } else {
             // find insertion index
             int insertIndex = 0;
@@ -187,6 +189,7 @@ struct Talea : Module {
     float clockFreq = 2.0; // Hz
     bool holdPattern = false;
     bool polyrhythmMode = false;
+    bool fixedMode = true;
     float phases[MAX_CHANNELS] = {};
     float volts[MAX_CHANNELS] = {};
     bool gates[MAX_CHANNELS];
@@ -262,15 +265,20 @@ struct Talea : Module {
     }
 
     float getRatioFromVolts(float _volts) {
-        int interval = static_cast<int>(std::round(_volts * 12.0));
+        int trans = 0;
+        if (!fixedMode) trans = pitchSet.transposition;
+
+        int pitch = static_cast<int>(std::round(_volts * 12.0)) - trans;
+        // DEBUG("pitch: %d", pitch);
 
         int index;
-        if (interval < 0) {
-            index = (interval % 12 + 12) % 12;
+        if (pitch < 0) {
+            index = (pitch % 12 + 12) % 12;
         } else {
-            index = interval % 12;
+            index = pitch % 12;
         }
-        int octave = floor(_volts);
+        // int octave = floor(_volts);
+        int octave = floor(pitch / 12.0);
         return ratios[index] * std::pow(2.0, octave);
     }
 
@@ -281,22 +289,24 @@ struct Talea : Module {
             if (pitchSet.notesQueue.size() > 0) {
                 for (unsigned int i = 0; i < pitchSet.notesQueue.size(); i++) {
                     PitchSet::Note n = pitchSet.notesQueue[i];
-                    pitchSet.addNote(n.pitch, n.channel);
+                    bool newNote = true;
+                    for (int j = 0; j < pitchSet.noteCount; j++) {
+                        if (n.pitch == pitchSet.sortedNotes[j].pitch)
+                            newNote = false;
+                    }
+                    if (newNote) 
+                        pitchSet.addNote(n.pitch, n.channel);
                 }
                 pitchSet.notesQueue.clear();
             }
             incPlayIndex();
-            incPlayIndex(_index);
+            // incPlayIndex(_index);
         }
         gates[_index] = (phases[_index] < gateLength);
     }
 
     void removeAllNotes(int _channels) {
         for (int c = 0; c < _channels; c++) {
-            // TODO
-            // if (gatesHigh[c]) {
-            //     pitchSet.removeNote(c);
-            // }
             pitchSet.resetSortedNotes(c);
             pitchSet.resetNotesAsPlayed(c);
         }
@@ -308,6 +318,7 @@ struct Talea : Module {
 
         json_object_set_new(rootJ, "clockOn", json_boolean(clockOn));
         json_object_set_new(rootJ, "polyrhythmMode", json_boolean(polyrhythmMode));
+        json_object_set_new(rootJ, "fixedMode", json_boolean(fixedMode));
         json_object_set_new(rootJ, "extmode", json_integer(bpmInputMode));
 
         return rootJ;
@@ -319,6 +330,9 @@ struct Talea : Module {
 
         json_t *polyrhythmModeJ = json_object_get(rootJ, "polyrhythmMode");
         if (polyrhythmModeJ) polyrhythmMode = json_boolean_value(polyrhythmModeJ);
+
+        json_t *fixedModeJ = json_object_get(rootJ, "fixedMode");
+        if (fixedModeJ) fixedMode = json_boolean_value(fixedModeJ);
 
         json_t *extmodeJ = json_object_get(rootJ, "extmode");
         if (extmodeJ) bpmInputMode = json_integer_value(extmodeJ);
@@ -385,43 +399,42 @@ struct Talea : Module {
                         period = 0.0;
                     }
                 }
-                if (polyrhythmMode) {
-                    // TODO: redundancy here too
-                
-                    outputs[VOLTS_OUTPUT].setChannels(channels);
-                    outputs[GATES_OUTPUT].setChannels(channels);
-                    bool wasGateOn = anyGateOn;
-                    anyGateOn = false;
-                    bool firstNote = true;
-                    for (int c = 0; c < channels; c++) {
-                        if (gateTriggers[c].process(inputs[GATES_INPUT].getPolyVoltage(c))) {
-                            if (firstNote && holdPattern && !wasGateOn) {
-                                removeAllNotes(channels);
+            
+                // code inspired from
+                // https://github.com/bogaudio/BogaudioModules/blob/master/src/Arp.cpp
+                bool wasGateOn = anyGateOn;
+                anyGateOn = false;
+                bool firstNote = true;
+                for (int c = 0; c < channels; c++) {
+                    if (gateTriggers[c].process(inputs[GATES_INPUT].getPolyVoltage(c))) {
+                        if (firstNote && holdPattern && !wasGateOn) {
+                            removeAllNotes(channels);
+                        }
+                        PitchSet::Note n(inputs[VOLTS_INPUT].getPolyVoltage(c), c);
+                        pitchSet.notesQueue.push_back(n);
+                        gatesHigh[c] = true;
+                        anyGateOn = true;
+                        firstNote = false;
+                    } else if (gatesHigh[c]) {
+                        if (!gateTriggers[c].isHigh()) {
+                            gatesHigh[c] = false;
+                            if (!holdPattern) {
+                                pitchSet.removeNote(c);
                             }
-                            PitchSet::Note n(inputs[VOLTS_INPUT].getPolyVoltage(c), c);
-                            pitchSet.notesQueue.push_back(n);
-                            gatesHigh[c] = true;
+                        } else {
                             anyGateOn = true;
-                            firstNote = false;
-                        } else if (gatesHigh[c]) {
-                            if (!gateTriggers[c].isHigh()) {
-                                gatesHigh[c] = false;
-                                if (!holdPattern) {
-                                    pitchSet.removeNote(c);
-                                }
-                            } else {
-                                anyGateOn = true;
-                            }
                         }
                     }
-                    if (anyGateOn || holdPattern) {
-                        if (pitchSet.noteCount > 0 || pitchSet.notesQueue.size() > 0) {
-
+                }
+                if (anyGateOn || holdPattern) {
+                    if (pitchSet.noteCount > 0 || pitchSet.notesQueue.size() > 0) {
+                        if (polyrhythmMode) {
+                            outputs[VOLTS_OUTPUT].setChannels(channels);
+                            outputs[GATES_OUTPUT].setChannels(channels);
                             for (int c = 0; c < channels; c++) {
                                 float fractionRhythm = 1.0;
                                 if (pitchSet.isNoteFromChannel(c)) {
                                     float volts = pitchSet.getPitchFromChannel(c);
-                                    float voltsCycle = pitchSet.getNextPitch(pitchSet.playIndeces[c]); // TODO: won't use this?
                                     fractionRhythm = getRatioFromVolts(volts);
                                     outputs[VOLTS_OUTPUT].setVoltage(volts, c);
                                     outputs[GATES_OUTPUT].setVoltage(gates[c] ? 5.0 : 0.0, c);
@@ -433,48 +446,9 @@ struct Talea : Module {
 
                                 checkPhases(c);
                             }
-                        }
-                    } else {
-                        removeAllNotes(channels);
-                        for (int c = 0; c < channels; c++) {
-                            phases[c] = 0.0;
-                            outputs[GATES_OUTPUT].setVoltage(0.0, c);
-                        }
-                    }
-                } else {
-                    // only need mono here
-                    outputs[VOLTS_OUTPUT].setChannels(1);
-                    outputs[GATES_OUTPUT].setChannels(1);
-
-                    // code inspired from
-                    // https://github.com/bogaudio/BogaudioModules/blob/master/src/Arp.cpp
-                    bool wasGateOn = anyGateOn;
-                    anyGateOn = false;
-                    bool firstNote = true;
-                    for (int c = 0; c < channels; c++) {
-                        if (gateTriggers[c].process(inputs[GATES_INPUT].getPolyVoltage(c))) {
-                            if (firstNote && holdPattern && !wasGateOn) {
-                                removeAllNotes(channels);
-                            }
-                            // pitchSet.addNote(inputs[VOLTS_INPUT].getPolyVoltage(c), c);
-                            PitchSet::Note n(inputs[VOLTS_INPUT].getPolyVoltage(c), c);
-                            pitchSet.notesQueue.push_back(n);
-                            gatesHigh[c] = true;
-                            anyGateOn = true;
-                            firstNote = false;
-                        } else if (gatesHigh[c]) {
-                            if (!gateTriggers[c].isHigh()) {
-                                gatesHigh[c] = false;
-                                if (!holdPattern) {
-                                    pitchSet.removeNote(c);
-                                }
-                            } else {
-                                anyGateOn = true;
-                            }
-                        }
-                    }
-                    if (anyGateOn || holdPattern) {
-                        if (pitchSet.noteCount > 0 || pitchSet.notesQueue.size() > 0) {
+                        } else {
+                            outputs[VOLTS_OUTPUT].setChannels(1);
+                            outputs[GATES_OUTPUT].setChannels(1);
                             float note = 0.0;
                             if (arpMode == AS_PLAYED) note = pitchSet.getAsPlayedPitch(playIndex);
                             else note = pitchSet.getNextPitch(playIndex);
@@ -483,10 +457,12 @@ struct Talea : Module {
                             phases[0] += clockFreq * args.sampleTime;
                             checkPhases(0, channels);
                         }
-                    } else {
-                        removeAllNotes(channels);
-                        phases[0] = 0.0;
-                        outputs[GATES_OUTPUT].setVoltage(0.0);
+                    }
+                } else {
+                    removeAllNotes(channels);
+                    for (int c = 0; c < channels; c++) {
+                        phases[c] = 0.0;
+                        outputs[GATES_OUTPUT].setVoltage(0.0, c);
                     }
                 }
             }
@@ -504,7 +480,8 @@ struct TaleaModeKnob : BlueInvertKnobLabelCentered {
                 case Talea::UP:         return "↑";
                 case Talea::DOWN:       return "↓";
                 case Talea::DOUBLE:     return "2x";
-                case Talea::AS_PLAYED:  return "→";
+                case Talea::AS_PLAYED:  return "⚡︎";
+                // case Talea::AS_PLAYED:  return "→";
                 case Talea::RANDOM:     return "R";
             }
         }
@@ -538,8 +515,32 @@ struct ExternalClockModeItem : MenuItem {
     }
 };
 
-}
+struct PolyrhythmModeValueItem : MenuItem {
+    Talea *module;
+    bool fixedMode;
+    void onAction(const event::Action &e) override {
+        module->fixedMode = fixedMode;
+    }
+};
 
+struct PolyrhythmModeItem : MenuItem {
+    Talea *module;
+    Menu *createChildMenu() override {
+        Menu *menu = new Menu;
+        for (int i = 0; i < 2; i++) {
+            bool fixedMode = i == 0 ? true : false;
+            PolyrhythmModeValueItem *item = new PolyrhythmModeValueItem;
+            item->text = i == 0 ? "fixed " : "movable ";
+            item->rightText = CHECKMARK(module->fixedMode == fixedMode);
+            item->module = module;
+            item->fixedMode = fixedMode;
+            menu->addChild(item);
+        }
+        return menu;
+    }
+};
+
+}
 
 struct TaleaWidget : ModuleWidget {
     TaleaWidget(Talea *module) {
@@ -557,10 +558,10 @@ struct TaleaWidget : ModuleWidget {
 
         // hold
         addParam(createParamCentered<NanoBlueButton>(Vec(34, 100), module, Talea::HOLD_PARAM));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(34 - 3.21, 100 - 3.21), module, Talea::HOLD_LIGHT));
+        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(34 - 3.21, 100 - 3.21), module, Talea::HOLD_LIGHT));
         // polyrhythm mode
         addParam(createParamCentered<NanoBlueButton>(Vec(11, 128.8), module, Talea::POLYRHYTHM_MODE_PARAM));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(11 - 3.21, 128.8 - 3.21), module, Talea::POLYRHYTHM_MODE_LIGHT));
+        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(11 - 3.21, 128.8 - 3.21), module, Talea::POLYRHYTHM_MODE_LIGHT));
 
         TaleaNS::TaleaModeKnob *modeKnob = dynamic_cast<TaleaNS::TaleaModeKnob *>(createParamCentered<TaleaNS::TaleaModeKnob>(Vec(22.5, 151.6), module, Talea::MODE_PARAM));
         CenterAlignedLabel *const modeLabel = new CenterAlignedLabel;
@@ -590,6 +591,12 @@ struct TaleaWidget : ModuleWidget {
         extClockModeItem->rightText = RIGHT_ARROW;
         extClockModeItem->module = module;
         menu->addChild(extClockModeItem);
+
+        TaleaNS::PolyrhythmModeItem *polyModeItem = new TaleaNS::PolyrhythmModeItem;
+        polyModeItem->text = "Polyrhythm Mode";
+        polyModeItem->rightText = RIGHT_ARROW;
+        polyModeItem->module = module;
+        menu->addChild(polyModeItem);
     }
 
 };
