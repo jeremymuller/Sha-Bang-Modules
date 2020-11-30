@@ -1,3 +1,10 @@
+v1.2.0 (11-30-2020)
+- New module Talea (arpeggiator with unique polyrhythm capabilities)
+- New module Photron Panel (like photron but panel size)
+- Added trails for Orbitones particles
+- Bug fixes
+- Updated Docs
+
 v1.1.2 (11-12-2020)
 - Added right-click menu on Photron to change the processing rates
 
