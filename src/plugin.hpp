@@ -19,6 +19,7 @@ extern Model *modelCosmosis;
 extern Model *modelJeremyBlankPanel;
 extern Model *modelQubitCrusher;
 extern Model *modelPhotron;
+extern Model *modelPhotronPanel;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 
@@ -278,6 +279,14 @@ struct TinyRedButton : SvgSwitch {
         momentary = true;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyRedButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyRedButtonDown.svg")));
+    }
+};
+
+struct NanoBlueButton : SvgSwitch {
+    NanoBlueButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonDown.svg")));
     }
 };
 

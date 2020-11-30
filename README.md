@@ -6,7 +6,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 *TODO: videos*
 
-![modulesall](/docs/Modules_ALL2.gif)
+![modulesall](/docs/Modules_ALL.gif)
 
 ## Contents:
 
@@ -14,11 +14,13 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [Neutrinode](#neutrinode)
 * [Orbitones](#orbitones)
 * [Photron](#photron)
+* [PhotronPanel](#photron-panel)
 * [PolyrhythmClock](#polyrhythm-clock)
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates)
 * [StochSeq](#stochseq)
 * [StochSeq4](#stochseq4)
+* [Talea](#talea)
 
 ---
 
@@ -107,6 +109,10 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
+- Particle trails: 
+  - off
+  - white
+  - red/blue shift (based on velocity of particles)
 ##### BUTTONS:
 - `RMV` removes one particle.
 - `CLR` clears all particles.
@@ -149,6 +155,21 @@ Click on the attractors to move position them where you want. Click anywhere els
   - color version of black & white version.
   - invert colors.
   - reinitialize all blocks (alternates between randomizing all colors or 4 colors in 4 quadrants).
+
+---
+
+### Photron Panel
+
+![PhotronPanel](/docs/PhotronPanel.png)
+
+*An animated panel visualizer. Small panel version of Photron.*
+
+- `Initialize` will set the colors in a quadrant of Purple, Blue, Aqua, and Red.
+- `Randomize` will randomize all colors.
+
+##### RIGHT-CLICK MENU:
+- `Processing rate` (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
+- `Mode` color or black & white.
 
 ---
 
@@ -281,5 +302,43 @@ Watch the [video tutorial](https://youtu.be/LBL_VYe_stU)
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current individual sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
 - `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
+
+---
+
+### Talea
+
+![Talea](/docs/Talea.png)
+
+*An arpeggiator with polyrhythmic capabilities dependent upon note intervals.*
+
+##### RIGHT-CLICK MENU:
+- External Clock Mode:
+  - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
+  - `12 PPQN` controls bpm based on 12 pulses per quarter note.
+  - `24 PPQN` controls bpm based on 24 pulses per quarter note.
+  - If the mode is set to either of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
+- Polyrhythm Mode:
+  - `Fixed` means each note is fixed and centered around middle C (C4, volts = 0.0). This note will take the current tempo of the BPM knob and all other notes are a ratio based on this note/tempo.
+  - `Movable` means that the first note played will take the current tempo of the BPM knob and all other notes are a ratio based on this first note/tempo.
+##### INPUT:
+- `EXT` is an external clock to control the Talea BPM determined by the External Clock Mode.
+- `V/OCT` takes input voltage
+- `GATE` input gates when note is held
+##### BUTTON:
+- on or off
+- `HOLD` will hold pattern. Is overriden when you release all notes and start a new note.
+- `POLYRHYTHM` will turn on or off the polyrhythm arpeggiator. If off, Talea acts like a conventional arpeggiator.
+##### KNOBS:
+- large main knob at the top controls the bpm (beats per minute).
+- `GATE` knob control the percentage amount the gate is on. 
+- the pattern mode controls the order of notes when `POLYRHYTHM` is turned off. These are:
+  - `↑` ascending order
+  - `↓` descending order
+  - `2x` each note plays twice in ascending order
+  - `⚡︎` in order of which they were played
+  - `R` random
+##### OUTPUTS:
+- `V/OCT` outputs pitch
+- `GATE` outputs gates determined by arpeggiator rhythms
 
 ---

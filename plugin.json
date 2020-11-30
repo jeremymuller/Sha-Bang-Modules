@@ -48,6 +48,13 @@
           "tags": ["Visual"]
       },
       {
+          "slug": "PhotronPanel",
+          "name": "Photron Panel",
+          "description": "Animated panel",
+          "tags": ["Visual"]
+
+      },
+      {
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
           "description": "Clock with 3 layers of embedded rhythms and randomization",
@@ -76,6 +83,12 @@
           "name": "Stochastic Sequencer 4",
           "description": "Probabilistic sequencer with four independent voices",
           "tags": ["Sequencer", "Visual"]
+      },
+      {
+          "slug": "Talea",
+          "name": "Talea",
+          "description": "A unique arpeggiator with polyrhythmic capabilities",
+          "tags": ["Arpeggiator"]
       }
   ]
 }
