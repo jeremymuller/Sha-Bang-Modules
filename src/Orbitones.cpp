@@ -174,7 +174,7 @@ struct Orbitones : Module {
     bool movement = false;
     bool drawTrails = true;
     int currentTrailId = 1;
-    std::string trails[NUM_TRAIL] = {"off ", "white ", "red shift/blue shift "};
+    std::string trails[NUM_TRAIL] = {"off ", "white ", "red/blue shift "};
     int processOrbits = 0;
     int visibleParticles = 2;
     int channels = 1;
