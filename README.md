@@ -6,7 +6,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 *TODO: videos*
 
-![modulesall](/docs/Modules_ALL2.gif)
+![modulesall](/docs/Modules_ALL.gif)
 
 ## Contents:
 
