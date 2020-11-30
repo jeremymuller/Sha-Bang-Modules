@@ -162,6 +162,9 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 *An animated panel visualizer. Small panel version of Photron.*
 
+- `Initialize` will set the colors in a quadrant of Purple, Blue, Aqua, and Red.
+- `Randomize` will randomize all colors.
+
 ##### RIGHT-CLICK MENU:
 - `Processing rate` (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
 - `Mode` color or black & white.
