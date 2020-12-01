@@ -22,6 +22,7 @@ extern Model *modelPhotron;
 extern Model *modelPhotronPanel;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
+extern Model *modelTalea;
 
 /************************** INLINE FUNCTIONS **************************/
 
