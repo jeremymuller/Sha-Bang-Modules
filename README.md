@@ -322,8 +322,8 @@ Watch the [video tutorial](https://youtu.be/LBL_VYe_stU)
   - `Movable` means that the first note played will take the current tempo of the BPM knob and all other notes are a ratio based on this first note/tempo.
 ##### INPUT:
 - `EXT` is an external clock to control the Talea BPM determined by the External Clock Mode.
-- `V/OCT` takes input voltage
-- `GATE` input gates when note is held
+- `V/OCT` takes input voltage.
+- `GATE` input gates when note is held.
 ##### BUTTON:
 - on or off
 - `HOLD` will hold pattern. Is overriden when you release all notes and start a new note.
@@ -338,7 +338,29 @@ Watch the [video tutorial](https://youtu.be/LBL_VYe_stU)
   - `⚡︎` in order of which they were played
   - `R` random
 ##### OUTPUTS:
-- `V/OCT` outputs pitch
-- `GATE` outputs gates determined by arpeggiator rhythms
+- `V/OCT` outputs pitch.
+- `GATE` outputs gates determined by arpeggiator rhythms.
+
+##### TUNINGS AND RHYTHMS
+When `POLYRHYTHM` is turned on, the arpeggiator will repeat notes at a tempo based on a specific tuning. For example, the note A440 vibrates at 440 Hz and an octave higher the note vibrates at 880 Hz. This is a 2:1 ratio, meaning one vibrates twice as fast as the other. Rhythms can work like this as well, one rhythm can repeat at a tempo twice as fast as another. Once we start using other intervals that occur in a scale, we can create some more complex rhythms. However, using equal temperament tuning (which is standard tuning for the overwhelming majority of music and instruments in the Western Hemisphere) divides the octave into 12 equal steps which gives us non-integer ratios. So if you play an A and an E (perfect 5th) in equal temperament, you get a rhythmic ratio of 1 : 1.4983070768766815, or 440Hz : 659.2551138257398Hz, YUCK! So to simplify this, I use the natural harmonic series for the ratios. They make nice integer ratios and are a naturally occuring phenomenon. The table below shows the ratios that are use for each interval.
+No. of steps | Musical interval | Ratio
+------------ | ----------------  | -----
+0 | unison | 1:1
+1 | minor 2<sup>nd</sup> | 16:15
+2 | major 2<sup>nd</sup> | 9:8
+3 | minor 3<sup>rd</sup> | 6:5
+4 | major 3<sup>rd</sup> | 5:4
+5 | perfect 4<sup>th</sup> | 4:3
+6 | augmented 4<sup>th</sup>/diminished 5<sup>th</sup> | 7:5
+7 | perfect 5<sup>th</sup> | 3:2
+8 | minor 6<sup>th</sup> | 8:5
+9 | major 6<sup>th</sup> | 5:3
+10 | minor 7<sup>th</sup> | 9:5
+11 | major 7<sup>th</sup> | 15:8
+12 | octave | 2:1
+13 | minor 9<sup>th</sup> | 32:15 (16:15 * 2)
+14 | major 9<sup>th</sup> | 18:8 (9:8 * 2)
+15 | minor 10<sup>th</sup> | 12:5 (6:5 * 2)
+...
 
 ---
