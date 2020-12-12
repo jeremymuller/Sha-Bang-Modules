@@ -1,3 +1,8 @@
+v1.2.1 ()
+- Added boundary option for particles in Orbitones
+- Bug fixes
+- Updated Docs
+
 v1.2.0 (11-30-2020)
 - New module Talea (arpeggiator with unique polyrhythm capabilities)
 - New module Photron Panel (like photron but panel size)
