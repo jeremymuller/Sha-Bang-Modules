@@ -281,7 +281,7 @@ Watch the [video tutorial](https://youtu.be/QtNtazAv73M)
 
 Click and/or drag to draw your own patterns!
 
-Watch the [video tutorial](https://youtu.be/LBL_VYe_stU)
+[![StochSeq4_video](docs/StochSeq4-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq 4 tutorial - Click to Watch!")
 
 ##### INPUTS:
 - `MCLK` controls timing of all patterns (overrides all individual clocks).
