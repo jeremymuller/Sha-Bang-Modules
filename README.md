@@ -113,6 +113,9 @@ Click on the attractors to move position them where you want. Click anywhere els
   - off
   - white
   - red/blue shift (based on velocity of particles)
+- Particle boundaries:
+  - on (particles are bound by the display area and will bounce off edges)
+  - off (particles are able to leave the display area)
 ##### BUTTONS:
 - `RMV` removes one particle.
 - `CLR` clears all particles.
