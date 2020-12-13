@@ -1,5 +1,6 @@
-v1.2.1 ()
+v1.2.1 (12-12-2020)
 - Added boundary option for particles in Orbitones
+- Added input to control target color for Photron
 - Bug fixes
 - Updated Docs
 
