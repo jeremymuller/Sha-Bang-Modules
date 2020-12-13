@@ -248,7 +248,6 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 Click and/or drag to draw your own patterns!
 
-Watch the [video tutorial](https://youtu.be/QtNtazAv73M)
 Watch the tutorial:
 
 [![StochSeq_video](docs/StochSeq-video.png)](https://youtu.be/QtNtazAv73M "Stochastic Sequencer tutorial")
