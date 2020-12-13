@@ -147,10 +147,13 @@ Click on the attractors to move position them where you want. Click anywhere els
 ##### BUTTON:
 - color version or black & white version.
 ##### INPUTS:
-- Top 3 inputs (zero volts is default values):
+- Top 4 inputs (zero volts is default values):
   - CV controls the separation of colors between adjacent blocks. Higher voltage = more separation.
   - CV controls the alignment of block colors which is their rate of change. Higher voltage = more alignment and thus their color velocities will become the same.
   - CV controls the cohesion of block colors which is converging on a single color. Higher voltage = more cohesion and thus their colors will quickly become the same and Photron will look like one color.
+  - V/OCT controls the target color for Photron. Blocks will drift towards the target color and hover around it. See the image below for corresponding notes & colors:
+
+![notes_spectrum](/docs/Notes_Spectrum.png)
 - Bottom 3 inputs are triggers:
   - color version of black & white version.
   - invert colors.

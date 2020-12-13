@@ -13,6 +13,7 @@ struct Photron : Module {
         SEPARATE_INPUT,
         ALIGN_INPUT,
         COHESION_INPUT,
+        TARGET_INPUT,
         COLOR_TRIGGER_INPUT,
         INVERT_INPUT,
         RESET_INPUT,
@@ -25,7 +26,7 @@ struct Photron : Module {
 		NUM_LIGHTS
 	};
 
-    dsp::SchmittTrigger colorTrig, invertTrig, resetTrig;
+    dsp::SchmittTrigger colorTrig, invertTrig, resetTrig, velTrig;
     bool isColor = true;
     int resetIndex = 0;
     int checkParams = 0;
@@ -137,6 +138,8 @@ struct Photron : Module {
         checkParams = (checkParams+1) % 4;
 
         if (sr == 0) {
+            bool isTargetConnected = inputs[TARGET_INPUT].isConnected();
+
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
                     // TODO: clamp these input values?
@@ -166,6 +169,14 @@ struct Photron : Module {
 
                     Block b[8] = {west, east, north, south, northwest, northeast, southwest, southeast};
                     blocks[y][x].flock(b, 8);
+                    if (isTargetConnected) {
+                        NVGcolor rgbColor = nvgHSL(inputs[TARGET_INPUT].getVoltage(), 1.0, 0.5);
+                        Vec3 color = Vec3(rgbColor.r, rgbColor.g, rgbColor.b);
+                        Vec3 target = blocks[y][x].seek(color.mult(255.0));
+                        target = target.mult(0.7);
+                        blocks[y][x].applyForce(target);
+                    }
+
                     blocks[y][x].update();
                 }
             }
@@ -295,6 +306,7 @@ struct PhotronWidget : ModuleWidget {
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 9.7), module, Photron::SEPARATE_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 27.9), module, Photron::ALIGN_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 46.1), module, Photron::COHESION_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 64.4), module, Photron::TARGET_INPUT));
 
         addParam(createParamCentered<TinyBlueButton>(Vec(9.7, 316.2), module, Photron::COLOR_PARAM));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 333.8), module, Photron::COLOR_TRIGGER_INPUT));

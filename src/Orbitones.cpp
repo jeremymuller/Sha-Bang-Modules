@@ -173,6 +173,7 @@ struct Orbitones : Module {
     Particle *particles = new Particle[MAX_PARTICLES];
     bool movement = false;
     bool drawTrails = true;
+    bool particleBoundary = false;
     int currentTrailId = 1;
     std::string trails[NUM_TRAIL] = {"off ", "white ", "red/blue shift "};
     int processOrbits = 0;
@@ -251,6 +252,7 @@ struct Orbitones : Module {
 
         json_object_set_new(rootJ, "move", json_boolean(movement));
         json_object_set_new(rootJ, "trails", json_integer(currentTrailId));
+        json_object_set_new(rootJ, "boundary", json_boolean(particleBoundary));
         json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "visibleParticles", json_integer(visibleParticles));
         json_object_set_new(rootJ, "attractors", attractorsJ);
@@ -268,6 +270,9 @@ struct Orbitones : Module {
 
         json_t *trailsJ = json_object_get(rootJ, "trails");
         if (trailsJ) setTrails(json_integer_value(trailsJ));
+
+        json_t *particleBoundaryJ = json_object_get(rootJ, "boundary");
+        if (particleBoundaryJ) particleBoundary = json_boolean_value(particleBoundaryJ);
 
         json_t *visibleParticlesJ = json_object_get(rootJ, "visibleParticles");
         if (visibleParticlesJ) visibleParticles = json_integer_value(visibleParticlesJ);
@@ -509,6 +514,31 @@ namespace OrbitonesNS {
             return menu;
         }
     };
+
+    struct ParticleBoundaryValueItem : MenuItem {
+        Orbitones *module;
+        bool boundary;
+        void onAction(const event::Action &e) override {
+            module->particleBoundary = boundary;
+        }
+    };
+
+    struct ParticleBoundaryItem : MenuItem {
+        Orbitones *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            for (int i = 0; i < 2; i++) {
+                bool boundary = (i == 0);
+                ParticleBoundaryValueItem *item = new ParticleBoundaryValueItem;
+                item->text = i == 0 ? "on" : "off";
+                item->rightText = CHECKMARK(module->particleBoundary == boundary);
+                item->module = module;
+                item->boundary = boundary;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
 }
 
 struct OrbitonesDisplay : Widget {
@@ -587,6 +617,28 @@ struct OrbitonesDisplay : Widget {
         }
     }
 
+    void checkEdgesParticle(int index) {
+        if (module != NULL) {
+            // x's
+            float radius = module->particles[index].radius;
+            if (module->particles[index].box.pos.x < radius) {
+                module->particles[index].box.pos.x = radius;
+                module->particles[index].vel.x *= -1;
+            } else if (module->particles[index].box.pos.x > box.size.x-radius) {
+                module->particles[index].box.pos.x = box.size.x-radius;
+                module->particles[index].vel.x *= -1;
+            }
+            // y's
+            if (module->particles[index].box.pos.y < radius) {
+                module->particles[index].box.pos.y = radius;
+                module->particles[index].vel.y *= -1;
+            } else if (module->particles[index].box.pos.y > box.size.y - radius) {
+                module->particles[index].box.pos.y = box.size.y - radius;
+                module->particles[index].vel.y *= -1;
+            }
+        }
+    }
+
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
@@ -617,12 +669,11 @@ struct OrbitonesDisplay : Widget {
         for (int i = 0; i < MAX_PARTICLES; i++) {
             if (module->particles[i].visible) {
                 // trails
+                nvgScissor(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT); // clip trails to display area
                 if (module->drawTrails) {
                     bool updated = module->particles[i].updateHistory();
                     if (!updated) break;
                     for (unsigned int j = 1; j < module->particles[i].history.size(); j++) {
-                        // TODO: edges?
-                        // TODO: colors?
                         Trail trailPos = module->particles[i].history[j];
                         Trail trailPosPrev = module->particles[i].history[j-1];
                         nvgBeginPath(args.vg);
@@ -637,20 +688,20 @@ struct OrbitonesDisplay : Widget {
                         nvgStroke(args.vg);
                     }
                 }
-                if (module->particles[i].box.pos.x > 0 && module->particles[i].box.pos.x < DISPLAY_SIZE_WIDTH) {
-                    // particles
-                    Vec pos = module->particles[i].box.getCenter();
-                    nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
-                    nvgBeginPath(args.vg);
-                    nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
-                    nvgFill(args.vg);
 
-                    nvgFillColor(args.vg, module->particles[i].color);
-                    nvgBeginPath(args.vg);
-                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                    nvgFill(args.vg);
+                // particles
+                Vec pos = module->particles[i].box.getCenter();
+                nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
+                nvgBeginPath(args.vg);
+                nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
+                nvgFill(args.vg);
 
-                }
+                nvgFillColor(args.vg, module->particles[i].color);
+                nvgBeginPath(args.vg);
+                nvgCircle(args.vg, pos.x, pos.y, 2.5);
+                nvgFill(args.vg);
+                if (module->particleBoundary)
+                    checkEdgesParticle(i);
             }
         }
     }
@@ -723,12 +774,21 @@ struct OrbitonesWidget : ModuleWidget {
         channelItem->module = module;
         menu->addChild(channelItem);
 
+        menu->addChild(new MenuEntry);
+
         OrbitonesNS::DrawTrailsItem *drawTrailsItem = new OrbitonesNS::DrawTrailsItem;
         drawTrailsItem->text = "Particle trails";
         std::string rightText = module->getTrailString();
         drawTrailsItem->rightText = rightText + RIGHT_ARROW;
         drawTrailsItem->module = module;
         menu->addChild(drawTrailsItem);
+
+        OrbitonesNS::ParticleBoundaryItem *particleBoundaryItem = new OrbitonesNS::ParticleBoundaryItem;
+        particleBoundaryItem->text = "Particle boundaries";
+        std::string boundaryText = module->particleBoundary ? "on " : "off ";
+        particleBoundaryItem->rightText = boundaryText + RIGHT_ARROW;
+        particleBoundaryItem->module = module;
+        menu->addChild(particleBoundaryItem);
 
     }
 };
