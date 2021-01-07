@@ -4,8 +4,6 @@ A collection of innovative, probabilistic, generative, and rhythmically complex 
 
 Add these modules to VCVRack through the [Rack library](https://library.vcvrack.com/?brand=Sha%23Bang!%20Modules).
 
-*TODO: videos*
-
 ![modulesall](/docs/Modules_ALL.gif)
 
 ## Contents:
@@ -18,8 +16,8 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [PolyrhythmClock](#polyrhythm-clock)
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates)
-* [StochSeq](#stochseq)
-* [StochSeq4](#stochseq4)
+* [StochSeq](#stochseq) :tv:
+* [StochSeq4](#stochseq4) :tv:
 * [Talea](#talea)
 
 ---
@@ -337,6 +335,12 @@ Watch the tutorial:
 ##### BUTTON:
 - on or off
 - `HOLD` will hold pattern. Is overriden when you release all notes and start a new note.
+- `OCT` will add octaves to the pattern:
+  - No light = 1 octave
+  - Purple light = 2 octaves
+  - Blue light = 3 octaves
+  - Aqua light = 4 octaves
+  - Red light = 5 octaves
 - `POLYRHYTHM` will turn on or off the polyrhythm arpeggiator. If off, Talea acts like a conventional arpeggiator.
 ##### KNOBS:
 - large main knob at the top controls the bpm (beats per minute).
