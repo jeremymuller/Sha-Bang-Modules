@@ -1,3 +1,8 @@
+v1.2.2 (1-07-2021)
+- Added octave feature to Talea
+- Bug fixes
+- Updated Docs
+
 v1.2.1 (12-12-2020)
 - Added boundary option for particles in Orbitones
 - Added input to control target color for Photron
