@@ -18,7 +18,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [RandGates](#randgates)
 * [StochSeq](#stochseq) :tv:
 * [StochSeq4](#stochseq4) :tv:
-* [Talea](#talea)
+* [Talea](#talea) :tv:
 
 ---
 
@@ -107,7 +107,7 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
-- Particle trails: 
+- Particle trails:
   - off
   - white
   - red/blue shift (based on velocity of particles)
@@ -319,6 +319,10 @@ Watch the tutorial:
 
 *An arpeggiator with polyrhythmic capabilities dependent upon note intervals.*
 
+Watch the tutorial:
+
+[![Talea_video](docs/Talea-video.png)](https://youtu.be/SVNwWxELw4U "Talea tutorial")
+
 ##### RIGHT-CLICK MENU:
 - External Clock Mode:
   - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
@@ -344,7 +348,7 @@ Watch the tutorial:
 - `POLYRHYTHM` will turn on or off the polyrhythm arpeggiator. If off, Talea acts like a conventional arpeggiator.
 ##### KNOBS:
 - large main knob at the top controls the bpm (beats per minute).
-- `GATE` knob control the percentage amount the gate is on. 
+- `GATE` knob control the percentage amount the gate is on.
 - the pattern mode controls the order of notes when `POLYRHYTHM` is turned off. These are:
   - `↑` ascending order
   - `↓` descending order
