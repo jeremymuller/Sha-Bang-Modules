@@ -13,9 +13,9 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [Orbitones](#orbitones)
 * [Photron](#photron)
 * [PhotronPanel](#photron-panel)
-* [PolyrhythmClock](#polyrhythm-clock)
+* [PolyrhythmClock](#polyrhythm-clock) :tv:
 * [QubitCrusher](#qubit-crusher)
-* [RandGates](#randgates)
+* [RandGates](#randgates) :tv:
 * [StochSeq](#stochseq) :tv:
 * [StochSeq4](#stochseq4) :tv:
 * [Talea](#talea) :tv:
@@ -183,6 +183,10 @@ Click on the attractors to move position them where you want. Click anywhere els
 
 *A clock featuring three layers of embedded rhythms. It's easy to multiply and/or divide the clock with virtually any rhythm you want using this clock.*
 
+Watch the tutorial:
+
+[![PolyrhythmClock_video](docs/PolyClockRandGates-video.png)](https://youtu.be/v-MF6ziY_bI "Polyrhythm Clock & Rand Gates tutorial")
+
 ##### RIGHT-CLICK MENU:
 - External Clock Mode:
   - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
@@ -230,6 +234,10 @@ Click on the attractors to move position them where you want. Click anywhere els
 ![RandGates](/docs/RandGates.png)
 
 *Randomly outputs one of the 4 inputs.*
+
+Watch the tutorial:
+
+[![RandGates_video](docs/PolyClockRandGates-video.png)](https://youtu.be/v-MF6ziY_bI "Polyrhythm Clock & Rand Gates tutorial")
 
 ##### INPUTS:
 - `TRG` randomizes the output
