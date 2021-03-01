@@ -571,6 +571,27 @@ struct Neutrinode : Module, Quantize {
                 nodes[i].vel = nodes[i].vel.mult(speed);
             }
             nodes[i].box.pos = nodes[i].box.pos.plus(nodes[i].vel);
+            checkEdges(i);
+        }
+    }
+
+    // check node edges
+    void checkEdges(int index) {
+        // x's
+        if (nodes[index].box.pos.x < 16) {
+            nodes[index].box.pos.x = 16;
+            nodes[index].vel.x *= -1;
+        } else if (nodes[index].box.pos.x > DISPLAY_SIZE-16) {
+            nodes[index].box.pos.x = DISPLAY_SIZE-16;
+            nodes[index].vel.x *= -1;
+        }
+        // y's
+        if (nodes[index].box.pos.y < 16) {
+            nodes[index].box.pos.y = 16;
+            nodes[index].vel.y *= -1;
+        } else if (nodes[index].box.pos.y > DISPLAY_SIZE - 16) {
+            nodes[index].box.pos.y = DISPLAY_SIZE - 16;
+            nodes[index].vel.y *= -1;
         }
     }
 
@@ -716,7 +737,7 @@ struct NeutrinodeDisplay : Widget {
             if (!module->nodes[i].locked) {
                 module->nodes[i].box.pos.x = initX + (newDragX-dragX);
                 module->nodes[i].box.pos.y = initY + (newDragY-dragY);
-                checkEdges(i);
+                module->checkEdges(i);
             }
         }
         for (int i = 0; i < MAX_PARTICLES; i++) {
@@ -739,27 +760,6 @@ struct NeutrinodeDisplay : Widget {
         //     // currentX = posX;
         //     // currentY = posY;
         // }
-    }
-
-    void checkEdges(int index) {
-        if (module != NULL) {
-            // x's
-            if (module->nodes[index].box.pos.x < 16) {
-                module->nodes[index].box.pos.x = 16;
-                module->nodes[index].vel.x *= -1;
-            } else if (module->nodes[index].box.pos.x > box.size.x-16) {
-                module->nodes[index].box.pos.x = box.size.x-16;
-                module->nodes[index].vel.x *= -1;
-            }
-            // y's
-            if (module->nodes[index].box.pos.y < 16) {
-                module->nodes[index].box.pos.y = 16;
-                module->nodes[index].vel.y *= -1;
-            } else if (module->nodes[index].box.pos.y > box.size.y - 16) {
-                module->nodes[index].box.pos.y = box.size.y - 16;
-                module->nodes[index].vel.y *= -1;
-            }
-        }
     }
 
     void checkEdgesForDelete(int index) {
@@ -851,7 +851,8 @@ struct NeutrinodeDisplay : Widget {
                     nvgCircle(args.vg, pos.x, pos.y, module->nodes[i].radius-3.5);
                     nvgFill(args.vg);
 
-                    checkEdges(i);
+                    module->checkEdges(i);
+                    // checkEdges(i);
                 }
             }
 
