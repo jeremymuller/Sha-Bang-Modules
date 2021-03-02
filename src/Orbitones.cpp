@@ -459,6 +459,27 @@ struct Orbitones : Module {
                 attractors[i].vel = attractors[i].vel.mult(0.9);
             }
             attractors[i].box.pos = attractors[i].box.pos.plus(attractors[i].vel);
+
+            checkEdges(i);
+        }
+    }
+
+    void checkEdges(int index) {
+        // x's
+        if (attractors[index].box.pos.x < 16) {
+            attractors[index].box.pos.x = 16;
+            attractors[index].vel.x *= -1;
+        } else if (attractors[index].box.pos.x > DISPLAY_SIZE_WIDTH-16) {
+            attractors[index].box.pos.x = DISPLAY_SIZE_WIDTH-16;
+            attractors[index].vel.x *= -1;
+        }
+        // y's
+        if (attractors[index].box.pos.y < 16) {
+            attractors[index].box.pos.y = 16;
+            attractors[index].vel.y *= -1;
+        } else if (attractors[index].box.pos.y > DISPLAY_SIZE_HEIGHT - 16) {
+            attractors[index].box.pos.y = DISPLAY_SIZE_HEIGHT - 16;
+            attractors[index].vel.y *= -1;
         }
     }
 };
@@ -591,31 +612,31 @@ struct OrbitonesDisplay : Widget {
             if (!module->attractors[i].locked) {
                 module->attractors[i].box.pos.x = initX + (newDragX - dragX);
                 module->attractors[i].box.pos.y = initY + (newDragY - dragY);
-                checkEdges(i);
+                module->checkEdges(i);
             }
         }
     }
 
-    void checkEdges(int index) {
-        if (module != NULL) {
-            // x's
-            if (module->attractors[index].box.pos.x < 16) {
-                module->attractors[index].box.pos.x = 16;
-                module->attractors[index].vel.x *= -1;
-            } else if (module->attractors[index].box.pos.x > box.size.x-16) {
-                module->attractors[index].box.pos.x = box.size.x-16;
-                module->attractors[index].vel.x *= -1;
-            }
-            // y's
-            if (module->attractors[index].box.pos.y < 16) {
-                module->attractors[index].box.pos.y = 16;
-                module->attractors[index].vel.y *= -1;
-            } else if (module->attractors[index].box.pos.y > box.size.y - 16) {
-                module->attractors[index].box.pos.y = box.size.y - 16;
-                module->attractors[index].vel.y *= -1;
-            }
-        }
-    }
+    // void checkEdges(int index) {
+    //     if (module != NULL) {
+    //         // x's
+    //         if (module->attractors[index].box.pos.x < 16) {
+    //             module->attractors[index].box.pos.x = 16;
+    //             module->attractors[index].vel.x *= -1;
+    //         } else if (module->attractors[index].box.pos.x > box.size.x-16) {
+    //             module->attractors[index].box.pos.x = box.size.x-16;
+    //             module->attractors[index].vel.x *= -1;
+    //         }
+    //         // y's
+    //         if (module->attractors[index].box.pos.y < 16) {
+    //             module->attractors[index].box.pos.y = 16;
+    //             module->attractors[index].vel.y *= -1;
+    //         } else if (module->attractors[index].box.pos.y > box.size.y - 16) {
+    //             module->attractors[index].box.pos.y = box.size.y - 16;
+    //             module->attractors[index].vel.y *= -1;
+    //         }
+    //     }
+    // }
 
     void checkEdgesParticle(int index) {
         if (module != NULL) {
@@ -663,7 +684,7 @@ struct OrbitonesDisplay : Widget {
                 nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
                 nvgFill(args.vg);
 
-                checkEdges(i);
+                // checkEdges(i);
             }
         }
         for (int i = 0; i < MAX_PARTICLES; i++) {
