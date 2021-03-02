@@ -1,3 +1,6 @@
+v1.2.3 (3-01-2021)
+- Bug fixes in Neutrinode and Orbitones
+
 v1.2.2 (1-07-2021)
 - Added octave feature to Talea
 - Bug fixes
