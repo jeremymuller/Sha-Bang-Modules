@@ -323,9 +323,9 @@ struct StochSeqDisplay : Widget {
 			nvgMoveTo(args.vg, i * SLIDER_WIDTH, 0);
 			nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
 			nvgStroke(args.vg);
+			float sHeight = getSliderHeight(i);
 
 			// float sHeight = sliderHeights[i];
-			float sHeight = getSliderHeight(i);
 
 			if (i < module->params[StochSeq::LENGTH_PARAM].getValue()) {
 				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
@@ -350,6 +350,19 @@ struct StochSeqDisplay : Widget {
 				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
 				nvgFill(args.vg);
 			}
+
+			// text
+			nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
+			nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+			nvgFontSize(args.vg, 9);
+			float w = i * SLIDER_WIDTH;
+			float yText = sHeight;
+			if (sHeight < SLIDER_TOP + 3) {
+				yText = (SLIDER_TOP * 2) + sHeight + 3;
+				nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+			}
+			std::string probText = std::to_string(static_cast<int>(module->gateProbabilities[i] * 100));
+			nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
 		}
 
 		// seq position

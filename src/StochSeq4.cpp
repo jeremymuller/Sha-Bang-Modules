@@ -401,6 +401,19 @@ struct StochSeq4Display : Widget {
                 nvgFill(args.vg);
             }
 
+            // text
+			nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
+			nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+			nvgFontSize(args.vg, 9);
+			float w = i * SLIDER_WIDTH;
+			float yText = sHeight;
+			if (sHeight < SLIDER_TOP + 3) {
+				yText = (SLIDER_TOP * 2) + sHeight + 3;
+				nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+			}
+			std::string probText = std::to_string(static_cast<int>(module->seqs[seqId].gateProbabilities[i] * 100));
+			nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+
         }
 
         // seq position
