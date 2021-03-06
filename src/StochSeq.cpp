@@ -48,6 +48,7 @@ struct StochSeq : Module, Quantize {
 	int currentPattern = 0;
 	bool resetMode = false;
 	bool lightBlink = false;
+	bool showPercentages = true;
 	int randLight;
 	float pitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
@@ -84,11 +85,15 @@ struct StochSeq : Module, Quantize {
 			json_array_append_new(probsJ, probJ);
 		}
 		json_object_set_new(rootJ, "probs", probsJ);
+		json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
 
 		return rootJ;
 	}
 
 	void dataFromJson(json_t *rootJ) override {
+        json_t *percentagesJ = json_object_get(rootJ, "percentages");
+        if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
+
 		json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
 		if (currentPatternJ) {
 			currentPattern = json_integer_value(currentPatternJ);
@@ -240,6 +245,34 @@ struct StochSeq : Module, Quantize {
 	}
 };
 
+namespace StochSeqNS {
+	struct ShowTextValueItem : MenuItem {
+        StochSeq *module;
+        bool showPercentages;
+        void onAction(const event::Action &e) override {
+            module->showPercentages = showPercentages;
+        }
+    };
+
+    struct ShowTextItem : MenuItem {
+        StochSeq *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            std::vector<std::string> percentages = {"show", "hide"};
+            for (int i = 0; i < 2; i++) {
+                ShowTextValueItem *item = new ShowTextValueItem;
+                item->text = percentages[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->showPercentages == isOn);
+                item->module = module;
+                item->showPercentages = isOn;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+}
+
 struct StochSeqDisplay : Widget {
 	StochSeq *module;
 	float initX = 0;
@@ -351,18 +384,20 @@ struct StochSeqDisplay : Widget {
 				nvgFill(args.vg);
 			}
 
-			// text
-			nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
-			nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-			nvgFontSize(args.vg, 9);
-			float w = i * SLIDER_WIDTH;
-			float yText = sHeight;
-			if (sHeight < SLIDER_TOP + 3) {
-				yText = (SLIDER_TOP * 2) + sHeight + 3;
-				nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+			// percentage texts for each slider
+			if (module->showPercentages) {
+				nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
+				nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+				nvgFontSize(args.vg, 9);
+				float w = i * SLIDER_WIDTH;
+				float yText = sHeight;
+				if (sHeight < SLIDER_TOP + 3) {
+					yText = (SLIDER_TOP * 2) + sHeight + 3;
+					nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+				}
+				std::string probText = std::to_string(static_cast<int>(module->gateProbabilities[i] * 100));
+				nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
 			}
-			std::string probText = std::to_string(static_cast<int>(module->gateProbabilities[i] * 100));
-			nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
 		}
 
 		// seq position
@@ -487,6 +522,18 @@ struct StochSeqWidget : ModuleWidget {
 		}
 
 
+	}
+
+	void appendContextMenu(Menu *menu) override {
+		StochSeq *module = dynamic_cast<StochSeq*>(this->module);
+		menu->addChild(new MenuEntry);
+
+		StochSeqNS::ShowTextItem *showTextItem = new StochSeqNS::ShowTextItem;
+		showTextItem->text = "Show Slider Percentages";
+		if (module->showPercentages) showTextItem->rightText = std::string("show") + " " + RIGHT_ARROW;
+		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
+		showTextItem->module = module;
+		menu->addChild(showTextItem);
 	}
 };
 

@@ -79,6 +79,7 @@ struct StochSeq4 : Module, Quantize {
     dsp::SchmittTrigger clockTriggers[NUM_SEQS];
     dsp::SchmittTrigger resetTrig;
     bool resetMode = false;
+    bool showPercentages = true;
     Sequencer seqs[NUM_SEQS];
 
     StochSeq4() {
@@ -130,11 +131,15 @@ struct StochSeq4 : Module, Quantize {
         }
         json_object_set_new(rootJ, "currentPatterns", currentPatternsJ);
         json_object_set_new(rootJ, "seqsProbs", seqsProbsJ);
+        json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
 
         return rootJ;
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *percentagesJ = json_object_get(rootJ, "percentages");
+        if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
+
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
         if (currentPatternsJ) {
@@ -299,6 +304,34 @@ struct StochSeq4 : Module, Quantize {
 	}
 };
 
+namespace StochSeq4NS {
+	struct ShowTextValueItem : MenuItem {
+        StochSeq4 *module;
+        bool showPercentages;
+        void onAction(const event::Action &e) override {
+            module->showPercentages = showPercentages;
+        }
+    };
+
+    struct ShowTextItem : MenuItem {
+        StochSeq4 *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            std::vector<std::string> percentages = {"show", "hide"};
+            for (int i = 0; i < 2; i++) {
+                ShowTextValueItem *item = new ShowTextValueItem;
+                item->text = percentages[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->showPercentages == isOn);
+                item->module = module;
+                item->showPercentages = isOn;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+}
+
 struct StochSeq4Display : Widget {
     StochSeq4 *module;
     float initX = 0;
@@ -329,6 +362,7 @@ struct StochSeq4Display : Widget {
     }
 
     void setProbabilities(float currentX, float dragY) {
+        if (currentX < 0) currentX = 0;
         int index = (int)(currentX / SLIDER_WIDTH);
         if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
         if (dragY < 0) dragY = 0;
@@ -402,17 +436,19 @@ struct StochSeq4Display : Widget {
             }
 
             // text
-			nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
-			nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-			nvgFontSize(args.vg, 9);
-			float w = i * SLIDER_WIDTH;
-			float yText = sHeight;
-			if (sHeight < SLIDER_TOP + 3) {
-				yText = (SLIDER_TOP * 2) + sHeight + 3;
-				nvgFillColor(args.vg, nvgRGB(0, 0, 0));
-			}
-			std::string probText = std::to_string(static_cast<int>(module->seqs[seqId].gateProbabilities[i] * 100));
-			nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+            if (module->showPercentages) {
+                nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
+                nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+                nvgFontSize(args.vg, 9);
+                float w = i * SLIDER_WIDTH;
+                float yText = sHeight;
+                if (sHeight < SLIDER_TOP + 3) {
+                    yText = (SLIDER_TOP * 2) + sHeight + 3;
+                    nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+                }
+                std::string probText = std::to_string(static_cast<int>(module->seqs[seqId].gateProbabilities[i] * 100));
+                nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+            }
 
         }
 
@@ -580,6 +616,19 @@ struct StochSeq4Widget : ModuleWidget {
         addOutput(createOutputCentered<TinyPJ301MRed>(Vec(705.3, 328.6), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
         addOutput(createOutputCentered<TinyPJ301MRed>(Vec(728.7, 328.6), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
     }
+
+	void appendContextMenu(Menu *menu) override {
+		StochSeq4 *module = dynamic_cast<StochSeq4*>(this->module);
+		menu->addChild(new MenuEntry);
+
+		StochSeq4NS::ShowTextItem *showTextItem = new StochSeq4NS::ShowTextItem;
+		showTextItem->text = "Show Slider Percentages";
+		if (module->showPercentages) showTextItem->rightText = std::string("show") + " " + RIGHT_ARROW;
+		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
+		showTextItem->module = module;
+		menu->addChild(showTextItem);
+	}
+
 };
 
 Model *modelStochSeq4 = createModel<StochSeq4, StochSeq4Widget>("StochSeq4");
