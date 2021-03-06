@@ -1,3 +1,7 @@
+v1.2.4 (3-05-2021)
+- Bug fix in Orbitones
+- Added percentages on individual sliders for StochSeq and StochSeq4
+
 v1.2.3 (3-01-2021)
 - Bug fixes in Neutrinode and Orbitones
 

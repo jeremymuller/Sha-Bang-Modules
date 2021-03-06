@@ -71,9 +71,11 @@ struct Particle {
         // trail
         Vec v = box.getCenter();
         Trail t = Trail(v.x, v.y, 255);
-        history.push_back(t);
+        history.insert(history.begin(), t);
+        // history.push_back(t);
         if (history.size() > 20) {
-            history.erase(history.begin());
+            history.pop_back();
+            // history.erase(history.begin());
         }
         return true;
     }
@@ -683,8 +685,6 @@ struct OrbitonesDisplay : Widget {
                 nvgBeginPath(args.vg);
                 nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
                 nvgFill(args.vg);
-
-                // checkEdges(i);
             }
         }
         for (int i = 0; i < MAX_PARTICLES; i++) {
@@ -694,7 +694,8 @@ struct OrbitonesDisplay : Widget {
                 if (module->drawTrails) {
                     bool updated = module->particles[i].updateHistory();
                     if (!updated) break;
-                    for (unsigned int j = 1; j < module->particles[i].history.size(); j++) {
+                    unsigned int length = std::min<unsigned int>(module->particles[i].history.size(), 20);
+                    for (unsigned int j = 1; j < length; j++) {
                         Trail trailPos = module->particles[i].history[j];
                         Trail trailPosPrev = module->particles[i].history[j-1];
                         nvgBeginPath(args.vg);
