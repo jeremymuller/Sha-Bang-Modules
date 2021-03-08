@@ -8,8 +8,8 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 ## Contents:
 
-* [Cosmosis](#cosmosis)
-* [Neutrinode](#neutrinode)
+* [Cosmosis](#cosmosis) :tv:
+* [Neutrinode](#neutrinode) :tv:
 * [Orbitones](#orbitones)
 * [Photron](#photron)
 * [PhotronPanel](#photron-panel)
@@ -29,6 +29,10 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 *A continuous sequencer based on constellations where time can move left->right, right->left, up->down, and down->up.*
 
 Click anywhere to add/drag new stars. To remove stars click/drag them out of the dark display area.
+
+Watch the tutorial:
+
+[![Cosmosis_video](docs/Cosmosis-video.png)](https://youtu.be/isZ22FNc9eI "Cosmosis tutorial")
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
@@ -66,6 +70,10 @@ Click anywhere to add/drag new stars. To remove stars click/drag them out of the
 *A unique visual-based sequencer where time moves from the center of the 4 independent nodes out to the connected particles. Can generate interesting rhythmic textures and can be animated so that the textures change over time.*
 
 Click on nodes to position them. Click anywhere else to add/drag new particles. To remove particles click/drag them out of the dark display area.
+
+Watch the tutorial:
+
+[![Neutrinode_video](docs/Neutrinode-video.png)](https://youtu.be/WVPZnpNk_UE "Neutrinode tutorial")
 
 ##### RIGHT-CLICK MENU:
 - Collisions are turned on or off for the nodes.
