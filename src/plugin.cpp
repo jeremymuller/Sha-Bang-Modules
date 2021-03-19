@@ -12,6 +12,7 @@ void init(Plugin* p) {
 	p->addModel(modelStochSeq4);
 	p->addModel(modelPolyrhythmClock);
 	p->addModel(modelRandGates);
+	p->addModel(modelRandRoute);
 	p->addModel(modelNeutrinode);
 	p->addModel(modelCosmosis);
 	p->addModel(modelJeremyBlankPanel);

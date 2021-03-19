@@ -1,3 +1,7 @@
+v1.3.1 (2021)
+- Added new module RandRoute
+- 
+
 v1.2.4 (3-05-2021)
 - Bug fix in Orbitones
 - Added percentages on individual sliders for StochSeq and StochSeq4
