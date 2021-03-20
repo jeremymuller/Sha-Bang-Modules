@@ -3,17 +3,22 @@
 #define DISPLAY_SIZE_WIDTH 427
 #define DISPLAY_SIZE_HEIGHT 378
 #define MAX_PARTICLES 16
+#define MAX_HISTORY 20
 #define INTERNAL_SAMP_TIME 60.0
 
 struct Trail {
     float x;
     float y;
     int alpha;
-    Trail() {}
+    bool visible;
+    Trail() {
+        visible = false;
+    }
     Trail(float _x, float _y, int _alpha) {
         x = _x;
         y = _y;
         alpha = _alpha;
+        visible = true;
     }
 };
 
@@ -27,7 +32,10 @@ struct Particle {
     float radius;
     bool visible;
     bool whiteTrails = true;
-    std::vector<Trail> history;
+    // std::vector<Trail> history;
+    Trail history[MAX_HISTORY];
+    int currentHistorySize;
+    int historyIndex;
 
     Particle() {
         box.pos.x = randRange(0, DISPLAY_SIZE_WIDTH);
@@ -38,6 +46,8 @@ struct Particle {
         radius = randRange(5, 12);
         mass = radius;
         visible = false;
+        currentHistorySize = 0;
+        historyIndex = 0;
     }
 
     void setPos(Vec _pos) {
@@ -71,17 +81,22 @@ struct Particle {
         // trail
         Vec v = box.getCenter();
         Trail t = Trail(v.x, v.y, 255);
-        history.insert(history.begin(), t);
-        // history.push_back(t);
-        if (history.size() > 20) {
-            history.pop_back();
-            // history.erase(history.begin());
+
+        // shift elements to insert at beginning
+        for (int i = MAX_HISTORY-1; i > 0; i--) {
+            history[i] = history[i-1];
         }
+        history[0] = t;
+
+        currentHistorySize = std::min(++currentHistorySize, MAX_HISTORY);
+        historyIndex = (historyIndex + 1) % MAX_HISTORY;
+
         return true;
     }
 
     void clearHistory() {
-        history.clear();
+        currentHistorySize = 0;
+        historyIndex = 0;
     }
 };
 
@@ -694,8 +709,7 @@ struct OrbitonesDisplay : Widget {
                 if (module->drawTrails) {
                     bool updated = module->particles[i].updateHistory();
                     if (!updated) break;
-                    unsigned int length = std::min<unsigned int>(module->particles[i].history.size(), 20);
-                    for (unsigned int j = 1; j < length; j++) {
+                    for (int j = 1; j < module->particles[i].currentHistorySize; j++) {
                         Trail trailPos = module->particles[i].history[j];
                         Trail trailPosPrev = module->particles[i].history[j-1];
                         nvgBeginPath(args.vg);
