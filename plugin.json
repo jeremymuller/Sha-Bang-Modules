@@ -19,6 +19,12 @@
           "tags": ["Blank", "Visual"]
       },
       {
+          "slug": "Collider",
+          "name": "Collider",
+          "description": "Physics-based shaker",
+          "tags": ["Visual", "Granular", "Physical modeling", "Polyphonic"]
+      },
+      {
           "slug": "Cosmosis",
           "name": "Cosmosis",
           "description": "Continuous sequencer with constellations",

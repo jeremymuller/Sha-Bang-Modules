@@ -1,5 +1,6 @@
 v1.3.1 (2021)
 - Added new module RandRoute
+- Added new module Collider
 - Bug fix for Orbitones trails
 
 v1.2.4 (3-05-2021)

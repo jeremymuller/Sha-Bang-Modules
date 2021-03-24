@@ -24,11 +24,11 @@ extern Model *modelPhotronPanel;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
+extern Model *modelCollider;
 
 /************************** INLINE FUNCTIONS **************************/
 
-inline float
-dist(Vec a, Vec b)
+inline float dist(Vec a, Vec b)
 { // returns distance between two points
     return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
 }
@@ -46,12 +46,20 @@ inline float mag(Vec a) { // returns magnitude of vector
     return std::sqrt(a.x * a.x + a.y * a.y);
 }
 
+inline float freqToMidi(float freq) {
+    return 69 + 12.0 * log2(freq / 440.0);
+}
+
 inline float randRange(float max) { // returns random float up to max
     return random::uniform() * max;
 }
 
 inline float randRange(float min, float max) { // returns random float within min/max range
     return random::uniform() * fabs(max-min) + min;
+}
+
+inline int randRange(int max) {
+    return static_cast<int>(random::uniform() * max);
 }
 
 /************************** LABEL **************************/
@@ -200,6 +208,14 @@ struct DefaultButton : SvgSwitch {
         momentary = true;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/DefaultButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/DefaultButtonDown.svg")));
+    }
+};
+
+struct BigButton : SvgSwitch {
+    BigButton() {
+        momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BigButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BigButtonDown.svg")));
     }
 };
 
