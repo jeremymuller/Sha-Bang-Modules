@@ -153,6 +153,7 @@ struct Orbitones : Module {
         NUM_ATTRACTORS
     };
     enum ParamIds {
+        OFFSET_PARAM,
         REMOVE_PARTICLE_PARAM,
         CLEAR_PARTICLES_PARAM,
         MOVE_ATTRACTORS_PARAM,
@@ -188,6 +189,7 @@ struct Orbitones : Module {
     dsp::SchmittTrigger removeTrig, clearTrig, moveTrig;
     Attractor *attractors = new Attractor[NUM_ATTRACTORS];
     Particle *particles = new Particle[MAX_PARTICLES];
+    float voltsOffset = 0.0;
     bool movement = false;
     bool drawTrails = true;
     bool particleBoundary = false;
@@ -199,6 +201,7 @@ struct Orbitones : Module {
 
     Orbitones() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+        configParam(OFFSET_PARAM, -5.0, 5.0, 0.0, "Offset", " V");
         configParam(REMOVE_PARTICLE_PARAM, 0.0, 1.0, 0.0, "Remove previous particle");
         configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
         configParam(MOVE_ATTRACTORS_PARAM, 0.0, 1.0, 0.0, "Move attractors");
@@ -335,6 +338,7 @@ struct Orbitones : Module {
     }
 
     void process(const ProcessArgs &args) override {
+        voltsOffset = params[OFFSET_PARAM].getValue();
         if (removeTrig.process(params[REMOVE_PARTICLE_PARAM].getValue())) {
             if (visibleParticles > 0) removeParticle(visibleParticles-1);
         }
@@ -387,10 +391,11 @@ struct Orbitones : Module {
                         }
                     }
                     particles[i].update();
-                    float voltsX = rescale(particles[i].box.pos.x, 0, DISPLAY_SIZE_WIDTH, -5.0, 5.0);
-                    float voltsY = rescale(particles[i].box.pos.y, DISPLAY_SIZE_HEIGHT, 0, -5.0, 5.0);
-                    float voltsVelX = rescale(particles[i].vel.x, -12.0, 12.0, -5.0, 5.0);
-                    float voltsVelY = rescale(particles[i].vel.y, 12.0, -12.0, -5.0, 5.0);
+
+                    float voltsX = rescale(particles[i].box.pos.x, 0, DISPLAY_SIZE_WIDTH, -5.0 + voltsOffset, 5.0 + voltsOffset);
+                    float voltsY = rescale(particles[i].box.pos.y, DISPLAY_SIZE_HEIGHT, 0, -5.0 + voltsOffset, 5.0 + voltsOffset);
+                    float voltsVelX = rescale(particles[i].vel.x, -12.0, 12.0, -5.0 + voltsOffset, 5.0 + voltsOffset);
+                    float voltsVelY = rescale(particles[i].vel.y, 12.0, -12.0, -5.0 + voltsOffset, 5.0 + voltsOffset);
                     outputs[X_POLY_OUTPUT].setVoltage(voltsX, i);
                     outputs[Y_POLY_OUTPUT].setVoltage(voltsY, i);
                     outputs[NEG_X_POLY_OUTPUT].setVoltage(-voltsX, i);
@@ -760,6 +765,7 @@ struct OrbitonesWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(505.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(505.5, box.size.y - 14)));
 
+        addParam(createParamCentered<TinyBlueKnob>(Vec(511.5, 201.5), module, Orbitones::OFFSET_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(42, 56), module, Orbitones::REMOVE_PARTICLE_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(42, 93.4), module, Orbitones::CLEAR_PARTICLES_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(42, 130.9), module, Orbitones::MOVE_ATTRACTORS_PARAM));

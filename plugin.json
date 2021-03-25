@@ -22,7 +22,7 @@
           "slug": "Collider",
           "name": "Collider",
           "description": "Physics-based shaker",
-          "tags": ["Visual", "Granular", "Physical modeling", "Polyphonic"]
+          "tags": ["Granular", "Physical modeling", "Polyphonic"]
       },
       {
           "slug": "Cosmosis",

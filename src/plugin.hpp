@@ -50,6 +50,10 @@ inline float freqToMidi(float freq) {
     return 69 + 12.0 * log2(freq / 440.0);
 }
 
+inline float freqToVolts(float freq) {
+    return log2(freq / dsp::FREQ_C4);
+}
+
 inline float randRange(float max) { // returns random float up to max
     return random::uniform() * max;
 }
