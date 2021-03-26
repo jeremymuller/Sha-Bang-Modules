@@ -40,8 +40,8 @@ struct Collider : Module {
     float ampLevel = 0.0;
     float centerFreq = 2800; // 2800
     float freqSweep = 1.001;
-    float centerVoltage = 0.0; // 2800
-    float freqRange = 0.2; // 2800
+    float centerVoltage = 0.0; 
+    float freqRange = 0.2;
     float notes[3];
     float freqs[3];
     float freqRandomize = 0.0;
@@ -141,19 +141,16 @@ struct Collider : Module {
         }
         checkParams = (checkParams + 1) % 4;
 
+        // this algorithm inspired by Perry Cook's Phisem
+
         if (shakeEnergy > MIN_SHAKE_ENERGY) {
             shakeEnergy *= systemDecay;
             if (randRange(1024.f) < percentageObj) {
                 currentChannel = (currentChannel + 1) % channels;
                 ampLevel += shakeEnergy;
 
-                // ampLevel *= soundDecay;
-                // ampLevel = clamp(ampLevel, 0.0, 10.0);
                 pulses[currentChannel].trigger(1e-3f);
 
-                // float note = freqToMidi(centerFreq * randRange(0.8, 1.2));
-                // float note = notes[randRange(3)];
-                // float note = notes[noteIndex];
                 float freq = freqs[noteIndex] * (1.0 + (freqRandomize * randRange(-1.0, 1.0)));
                 float volts = freqToVolts(freq);
                 noteIndex = (noteIndex + 1) % 3;
