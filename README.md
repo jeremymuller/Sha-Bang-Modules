@@ -8,6 +8,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 ## Contents:
 
+* [Collider](#collider)
 * [Cosmosis](#cosmosis) :tv:
 * [Neutrinode](#neutrinode) :tv:
 * [Orbitones](#orbitones)
@@ -16,9 +17,38 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [PolyrhythmClock](#polyrhythm-clock) :tv:
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates) :tv:
+* [RandRoute](#randroute)
 * [StochSeq](#stochseq) :tv:
 * [StochSeq4](#stochseq4) :tv:
 * [Talea](#talea) :tv:
+
+---
+
+### Collider
+
+![Collider](/docs/Collider.png)
+
+*A physical model of various of shakers and wind chimes (maracas, sleigh bells, bamboo chimes, metallic chimes, etc).*
+
+##### RIGHT-CLICK MENU:
+- Polyphony.
+##### BUTTON:
+- `SHAKE` shakes the particles. Hold down to continuously shake.
+##### INPUTS:
+- `SHAKE` gate controls the shake.
+- `V/OCT` center frequency of the particles.
+- `SPREAD` control voltage determines the amount of spread from the center frequency.
+- `VEL` control voltage for the initial shake energy.
+- `PARTICLES` control voltage for the number of particles. More particles = faster decay in system energy, less particles = slower decay.
+##### KNOBS:
+- `C` center frequency of the particles in Hz.
+- `SPREAD` sets the amount of spread from the center frequency.
+- `RND` sets the amount of random frequencydeviation on each particle collision.
+- `PARTICLES` sets the number of particles. More particles = faster decay in system energy, less particles = slower decay.
+##### OUTPUTS:
+- `V/OCT` outputs ±5 volts.
+- `GATE` outputs pulses.
+- `VEL` outputs velocity of entire system.
 
 ---
 
@@ -130,6 +160,7 @@ Click on the attractors to move position them where you want. Click anywhere els
 - `ON` turns on/off individual attractors.
 - `G` scales the individual attractors' gravity.
 - `G` (big knob) main gravity control for all attractors.
+- `OFFSET` offsets the voltage output.
 ##### INPUTS:
 - `MOVE` trigger turns on/off the random movement of attractors.
 - `G` takes a CV using this formula: `G` * 2<sup>V</sup>.
