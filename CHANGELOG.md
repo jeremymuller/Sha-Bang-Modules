@@ -1,3 +1,10 @@
+v1.3.1 (3-26-2021)
+- Added new module RandRoute
+- Added new module Collider
+- Added volts offset knob for Orbitones
+- Bug fix for Orbitones trails
+- Updated docs
+
 v1.2.4 (3-05-2021)
 - Bug fix in Orbitones
 - Added percentages on individual sliders for StochSeq and StochSeq4
