@@ -288,6 +288,22 @@ Watch the tutorial:
 
 ---
 
+### RandRoute
+
+![RandRoute](/docs/RandRoute.png)
+
+*Randomly routes one inputs to 4 possible outputs.*
+
+##### INPUTS:
+- `TRG` randomizes the output
+- `IN` any type of input, i.e. gates or ±5 volts.
+##### KNOB:
+- Gives a higher probability weight to the chosen input. All the way to the right is uniform randomness.
+##### OUTPUT:
+- `OUTS` (purple, blue, aqua, red) randomly chosen to output the input as either a pulse or ±5 volts.
+
+---
+
 ### StochSeq
 
 ![StochSeq](/docs/StochSeq.png)
