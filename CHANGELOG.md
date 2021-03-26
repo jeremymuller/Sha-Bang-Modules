@@ -1,4 +1,4 @@
-v1.3.1 (2021)
+v1.3.1 (3-26-2021)
 - Added new module RandRoute
 - Added new module Collider
 - Added volts offset knob for Orbitones
