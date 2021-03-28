@@ -75,6 +75,7 @@ struct Node {
     float lineWidth;
     int maxConnectedDist = 150;
     int currentConnects = 0;
+    float initPhase;
     float phase;
     float tempoTime;
     int nodeTempo = maxConnectedDist * 2;
@@ -101,7 +102,8 @@ struct Node {
 
         // tempoTime = 0;
         tempoTime = static_cast<int>(random::uniform() * maxConnectedDist);
-        phase = random::uniform();
+        initPhase = random::uniform();
+        phase = initPhase;
     }
 
     ~Node() {
@@ -223,9 +225,11 @@ struct Neutrinode : Module, Quantize {
     Particle *particles = new Particle[MAX_PARTICLES];
     int visibleParticles = 0;
     // std::vector<Particle> particles;
+    bool oneShotMode = false;
     bool movement = false;
     bool pitchChoice = false;
     bool toggleStart = true;
+    bool oneShotStart[NUM_OF_NODES];
     bool nodeCollisionMode = true;
     float clockStep;
     float maxConnectedDist = 150;
@@ -233,12 +237,12 @@ struct Neutrinode : Module, Quantize {
     int checkParams = 0;
     int processNodes = 0;
     int moveNodes = 0;
-    int channels = 16;
+    int channels = 1;
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
-        configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Start nodes");
+        configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Continuous / 1-shot");
         configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
         configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
@@ -271,6 +275,13 @@ struct Neutrinode : Module, Quantize {
         for (int i = 0; i < NUM_OF_NODES; i++) {
             nodes[i].vel.x = randRange(1);
             nodes[i].vel.y = randRange(1);
+
+            oneShotStart[i] = false;
+        }
+
+        for (int i = 0; i < 5; i++) {
+            Vec pos = Vec(randRange(16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE - 16));
+            addParticle(pos, i);
         }
     }
 
@@ -318,6 +329,7 @@ struct Neutrinode : Module, Quantize {
         }
 
         json_object_set_new(rootJ, "start", json_boolean(toggleStart));
+        json_object_set_new(rootJ, "playMode", json_boolean(oneShotMode));
         json_object_set_new(rootJ, "collisions", json_boolean(nodeCollisionMode));
         json_object_set_new(rootJ, "channels", json_integer(channels));
         json_object_set_new(rootJ, "nodes", nodesJ);
@@ -332,6 +344,9 @@ struct Neutrinode : Module, Quantize {
 
         json_t *startJ = json_object_get(rootJ, "start");
         if (startJ) toggleStart = json_boolean_value(startJ);
+
+        json_t *playModeJ = json_object_get(rootJ, "playMode");
+        if (playModeJ) oneShotMode = json_boolean_value(playModeJ);
 
         json_t *collisionsJ = json_object_get(rootJ, "collisions");
         if (collisionsJ) nodeCollisionMode = json_boolean_value(collisionsJ);
@@ -391,7 +406,14 @@ struct Neutrinode : Module, Quantize {
                 clearParticles();
             }
             if (pauseTrig.process(params[PLAY_PARAM].getValue() + inputs[PLAY_INPUT].getVoltage())) {
-                toggleStart = !toggleStart;
+                if (oneShotMode) {
+                    for (int i = 0; i < NUM_OF_NODES; i++) {
+                        oneShotStart[i] = true;
+                        nodes[i].phase = 0;
+                    }
+                } else {
+                    toggleStart = !toggleStart;
+                }
             }
             if (moveTrig.process(params[MOVE_PARAM].getValue() + inputs[MOVE_INPUT].getVoltage())) {
                 movement = !movement;
@@ -406,7 +428,8 @@ struct Neutrinode : Module, Quantize {
         checkParams = (checkParams+1) % 4;
 
         if (processNodes == 0) {
-            lights[PAUSE_LIGHT].setBrightness(toggleStart ? 1.0 : 0.0);
+            bool lightOn = oneShotMode ? oneShotStart[0] : toggleStart;
+            lights[PAUSE_LIGHT].setBrightness(lightOn ? 1.0 : 0.0);
 
             if (movement) {
                 if (moveNodes == 0) {
@@ -426,7 +449,8 @@ struct Neutrinode : Module, Quantize {
             // int rootNote = params[ROOT_NOTE_PARAM].getValue();
             int scale = params[SCALE_PARAM].getValue();
             for (int i = 0; i < NUM_OF_NODES; i++) {
-                nodes[i].start = toggleStart;
+
+                nodes[i].start = oneShotMode ? oneShotStart[i] : toggleStart;
 
                 if (nodes[i].toggleTrig.process(params[ON_PARAM+i].getValue())) {
                     nodes[i].start = !nodes[i].start;
@@ -473,6 +497,7 @@ struct Neutrinode : Module, Quantize {
                     if (nodes[i].phase > 1.0) {
                         nodes[i].phase = 0;
                         nodes[i].triggered = true;
+                        oneShotStart[i] = false;
                     }
 
                 }
@@ -595,6 +620,22 @@ struct Neutrinode : Module, Quantize {
         }
     }
 
+    void setPlayMode(bool isOneShot) {
+        if (isOneShot) {
+            oneShotMode = true;
+            for (int i = 0; i < NUM_OF_NODES; i++) {
+                oneShotStart[i] = false;
+                nodes[i].phase = 0;
+            }
+        } else {
+            oneShotMode = false;
+            toggleStart = false;
+            for (int i = 0; i < NUM_OF_NODES; i++) {
+                nodes[i].triggered = false;
+                nodes[i].phase = nodes[i].initPhase;
+            }
+        }
+    }
 };
 
 namespace NeutrinodeNS {
@@ -619,6 +660,32 @@ namespace NeutrinodeNS {
                 item->rightText = CHECKMARK(module->channels == channels);
                 item->module = module;
                 item->channels = channels;
+                menu->addChild(item);
+            }
+            return menu;
+        }
+    };
+
+    struct PlayModeValueItem : MenuItem {
+        Neutrinode *module;
+        bool oneShot;
+        void onAction(const event::Action &e) override {
+            module->setPlayMode(oneShot);
+        }
+    };
+
+    struct PlayModeItem : MenuItem {
+        Neutrinode *module;
+        Menu *createChildMenu() override {
+            Menu *menu = new Menu;
+            std::vector<std::string> playModes = {"continuous", "1-shot"};
+            for (int i = 0; i < 2; i++) {
+                PlayModeValueItem *item = new PlayModeValueItem;
+                item->text = playModes[i];
+                bool isOn = i;
+                item->rightText = CHECKMARK(module->oneShotMode == isOn);
+                item->module = module;
+                item->oneShot = isOn;
                 menu->addChild(item);
             }
             return menu;
@@ -957,6 +1024,13 @@ struct NeutrinodeWidget : ModuleWidget {
     void appendContextMenu(Menu *menu) override {
         Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
         menu->addChild(new MenuEntry);
+
+        NeutrinodeNS::PlayModeItem *playModeItem = new NeutrinodeNS::PlayModeItem;
+        playModeItem->text = "Play mode";
+        if (module->oneShotMode) playModeItem->rightText = std::string("1-shot") + " " + RIGHT_ARROW;
+        else playModeItem->rightText = std::string("continuous") + " " + RIGHT_ARROW;
+        playModeItem->module = module;
+        menu->addChild(playModeItem);
 
         NeutrinodeNS::CollisionModeItem *collisionModeItem = new NeutrinodeNS::CollisionModeItem;
         collisionModeItem->text = "Collisions";
