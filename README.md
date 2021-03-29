@@ -106,6 +106,7 @@ Watch the tutorial:
 [![Neutrinode_video](docs/Neutrinode-video.png)](https://youtu.be/WVPZnpNk_UE "Neutrinode tutorial")
 
 ##### RIGHT-CLICK MENU:
+- Continuous play or one-shot mode (useful for synchronization). These options only affect the `PLAY` button/input.
 - Collisions are turned on or off for the nodes.
 - Polyphony.
 ##### BUTTONS:

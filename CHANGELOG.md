@@ -1,3 +1,7 @@
+v1.3.2 (3-29-2021)
+- Added one-shot play mode to Neutrinode
+- Updated interface to PolyrhythmClock
+
 v1.3.1 (3-26-2021)
 - Added new module RandRoute
 - Added new module Collider
