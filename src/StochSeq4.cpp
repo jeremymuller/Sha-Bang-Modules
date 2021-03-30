@@ -622,7 +622,7 @@ struct StochSeq4Widget : ModuleWidget {
 		menu->addChild(new MenuEntry);
 
 		StochSeq4NS::ShowTextItem *showTextItem = new StochSeq4NS::ShowTextItem;
-		showTextItem->text = "Show Slider Percentages";
+		showTextItem->text = "Slider Percentages";
 		if (module->showPercentages) showTextItem->rightText = std::string("show") + " " + RIGHT_ARROW;
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
 		showTextItem->module = module;
