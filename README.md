@@ -11,7 +11,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [Collider](#collider)
 * [Cosmosis](#cosmosis) :tv:
 * [Neutrinode](#neutrinode) :tv:
-* [Orbitones](#orbitones)
+* [Orbitones](#orbitones) :tv:
 * [Photron](#photron)
 * [PhotronPanel](#photron-panel)
 * [PolyrhythmClock](#polyrhythm-clock) :tv:
@@ -143,6 +143,10 @@ Watch the tutorial:
 *Physics-based animated LFO with 4 independent attractors.*
 
 Click on the attractors to move position them where you want. Click anywhere else to add particles.
+
+Watch the tutorial:
+
+[![Orbitones_video](docs/Orbitones-video.png)](https://youtu.be/x7X0--AugRU "Orbitones tutorial")
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
