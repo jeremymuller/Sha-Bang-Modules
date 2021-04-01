@@ -8,7 +8,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 ## Contents:
 
-* [Collider](#collider)
+* [Collider](#collider) :tv:
 * [Cosmosis](#cosmosis) :tv:
 * [Neutrinode](#neutrinode) :tv:
 * [Orbitones](#orbitones) :tv:
@@ -29,6 +29,10 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 ![Collider](/docs/Collider.png)
 
 *A physical model of various of shakers and wind chimes (maracas, sleigh bells, bamboo chimes, metallic chimes, etc).*
+
+Watch the tutorial: 
+
+[![Collider_video](docs/Collider-video.png)](https://youtu.be/nC_NozyveTc "Collider tutorial")
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
