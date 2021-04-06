@@ -1,3 +1,7 @@
+v1.4.1 (?-?-2021)
+- Small changes to interfaces of StochSeq and StochSeq4
+- Added Reset input to PolyrhythmClock
+
 v1.3.2 (3-29-2021)
 - Added one-shot play mode to Neutrinode
 - Updated interface to PolyrhythmClock

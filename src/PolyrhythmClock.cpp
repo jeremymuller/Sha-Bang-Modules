@@ -20,6 +20,7 @@ struct PolyrhythmClock : Module {
         NUM_PARAMS = TUPLETS_RAND_PARAM + 3
     };
     enum InputIds {
+        RESET_INPUT,
         EXT_CLOCK_INPUT,
         NUM_INPUTS
     };
@@ -35,7 +36,7 @@ struct PolyrhythmClock : Module {
         NUM_LIGHTS
     };
 
-    dsp::SchmittTrigger toggleTrig, bpmInputTrig;
+    dsp::SchmittTrigger toggleTrig, bpmInputTrig, resetTrig;
     dsp::PulseGenerator gatePulses[4];
     bool tupletGates[4] = {};
     bool clockOn = false;
@@ -117,6 +118,10 @@ struct PolyrhythmClock : Module {
     }
 
     void process(const ProcessArgs& args) override {
+
+        if (resetTrig.process(inputs[RESET_INPUT].getVoltage())) {
+            resetPhases();
+        }
 
         if (toggleTrig.process(params[CLOCK_TOGGLE_PARAM].getValue())) {
             clockOn = !clockOn;
@@ -338,11 +343,13 @@ struct PolyrhythmClockWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(box.size.x-12-12, 2)));
         addChild(createWidget<JeremyScrew>(Vec(box.size.x-12-12, box.size.y - 14)));
 
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(29.8 - 3.21, 54 - 3.21), module, PolyrhythmClock::TOGGLE_LIGHT));
+        // addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(29.8 - 3.21, 54 - 3.21), module, PolyrhythmClock::TOGGLE_LIGHT));
 
-        addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
         addParam(createParamCentered<PurpleKnob>(Vec(45, 76.7), module, PolyrhythmClock::BPM_PARAM));
-        // external clock
+        addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(45 - 3.21, 54 - 3.21), module, PolyrhythmClock::TOGGLE_LIGHT));
+        // inputs
+        addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 76.7), module, PolyrhythmClock::RESET_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 76.7), module, PolyrhythmClock::EXT_CLOCK_INPUT));
 
         // tuplet 1

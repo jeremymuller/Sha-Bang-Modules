@@ -25,6 +25,7 @@ extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
 extern Model *modelCollider;
+extern Model *modelQuantal;
 
 /************************** INLINE FUNCTIONS **************************/
 
@@ -430,6 +431,37 @@ struct PurpleInvertKnobLabel : PurpleInvertKnob {
     }
 };
 
+struct PurpleInvertKnobLabelCentered : PurpleInvertKnob {
+    CenterAlignedLabel *linkedLabel = NULL;
+    Module *linkedModule = NULL;
+
+    PurpleInvertKnobLabelCentered() {}
+
+    void connectLabel(CenterAlignedLabel *label, Module *module) {
+        linkedLabel = label;
+        linkedModule = module;
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+            linkedLabel->color = nvgRGB(128, 0, 219);
+            // linkedLabel->color = nvgRGB(0, 0, 0);
+        }
+    }
+
+    void onChange(const event::Change &e) override {
+        RoundKnob::onChange(e);
+        if (linkedModule && linkedLabel) {
+            linkedLabel->text = formatCurrentValue();
+        }
+    }
+
+    virtual std::string formatCurrentValue() {
+        if (paramQuantity != NULL) {
+            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
 struct BlueInvertKnobLabel : BlueInvertKnob {
     LeftAlignedLabel *linkedLabel = NULL;
     Module *linkedModule = NULL;
@@ -510,6 +542,43 @@ struct PurpleScaleKnob : PurpleInvertKnobLabel {
     std::string formatCurrentValue() override {
         if (paramQuantity != NULL) {
             return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+// centered knob labels
+struct PurpleNoteKnobCentered : PurpleInvertKnobLabelCentered {
+    Quantize *quantize;
+    PurpleNoteKnobCentered() {}
+
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct PurpleScaleKnobCentered : PurpleInvertKnobLabelCentered {
+    Quantize *quantize;
+    PurpleScaleKnobCentered() {}  
+    
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        }
+        return "";
+    }
+};
+
+struct BlueNoteKnobCentered : BlueInvertKnobLabelCentered {
+    Quantize *quantize;
+    BlueNoteKnobCentered() {}
+
+    std::string formatCurrentValue() override {
+        if (paramQuantity != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
         }
         return "";
     }

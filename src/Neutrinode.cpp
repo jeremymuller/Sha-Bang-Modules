@@ -302,12 +302,14 @@ struct Neutrinode : Module, Quantize {
             json_t *nodePosYJ = json_real(nodes[i].box.pos.y);
             json_t *nodeTempoTimeJ = json_real(nodes[i].tempoTime);
             json_t *nodePhaseJ = json_real(nodes[i].phase);
+            json_t *nodeInitPhaseJ = json_real(nodes[i].initPhase);
             // other data?
             json_array_append_new(dataJ, nodeVisibleJ);
             json_array_append_new(dataJ, nodePosXJ);
             json_array_append_new(dataJ, nodePosYJ);
             json_array_append_new(dataJ, nodeTempoTimeJ);
             json_array_append_new(dataJ, nodePhaseJ);
+            json_array_append_new(dataJ, nodeInitPhaseJ);
 
             // append node
             json_array_append_new(nodesJ, dataJ);
@@ -362,11 +364,13 @@ struct Neutrinode : Module, Quantize {
                     json_t *nodePosYJ = json_array_get(dataJ, 2);
                     json_t *nodeTempoTimeJ = json_array_get(dataJ, 3);
                     json_t *nodePhaseJ = json_array_get(dataJ, 4);
+                    json_t *nodeInitPhaseJ = json_array_get(dataJ, 5);
                     if (nodeVisibleJ) nodes[i].visible = json_boolean_value(nodeVisibleJ);
                     if (nodePosXJ) nodes[i].box.pos.x = json_real_value(nodePosXJ);
                     if (nodePosYJ) nodes[i].box.pos.y = json_real_value(nodePosYJ);
                     if (nodeTempoTimeJ) nodes[i].tempoTime = json_real_value(nodeTempoTimeJ);
                     if (nodePhaseJ) nodes[i].phase = json_real_value(nodePhaseJ);
+                    if (nodeInitPhaseJ) nodes[i].initPhase = json_real_value(nodeInitPhaseJ);
                 }
             }
         }
