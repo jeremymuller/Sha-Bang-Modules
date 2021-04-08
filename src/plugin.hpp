@@ -29,6 +29,10 @@ extern Model *modelQuantal;
 
 /************************** INLINE FUNCTIONS **************************/
 
+inline float modNeg(float num, int mod) {
+    return num - floorf(num / mod) * mod;
+}
+
 inline float dist(Vec a, Vec b)
 { // returns distance between two points
     return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));

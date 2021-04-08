@@ -22,6 +22,12 @@ struct PolyrhythmClock : Module {
     enum InputIds {
         RESET_INPUT,
         EXT_CLOCK_INPUT,
+        TUPLET1_RHYTHM_INPUT,
+        TUPLET1_DUR_INPUT,
+        TUPLET2_RHYTHM_INPUT,
+        TUPLET2_DUR_INPUT,
+        TUPLET3_RHYTHM_INPUT,
+        TUPLET3_DUR_INPUT,
         NUM_INPUTS
     };
     enum OutputIds {
@@ -55,17 +61,23 @@ struct PolyrhythmClock : Module {
     float phaseTuplet1 = 0;
     float phaseTuplet2 = 0;
     float phaseTuplet3 = 0;
+    float rhythm1;
+    float rhythm2;
+    float rhythm3;
+    float dur1;
+    float dur2;
+    float dur3;
 
     PolyrhythmClock() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
         configParam(BPM_PARAM, -2.0, 6.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
-        configParam(TUPLET1_RHYTHM_PARAM, 1.0, 13.0, 1.0);
-        configParam(TUPLET1_DUR_PARAM, 1.0, 13.0, 1.0);
-        configParam(TUPLET2_RHYTHM_PARAM, 1.0, 13.0, 1.0);
-        configParam(TUPLET2_DUR_PARAM, 1.0, 13.0, 1.0);
-        configParam(TUPLET3_RHYTHM_PARAM, 1.0, 13.0, 1.0);
-        configParam(TUPLET3_DUR_PARAM, 1.0, 13.0, 1.0);
+        configParam(TUPLET1_RHYTHM_PARAM, 1.0, 24.0, 1.0);
+        configParam(TUPLET1_DUR_PARAM, 1.0, 24.0, 1.0);
+        configParam(TUPLET2_RHYTHM_PARAM, 1.0, 24.0, 1.0);
+        configParam(TUPLET2_DUR_PARAM, 1.0, 24.0, 1.0);
+        configParam(TUPLET3_RHYTHM_PARAM, 1.0, 24.0, 1.0);
+        configParam(TUPLET3_DUR_PARAM, 1.0, 24.0, 1.0);
 
         currentRhythmFraction[0] = params[TUPLET1_RHYTHM_PARAM].getValue() / params[TUPLET1_DUR_PARAM].getValue();
         currentRhythmFraction[1] = params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
@@ -127,6 +139,45 @@ struct PolyrhythmClock : Module {
             clockOn = !clockOn;
         }
 
+        // fraction 1
+        if (inputs[TUPLET1_RHYTHM_INPUT].isConnected()) {
+            rhythm1 = inputs[TUPLET1_RHYTHM_INPUT].getVoltage() * 12.0;
+            // TODO: shit needs fixing
+            rhythm1 = rhythm1 < 0 ? modNeg(rhythm1, 12) : (int)rhythm1 % 12;
+        } else {
+            rhythm1 = params[TUPLET1_RHYTHM_PARAM].getValue();
+        }
+        if (inputs[TUPLET1_DUR_INPUT].isConnected()) {
+            dur1 = inputs[TUPLET1_DUR_INPUT].getVoltage() * 12.0;
+            dur1 = dur1 < 0 ? modNeg(dur1, 12) : (int)dur1 % 12;
+        } else {
+            dur1 = params[TUPLET1_DUR_PARAM].getValue();
+        }
+
+        // fraction 2
+        if (inputs[TUPLET2_RHYTHM_INPUT].isConnected()) {
+            rhythm2 = inputs[TUPLET2_RHYTHM_INPUT].getVoltage() * 12.0;
+        } else {
+            rhythm2 = params[TUPLET2_RHYTHM_PARAM].getValue();
+        }
+        if (inputs[TUPLET2_DUR_INPUT].isConnected()) {
+            dur2 = inputs[TUPLET2_DUR_INPUT].getVoltage() * 12.0;
+        } else {
+            dur2 = params[TUPLET2_DUR_PARAM].getValue();
+        }
+
+        // fraction 3
+        if (inputs[TUPLET3_RHYTHM_INPUT].isConnected()) {
+            rhythm3 = inputs[TUPLET3_RHYTHM_INPUT].getVoltage() * 12.0;
+        } else {
+            rhythm3 = params[TUPLET3_RHYTHM_PARAM].getValue();
+        }
+        if (inputs[TUPLET3_DUR_INPUT].isConnected()) {
+            dur3 = inputs[TUPLET3_DUR_INPUT].getVoltage() * 12.0;
+        } else {
+            dur3 = params[TUPLET3_DUR_PARAM].getValue();
+        }
+
         lights[TOGGLE_LIGHT].setBrightness(clockOn ? 1.0 : 0.0);
 
         for (int i = 0; i < 4; i++) {
@@ -170,9 +221,9 @@ struct PolyrhythmClock : Module {
                 }
             }
 
-            float frac1 = params[TUPLET1_RHYTHM_PARAM].getValue() / params[TUPLET1_DUR_PARAM].getValue();
-            float frac2 = params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
-            float frac3 = params[TUPLET3_RHYTHM_PARAM].getValue() / params[TUPLET3_DUR_PARAM].getValue();
+            float frac1 = rhythm1 / dur1;
+            float frac2 = rhythm2 / dur2;
+            float frac3 = rhythm3 / dur3;
             if (currentRhythmFraction[0] != frac1 && phases[0] == 0.0) {
                 currentRhythmFraction[0] = frac1;
                 phases[1] = 0.0;
@@ -275,8 +326,8 @@ struct RatioDisplay : Widget {
         // nvgFill(args.vg);
         if (module == NULL) return;
 
-        int num1 = (int)module->params[PolyrhythmClock::TUPLET1_RHYTHM_PARAM].getValue();
-        int den1 = (int)module->params[PolyrhythmClock::TUPLET1_DUR_PARAM].getValue();
+        int num1 = (int)module->rhythm1;
+        int den1 = (int)module->dur1;
         text1 = std::to_string(num1) + ":" + std::to_string(den1);
         float xPos1 = num1 < 10 ? 7.6 : 0.0;
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT + NVG_ALIGN_TOP);
@@ -286,8 +337,8 @@ struct RatioDisplay : Widget {
         nvgFontSize(args.vg, fontSize);
 		nvgText(args.vg, xPos1, 0, text1.c_str(), NULL);
 
-        int num2 = (int)module->params[PolyrhythmClock::TUPLET2_RHYTHM_PARAM].getValue();
-        int den2 = (int)module->params[PolyrhythmClock::TUPLET2_DUR_PARAM].getValue();
+        int num2 = (int)module->rhythm2;
+        int den2 = (int)module->dur2;
         text2 = std::to_string(num2) + ":" + std::to_string(den2);
         float xPos2 = num2 < 10 ? 7.6 : 0.0;
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
@@ -297,8 +348,8 @@ struct RatioDisplay : Widget {
         // nvgText(args.vg, 5, 5, text2.c_str(), NULL);
         nvgText(args.vg, xPos2, 75.4, text2.c_str(), NULL);
 
-        int num3 = (int)module->params[PolyrhythmClock::TUPLET3_RHYTHM_PARAM].getValue();
-        int den3 = (int)module->params[PolyrhythmClock::TUPLET3_DUR_PARAM].getValue();
+        int num3 = (int)module->rhythm3;
+        int den3 = (int)module->dur3;
         text3 = std::to_string(num3) + ":" + std::to_string(den3);
         float xPos3 = num3 < 10 ? 7.6 : 0.0;
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
@@ -351,6 +402,8 @@ struct PolyrhythmClockWidget : ModuleWidget {
         // inputs
         addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 76.7), module, PolyrhythmClock::RESET_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 76.7), module, PolyrhythmClock::EXT_CLOCK_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 195.8), module, PolyrhythmClock::TUPLET1_RHYTHM_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 195.8), module, PolyrhythmClock::TUPLET1_DUR_INPUT));
 
         // tuplet 1
         addParam(createParamCentered<BlueInvertKnob>(Vec(19.9, 173.6), module, PolyrhythmClock::TUPLET1_RHYTHM_PARAM));
