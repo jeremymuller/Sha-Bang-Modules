@@ -142,14 +142,13 @@ struct PolyrhythmClock : Module {
         // fraction 1
         if (inputs[TUPLET1_RHYTHM_INPUT].isConnected()) {
             rhythm1 = inputs[TUPLET1_RHYTHM_INPUT].getVoltage() * 12.0;
-            // TODO: shit needs fixing
-            rhythm1 = rhythm1 < 0 ? modNeg(rhythm1, 12) : (int)rhythm1 % 12;
+            rhythm1 = clamp(rhythm1, 0.f, 24.f);
         } else {
             rhythm1 = params[TUPLET1_RHYTHM_PARAM].getValue();
         }
         if (inputs[TUPLET1_DUR_INPUT].isConnected()) {
             dur1 = inputs[TUPLET1_DUR_INPUT].getVoltage() * 12.0;
-            dur1 = dur1 < 0 ? modNeg(dur1, 12) : (int)dur1 % 12;
+            dur1 = clamp(dur1, 1.f, 24.f);
         } else {
             dur1 = params[TUPLET1_DUR_PARAM].getValue();
         }
@@ -157,11 +156,13 @@ struct PolyrhythmClock : Module {
         // fraction 2
         if (inputs[TUPLET2_RHYTHM_INPUT].isConnected()) {
             rhythm2 = inputs[TUPLET2_RHYTHM_INPUT].getVoltage() * 12.0;
+            rhythm2 = clamp(rhythm2, 0.f, 24.f);
         } else {
             rhythm2 = params[TUPLET2_RHYTHM_PARAM].getValue();
         }
         if (inputs[TUPLET2_DUR_INPUT].isConnected()) {
             dur2 = inputs[TUPLET2_DUR_INPUT].getVoltage() * 12.0;
+            dur2 = clamp(dur2, 1.f, 24.f);
         } else {
             dur2 = params[TUPLET2_DUR_PARAM].getValue();
         }
@@ -169,11 +170,13 @@ struct PolyrhythmClock : Module {
         // fraction 3
         if (inputs[TUPLET3_RHYTHM_INPUT].isConnected()) {
             rhythm3 = inputs[TUPLET3_RHYTHM_INPUT].getVoltage() * 12.0;
+            rhythm3 = clamp(rhythm3, 0.f, 24.f);
         } else {
             rhythm3 = params[TUPLET3_RHYTHM_PARAM].getValue();
         }
         if (inputs[TUPLET3_DUR_INPUT].isConnected()) {
             dur3 = inputs[TUPLET3_DUR_INPUT].getVoltage() * 12.0;
+            dur3 = clamp(dur3, 1.f, 24.f);
         } else {
             dur3 = params[TUPLET3_DUR_PARAM].getValue();
         }
@@ -404,6 +407,10 @@ struct PolyrhythmClockWidget : ModuleWidget {
         addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 76.7), module, PolyrhythmClock::EXT_CLOCK_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 195.8), module, PolyrhythmClock::TUPLET1_RHYTHM_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 195.8), module, PolyrhythmClock::TUPLET1_DUR_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 271.1), module, PolyrhythmClock::TUPLET2_RHYTHM_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 271.1), module, PolyrhythmClock::TUPLET2_DUR_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 344.3), module, PolyrhythmClock::TUPLET3_RHYTHM_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 344.3), module, PolyrhythmClock::TUPLET3_DUR_INPUT));
 
         // tuplet 1
         addParam(createParamCentered<BlueInvertKnob>(Vec(19.9, 173.6), module, PolyrhythmClock::TUPLET1_RHYTHM_PARAM));

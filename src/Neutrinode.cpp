@@ -70,7 +70,6 @@ struct Node {
     NVGcolor color;
     NVGcolor lineColor;
     Pulse *pulses = new Pulse[MAX_PARTICLES];
-    // std::vector<Pulse> pulses;
     float lineAlpha;
     float lineWidth;
     int maxConnectedDist = 150;
@@ -79,7 +78,6 @@ struct Node {
     float phase;
     float tempoTime;
     int nodeTempo = maxConnectedDist * 2;
-    // float pulseSpeed = 1.0 / 44100 * 60;
     bool locked = true;
     bool visible = true;
     bool start = true;
@@ -220,11 +218,9 @@ struct Neutrinode : Module, Quantize {
 
     dsp::SchmittTrigger moveTrig, rndTrig, clearTrig, pauseTrig;
     dsp::PulseGenerator gatePulsesAll[16];
-    // float allPitches[16] = {}; // <-- this is weird when two nodes collide on one particle
     Node *nodes = new Node[NUM_OF_NODES];
     Particle *particles = new Particle[MAX_PARTICLES];
     int visibleParticles = 0;
-    // std::vector<Particle> particles;
     bool oneShotMode = false;
     bool movement = false;
     bool pitchChoice = false;
@@ -279,10 +275,6 @@ struct Neutrinode : Module, Quantize {
             oneShotStart[i] = false;
         }
 
-        for (int i = 0; i < 5; i++) {
-            Vec pos = Vec(randRange(16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE - 16));
-            addParticle(pos, i);
-        }
     }
 
     ~Neutrinode() {
@@ -397,6 +389,23 @@ struct Neutrinode : Module, Quantize {
                     }
                 }
             }
+        }
+    }
+
+    void onAdd() override {
+        bool loadedParticles = false;
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            if (particles[i].visible) {
+                loadedParticles = true;
+                break;
+            }
+        }
+        if (!loadedParticles) {
+            addParticle(Vec(randRange(16, DISPLAY_SIZE / 2.0 - 16), randRange(16, DISPLAY_SIZE / 2.0 - 16)), 0);
+            addParticle(Vec(randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE / 2.0 - 16)), 1);
+            addParticle(Vec(randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE / 2.0 - 16), randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE / 2.0 - 16)), 2);
+            addParticle(Vec(randRange(16, DISPLAY_SIZE / 2.0 - 16), randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE - 16)), 3);
+            addParticle(Vec(randRange(16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE - 16)), 4);
         }
     }
 
