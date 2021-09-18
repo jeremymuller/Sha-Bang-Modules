@@ -8,10 +8,10 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 ## Contents:
 
-* [Collider](#collider)
+* [Collider](#collider) :tv:
 * [Cosmosis](#cosmosis) :tv:
 * [Neutrinode](#neutrinode) :tv:
-* [Orbitones](#orbitones)
+* [Orbitones](#orbitones) :tv:
 * [Photron](#photron)
 * [PhotronPanel](#photron-panel)
 * [PolyrhythmClock](#polyrhythm-clock) :tv:
@@ -29,6 +29,10 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 ![Collider](/docs/Collider.png)
 
 *A physical model of various of shakers and wind chimes (maracas, sleigh bells, bamboo chimes, metallic chimes, etc).*
+
+Watch the tutorial: 
+
+[![Collider_video](docs/Collider-video.png)](https://youtu.be/nC_NozyveTc "Collider tutorial")
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
@@ -143,6 +147,10 @@ Watch the tutorial:
 *Physics-based animated LFO with 4 independent attractors.*
 
 Click on the attractors to move position them where you want. Click anywhere else to add particles.
+
+Watch the tutorial:
+
+[![Orbitones_video](docs/Orbitones-video.png)](https://youtu.be/x7X0--AugRU "Orbitones tutorial")
 
 ##### RIGHT-CLICK MENU:
 - Polyphony.
@@ -425,8 +433,9 @@ Watch the tutorial:
 
 ##### TUNINGS AND RHYTHMS
 When `POLYRHYTHM` is turned on, the arpeggiator will repeat notes at a tempo based on a specific tuning. For example, the note A440 vibrates at 440 Hz and an octave higher the note vibrates at 880 Hz. This is a 2:1 ratio, meaning one vibrates twice as fast as the other. Rhythms can work like this as well, one rhythm can repeat at a tempo twice as fast as another. Once we start using other intervals that occur in a scale, we can create some more complex rhythms. However, using equal temperament tuning (which is standard tuning for the overwhelming majority of music and instruments in the Western Hemisphere) divides the octave into 12 equal steps which gives us non-integer ratios. So if you play an A and an E (perfect 5th) in equal temperament, you get a rhythmic ratio of 1 : 1.4983070768766815, or 440Hz : 659.2551138257398Hz, YUCK! So to simplify this, I use the natural harmonic series for the ratios. They make nice integer ratios and are a naturally occuring phenomenon. The table below shows the ratios that are use for each interval.
+
 No. of steps | Musical interval | Ratio
------------- | ----------------  | -----
+------------ | ---------------- | -----
 0 | unison | 1:1
 1 | minor 2<sup>nd</sup> | 16:15
 2 | major 2<sup>nd</sup> | 9:8

@@ -323,6 +323,7 @@ struct Neutrinode : Module, Quantize {
         }
 
         json_object_set_new(rootJ, "start", json_boolean(toggleStart));
+        json_object_set_new(rootJ, "movement", json_boolean(movement));
         json_object_set_new(rootJ, "playMode", json_boolean(oneShotMode));
         json_object_set_new(rootJ, "collisions", json_boolean(nodeCollisionMode));
         json_object_set_new(rootJ, "channels", json_integer(channels));
@@ -338,6 +339,9 @@ struct Neutrinode : Module, Quantize {
 
         json_t *startJ = json_object_get(rootJ, "start");
         if (startJ) toggleStart = json_boolean_value(startJ);
+
+        json_t *movementJ = json_object_get(rootJ, "movement");
+        if (movementJ) movement = json_boolean_value(movementJ);
 
         json_t *playModeJ = json_object_get(rootJ, "playMode");
         if (playModeJ) oneShotMode = json_boolean_value(playModeJ);

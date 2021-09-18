@@ -485,7 +485,9 @@ struct StochSeqWidget : ModuleWidget {
 			// float x = random::uniform() * 260 + 1;
 			// float y = random::uniform() * 50 + 15;
 			// int light = int(random::uniform() * 4);
+
 			int light = int(i / (NUM_OF_LIGHTS/4.0));
+
 			switch(light) {
 				case 0:
 					addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
