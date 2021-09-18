@@ -3,5 +3,7 @@
 /plugin.so
 /plugin.dylib
 /plugin.dll
+Makefile
+MakefileOLD
 TODO.txt
 .DS_Store

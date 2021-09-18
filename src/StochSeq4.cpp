@@ -599,8 +599,8 @@ struct StochSeq4Widget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
-        addInput(createInputCentered<PJ301MPort>(Vec(148.8, 63.8), module, StochSeq4::MASTER_CLOCK_INPUT));
-        addInput(createInputCentered<PJ301MPort>(Vec(180.1, 63.8), module, StochSeq4::RESET_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(151.7, 63.8), module, StochSeq4::MASTER_CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(184, 63.8), module, StochSeq4::RESET_INPUT));
         for (int i = 0; i < 4; i++) {
             addInput(createInputCentered<TinyPJ301M>(Vec(119.4, 124.8 + (i * 57.3)), module, StochSeq4::RANDOM_INPUT + i));
             addInput(createInputCentered<TinyPJ301M>(Vec(151.7, 124.8 + (i * 57.3)), module, StochSeq4::INVERT_INPUT + i));
@@ -622,7 +622,7 @@ struct StochSeq4Widget : ModuleWidget {
 		menu->addChild(new MenuEntry);
 
 		StochSeq4NS::ShowTextItem *showTextItem = new StochSeq4NS::ShowTextItem;
-		showTextItem->text = "Show Slider Percentages";
+		showTextItem->text = "Slider Percentages";
 		if (module->showPercentages) showTextItem->rightText = std::string("show") + " " + RIGHT_ARROW;
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
 		showTextItem->module = module;

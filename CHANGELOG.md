@@ -1,3 +1,8 @@
+v1.3.4 (9-17-2021)
+- Small changes to interfaces of StochSeq and StochSeq4
+- Added Reset input to PolyrhythmClock
+- Updated interface to PolyrhythmClock
+
 v1.3.3 (4-8-2021)
 - Node movement is now saved in patch with Neutrinode
 - Updated lights on StochSeq

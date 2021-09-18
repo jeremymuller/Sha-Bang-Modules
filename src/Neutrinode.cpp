@@ -70,7 +70,6 @@ struct Node {
     NVGcolor color;
     NVGcolor lineColor;
     Pulse *pulses = new Pulse[MAX_PARTICLES];
-    // std::vector<Pulse> pulses;
     float lineAlpha;
     float lineWidth;
     int maxConnectedDist = 150;
@@ -79,7 +78,6 @@ struct Node {
     float phase;
     float tempoTime;
     int nodeTempo = maxConnectedDist * 2;
-    // float pulseSpeed = 1.0 / 44100 * 60;
     bool locked = true;
     bool visible = true;
     bool start = true;
@@ -220,11 +218,9 @@ struct Neutrinode : Module, Quantize {
 
     dsp::SchmittTrigger moveTrig, rndTrig, clearTrig, pauseTrig;
     dsp::PulseGenerator gatePulsesAll[16];
-    // float allPitches[16] = {}; // <-- this is weird when two nodes collide on one particle
     Node *nodes = new Node[NUM_OF_NODES];
     Particle *particles = new Particle[MAX_PARTICLES];
     int visibleParticles = 0;
-    // std::vector<Particle> particles;
     bool oneShotMode = false;
     bool movement = false;
     bool pitchChoice = false;
@@ -279,10 +275,6 @@ struct Neutrinode : Module, Quantize {
             oneShotStart[i] = false;
         }
 
-        for (int i = 0; i < 5; i++) {
-            Vec pos = Vec(randRange(16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE - 16));
-            addParticle(pos, i);
-        }
     }
 
     ~Neutrinode() {
@@ -302,12 +294,14 @@ struct Neutrinode : Module, Quantize {
             json_t *nodePosYJ = json_real(nodes[i].box.pos.y);
             json_t *nodeTempoTimeJ = json_real(nodes[i].tempoTime);
             json_t *nodePhaseJ = json_real(nodes[i].phase);
+            json_t *nodeInitPhaseJ = json_real(nodes[i].initPhase);
             // other data?
             json_array_append_new(dataJ, nodeVisibleJ);
             json_array_append_new(dataJ, nodePosXJ);
             json_array_append_new(dataJ, nodePosYJ);
             json_array_append_new(dataJ, nodeTempoTimeJ);
             json_array_append_new(dataJ, nodePhaseJ);
+            json_array_append_new(dataJ, nodeInitPhaseJ);
 
             // append node
             json_array_append_new(nodesJ, dataJ);
@@ -366,11 +360,13 @@ struct Neutrinode : Module, Quantize {
                     json_t *nodePosYJ = json_array_get(dataJ, 2);
                     json_t *nodeTempoTimeJ = json_array_get(dataJ, 3);
                     json_t *nodePhaseJ = json_array_get(dataJ, 4);
+                    json_t *nodeInitPhaseJ = json_array_get(dataJ, 5);
                     if (nodeVisibleJ) nodes[i].visible = json_boolean_value(nodeVisibleJ);
                     if (nodePosXJ) nodes[i].box.pos.x = json_real_value(nodePosXJ);
                     if (nodePosYJ) nodes[i].box.pos.y = json_real_value(nodePosYJ);
                     if (nodeTempoTimeJ) nodes[i].tempoTime = json_real_value(nodeTempoTimeJ);
                     if (nodePhaseJ) nodes[i].phase = json_real_value(nodePhaseJ);
+                    if (nodeInitPhaseJ) nodes[i].initPhase = json_real_value(nodeInitPhaseJ);
                 }
             }
         }
@@ -397,6 +393,23 @@ struct Neutrinode : Module, Quantize {
                     }
                 }
             }
+        }
+    }
+
+    void onAdd() override {
+        bool loadedParticles = false;
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            if (particles[i].visible) {
+                loadedParticles = true;
+                break;
+            }
+        }
+        if (!loadedParticles) {
+            addParticle(Vec(randRange(16, DISPLAY_SIZE / 2.0 - 16), randRange(16, DISPLAY_SIZE / 2.0 - 16)), 0);
+            addParticle(Vec(randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE / 2.0 - 16)), 1);
+            addParticle(Vec(randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE / 2.0 - 16), randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE / 2.0 - 16)), 2);
+            addParticle(Vec(randRange(16, DISPLAY_SIZE / 2.0 - 16), randRange(DISPLAY_SIZE / 2.0 + 16, DISPLAY_SIZE - 16)), 3);
+            addParticle(Vec(randRange(16, DISPLAY_SIZE - 16), randRange(16, DISPLAY_SIZE - 16)), 4);
         }
     }
 
