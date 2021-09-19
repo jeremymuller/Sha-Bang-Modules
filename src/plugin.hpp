@@ -25,7 +25,6 @@ extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
 extern Model *modelCollider;
-extern Model *modelQuantal;
 
 /************************** INLINE FUNCTIONS **************************/
 
