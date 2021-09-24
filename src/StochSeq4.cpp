@@ -338,6 +338,7 @@ struct StochSeq4Display : Widget {
     float initY = 0;
     float dragX = 0;
     float dragY = 0;
+    float sliderWidth = SLIDER_WIDTH;
     int seqId;
     StochSeq4Display() {}
 
@@ -363,7 +364,7 @@ struct StochSeq4Display : Widget {
 
     void setProbabilities(float currentX, float dragY) {
         if (currentX < 0) currentX = 0;
-        int index = (int)(currentX / SLIDER_WIDTH);
+        int index = (int)(currentX / sliderWidth);
         if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
         if (dragY < 0) dragY = 0;
         else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
@@ -404,50 +405,62 @@ struct StochSeq4Display : Widget {
 
         // sliders
         nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
-        for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+        int visibleSliders = (int)module->params[StochSeq4::LENGTH_PARAM+seqId].getValue();
+        sliderWidth = box.size.x / (float)visibleSliders;
+        for (int i = 0; i < visibleSliders; i++) {
             nvgStrokeWidth(args.vg, (i % 4 == 0 ? 2 : 0.5));
             nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, i * SLIDER_WIDTH, 0);
-            nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
+            nvgMoveTo(args.vg, i * sliderWidth, 0);
+            nvgLineTo(args.vg, i * sliderWidth, box.size.y);
             nvgStroke(args.vg);
 
             float sHeight = getSliderHeight(i);
 
-            if (i < module->params[StochSeq4::LENGTH_PARAM+seqId].getValue()) {
-                nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-                nvgFill(args.vg);
+            nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+            nvgFill(args.vg);
 
-                nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-                nvgFill(args.vg);
-            } else {
-                nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-                nvgFill(args.vg);
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+            nvgFill(args.vg);
 
-                nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-                nvgFill(args.vg);
-            }
+            // if (i < module->params[StochSeq4::LENGTH_PARAM+seqId].getValue()) {
+            //     nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
+            //     nvgFill(args.vg);
+
+            //     nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
+            //     nvgFill(args.vg);
+            // } else {
+            //     nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
+            //     nvgFill(args.vg);
+
+            //     nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
+            //     nvgFill(args.vg);
+            // }
 
             // text
             if (module->showPercentages) {
                 nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
                 nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-                nvgFontSize(args.vg, 9);
-                float w = i * SLIDER_WIDTH;
+                nvgFontSize(args.vg, 9 + (sliderWidth / SLIDER_WIDTH));
+                float w = i * sliderWidth;
                 float yText = sHeight;
                 if (sHeight < SLIDER_TOP + 3) {
                     yText = (SLIDER_TOP * 2) + sHeight + 3;
                     nvgFillColor(args.vg, nvgRGB(0, 0, 0));
                 }
                 std::string probText = std::to_string(static_cast<int>(module->seqs[seqId].gateProbabilities[i] * 100));
-                nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+                nvgText(args.vg, w + sliderWidth/2.0, yText, probText.c_str(), NULL);
             }
 
         }
@@ -472,39 +485,40 @@ struct StochSeq4Display : Widget {
             }
             // nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
             nvgBeginPath(args.vg);
-            nvgRect(args.vg, module->seqs[seqId].gateIndex * SLIDER_WIDTH, 1, SLIDER_WIDTH, box.size.y - 1);
+            nvgRect(args.vg, module->seqs[seqId].gateIndex * sliderWidth, 1, sliderWidth, box.size.y - 1);
             nvgStroke(args.vg);
         }
 
+        /***** OLD STUFF *****/
         // faded out non-pattern
-        if (module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() < NUM_OF_SLIDERS) {
-            float x = module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() * SLIDER_WIDTH;
-            nvgStrokeWidth(args.vg, 2.0);
-            switch (seqId) {
-            case 0:
-                nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
-                break;
-            case 1:
-                nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
-                break;
-            case 2:
-                nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
-                break;
-            case 3:
-                nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-                break;
-            }
-            // nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, x, 0);
-            nvgLineTo(args.vg, x, box.size.y);
-            nvgStroke(args.vg);
+        // if (module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() < NUM_OF_SLIDERS) {
+        //     float x = module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() * SLIDER_WIDTH;
+        //     nvgStrokeWidth(args.vg, 2.0);
+        //     switch (seqId) {
+        //     case 0:
+        //         nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+        //         break;
+        //     case 1:
+        //         nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
+        //         break;
+        //     case 2:
+        //         nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
+        //         break;
+        //     case 3:
+        //         nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+        //         break;
+        //     }
+        //     // nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+        //     nvgBeginPath(args.vg);
+        //     nvgMoveTo(args.vg, x, 0);
+        //     nvgLineTo(args.vg, x, box.size.y);
+        //     nvgStroke(args.vg);
 
-            nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
-            nvgFill(args.vg);
-        }
+        //     nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
+        //     nvgBeginPath(args.vg);
+        //     nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
+        //     nvgFill(args.vg);
+        // }
     }
 };
 

@@ -52,6 +52,7 @@ struct StochSeq : Module, Quantize {
 	int randLight;
 	float pitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
+	int visibleSliders = NUM_OF_SLIDERS;
 
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -279,6 +280,7 @@ struct StochSeqDisplay : Widget {
 	float initY = 0;
 	float dragX = 0;
 	float dragY = 0;
+	float sliderWidth = SLIDER_WIDTH;
 	StochSeqDisplay() {}
 
 	void onButton(const event::Button &e) override {
@@ -302,7 +304,7 @@ struct StochSeqDisplay : Widget {
 	}
 
 	void setProbabilities(float currentX, float dragY) {
-		int index = (int)(currentX / SLIDER_WIDTH);
+		int index = (int)(currentX / sliderWidth);
 		if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
 		if (dragY < 0) dragY = 0;
 		else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
@@ -350,53 +352,65 @@ struct StochSeqDisplay : Widget {
 
 		// sliders
 		nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
-		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+		int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
+		sliderWidth = box.size.x / (float)visibleSliders;
+		for (int i = 0; i < visibleSliders; i++) {
 			nvgStrokeWidth(args.vg, (i % 4 == 0 ? 2 : 0.5));
 			nvgBeginPath(args.vg);
-			nvgMoveTo(args.vg, i * SLIDER_WIDTH, 0);
-			nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
+			nvgMoveTo(args.vg, i * sliderWidth, 0);
+			nvgLineTo(args.vg, i * sliderWidth, box.size.y);
 			nvgStroke(args.vg);
 			float sHeight = getSliderHeight(i);
 
 			// float sHeight = sliderHeights[i];
 
-			if (i < module->params[StochSeq::LENGTH_PARAM].getValue()) {
-				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
-				// nvgFillColor(args.vg, nvgRGBA(0, 238, 255, 191)); // bottoms
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-				nvgFill(args.vg);
+			nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+			nvgFill(args.vg);
 
-				nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
-				// nvgFillColor(args.vg, nvgRGB(0, 238, 255)); // tops
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-				nvgFill(args.vg);
-			} else {
-				nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-				nvgFill(args.vg);
+			nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+			nvgFill(args.vg);
 
-				nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-				nvgFill(args.vg);
-			}
+			// if (i < module->params[StochSeq::LENGTH_PARAM].getValue()) {
+			// 	nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+			// 	// nvgFillColor(args.vg, nvgRGBA(0, 238, 255, 191)); // bottoms
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+			// 	nvgFill(args.vg);
+
+			// 	nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+			// 	// nvgFillColor(args.vg, nvgRGB(0, 238, 255)); // tops
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+			// 	nvgFill(args.vg);
+			// } else {
+			// 	nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+			// 	nvgFill(args.vg);
+
+			// 	nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+			// 	nvgFill(args.vg);
+			// }
 
 			// percentage texts for each slider
 			if (module->showPercentages) {
 				nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
 				nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-				nvgFontSize(args.vg, 9);
-				float w = i * SLIDER_WIDTH;
+				nvgFontSize(args.vg, 9 + (sliderWidth / SLIDER_WIDTH));
+				float w = i * sliderWidth;
 				float yText = sHeight;
 				if (sHeight < SLIDER_TOP + 3) {
 					yText = (SLIDER_TOP * 2) + sHeight + 3;
 					nvgFillColor(args.vg, nvgRGB(0, 0, 0));
 				}
 				std::string probText = std::to_string(static_cast<int>(module->gateProbabilities[i] * 100));
-				nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+				nvgText(args.vg, w + sliderWidth/2.0, yText, probText.c_str(), NULL);
 			}
 		}
 
@@ -406,25 +420,26 @@ struct StochSeqDisplay : Widget {
 			// nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
 			nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
 			nvgBeginPath(args.vg);
-			nvgRect(args.vg, module->gateIndex * SLIDER_WIDTH, 1, SLIDER_WIDTH, box.size.y - 1);
+			nvgRect(args.vg, module->gateIndex * sliderWidth, 1, sliderWidth, box.size.y - 1);
 			nvgStroke(args.vg);
 		}
 
+		/***** OLD STUFF *****/
 		// faded out non-pattern
-		if (module->params[StochSeq::LENGTH_PARAM].getValue() < NUM_OF_SLIDERS) {
-			float x = module->params[StochSeq::LENGTH_PARAM].getValue() * SLIDER_WIDTH;
-			nvgStrokeWidth(args.vg, 2.0);
-			nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-			nvgBeginPath(args.vg);
-			nvgMoveTo(args.vg, x, 0);
-			nvgLineTo(args.vg, x, box.size.y);
-			nvgStroke(args.vg);
+		// if (module->params[StochSeq::LENGTH_PARAM].getValue() < NUM_OF_SLIDERS) {
+		// 	float x = module->params[StochSeq::LENGTH_PARAM].getValue() * SLIDER_WIDTH;
+		// 	nvgStrokeWidth(args.vg, 2.0);
+		// 	nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+		// 	nvgBeginPath(args.vg);
+		// 	nvgMoveTo(args.vg, x, 0);
+		// 	nvgLineTo(args.vg, x, box.size.y);
+		// 	nvgStroke(args.vg);
 
-			nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
-			nvgBeginPath(args.vg);
-			nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
-			nvgFill(args.vg);
-		}
+		// 	nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
+		// 	nvgBeginPath(args.vg);
+		// 	nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
+		// 	nvgFill(args.vg);
+		// }
 	}
 };
 
