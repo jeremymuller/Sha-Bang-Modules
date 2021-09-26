@@ -80,6 +80,8 @@ struct StochSeq4 : Module, Quantize {
     dsp::SchmittTrigger resetTrig;
     bool resetMode = false;
     bool showPercentages = true;
+    bool enableKBShortcuts = true;
+    int focusedSeq = PURPLE_SEQ;
     Sequencer seqs[NUM_SEQS];
 
     StochSeq4() {
@@ -132,6 +134,8 @@ struct StochSeq4 : Module, Quantize {
         json_object_set_new(rootJ, "currentPatterns", currentPatternsJ);
         json_object_set_new(rootJ, "seqsProbs", seqsProbsJ);
         json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
+        json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
+        json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
 
         return rootJ;
     }
@@ -139,6 +143,12 @@ struct StochSeq4 : Module, Quantize {
     void dataFromJson(json_t *rootJ) override {
         json_t *percentagesJ = json_object_get(rootJ, "percentages");
         if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
+
+		json_t *kbshortcutsJ = json_object_get(rootJ, "kbshortcuts");
+		if (kbshortcutsJ) enableKBShortcuts = json_boolean_value(kbshortcutsJ);
+
+        json_t *focusIdJ = json_object_get(rootJ, "focusId");
+        if (focusIdJ) focusedSeq = json_integer_value(focusIdJ);
 
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
@@ -254,6 +264,46 @@ struct StochSeq4 : Module, Quantize {
         delete[] tempArray;
     }
 
+    void shiftFocus() {
+        focusedSeq = (focusedSeq + 1) % NUM_SEQS;
+    }
+
+    void shiftPatternLeft(int id) {
+		float temp = seqs[id].gateProbabilities[0]; // this goes at the end
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			if (i == NUM_OF_SLIDERS-1) {
+				seqs[id].gateProbabilities[i] = temp;
+			} else {
+				seqs[id].gateProbabilities[i] = seqs[id].gateProbabilities[i+1];
+			}
+		}
+	}
+
+	void shiftPatternRight(int id) {
+		float temp = seqs[id].gateProbabilities[NUM_OF_SLIDERS-1]; // this goes at the beginning
+		for (int i = NUM_OF_SLIDERS-1; i >= 0; i--) {
+			if (i == 0) {
+				seqs[id].gateProbabilities[i] = temp;
+			} else {
+                seqs[id].gateProbabilities[i] = seqs[id].gateProbabilities[i - 1];
+            }
+		}
+	}
+
+	void shiftPatternUp(int id) {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			seqs[id].gateProbabilities[i] += 0.05;
+            seqs[id].gateProbabilities[i] = clamp(seqs[id].gateProbabilities[i], 0.0, 1.0);
+        }
+	}
+
+	void shiftPatternDown(int id) {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			seqs[id].gateProbabilities[i] -= 0.05;
+            seqs[id].gateProbabilities[i] = clamp(seqs[id].gateProbabilities[i], 0.0, 1.0);
+        }
+	}
+
     void genPatterns(int c, int id) {
 		switch (c) {
 			case 0:
@@ -330,6 +380,32 @@ namespace StochSeq4NS {
             return menu;
         }
     };
+
+	struct EnableShortcutsValueItem : MenuItem {
+		StochSeq4 *module;
+		bool enableKBShortcuts;
+		void onAction(const event::Action &e) override {
+			module->enableKBShortcuts = enableKBShortcuts;
+		}
+	};
+
+	struct EnableShortcutsItem : MenuItem {
+		StochSeq4 *module;
+		Menu *createChildMenu() override {
+			Menu *menu = new Menu;
+			std::vector<std::string> enabled = {"on", "off"};
+            for (int i = 0; i < 2; i++) {
+                EnableShortcutsValueItem *item = new EnableShortcutsValueItem;
+                item->text = enabled[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->enableKBShortcuts == isOn);
+                item->module = module;
+				item->enableKBShortcuts = isOn;
+				menu->addChild(item);
+            }
+            return menu;
+		}
+	};
 }
 
 struct StochSeq4Display : Widget {
@@ -489,6 +565,31 @@ struct StochSeq4Display : Widget {
             nvgStroke(args.vg);
         }
 
+        // focus rect
+        if (module->enableKBShortcuts) {
+            if (module->focusedSeq == seqId) {
+                nvgStrokeWidth(args.vg, 4.0);
+                // nvgStrokeColor(args.vg, nvgRGB(255, 255, 255));
+                switch (seqId) {
+                    case 0:
+                        nvgStrokeColor(args.vg, nvgRGBA(128, 0, 219, 100));
+                        break;
+                    case 1:
+                        nvgStrokeColor(args.vg, nvgRGBA(38, 0, 255, 100));
+                        break;
+                    case 2:
+                        nvgStrokeColor(args.vg, nvgRGBA(0, 238, 255, 100));
+                        break;
+                    case 3:
+                        nvgStrokeColor(args.vg, nvgRGBA(255, 0, 0, 100));
+                        break;
+                }
+                nvgBeginPath(args.vg);
+                nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+                nvgStroke(args.vg);
+            }
+        }
+
         /***** OLD STUFF *****/
         // faded out non-pattern
         // if (module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() < NUM_OF_SLIDERS) {
@@ -641,7 +742,52 @@ struct StochSeq4Widget : ModuleWidget {
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
 		showTextItem->module = module;
 		menu->addChild(showTextItem);
+
+        StochSeq4NS::EnableShortcutsItem *enableShortcutItem = new StochSeq4NS::EnableShortcutsItem;
+		enableShortcutItem->text = "Keyboard Shortcuts";
+		if (module->enableKBShortcuts) enableShortcutItem->rightText = std::string("on") + " " + RIGHT_ARROW;
+		else enableShortcutItem->rightText = std::string("off") + " " + RIGHT_ARROW;
+		enableShortcutItem->module = module;
+		menu->addChild(enableShortcutItem);
 	}
+
+    void onHoverKey(const event::HoverKey &e) override {
+        StochSeq4 *module = dynamic_cast<StochSeq4 *>(this->module);
+		if (!module->enableKBShortcuts) {
+			ModuleWidget::onHoverKey(e);
+			return;
+		}
+
+        if (e.key == GLFW_KEY_ENTER && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftFocus();
+            }
+        } else if (e.key == GLFW_KEY_LEFT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternLeft(module->focusedSeq);
+			}
+		} else if (e.key == GLFW_KEY_RIGHT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftPatternRight(module->focusedSeq);
+            }
+		} else if (e.key == GLFW_KEY_UP && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftPatternUp(module->focusedSeq);
+            }
+		} else if (e.key == GLFW_KEY_DOWN && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftPatternDown(module->focusedSeq);
+            }
+		} else {
+			ModuleWidget::onHoverKey(e);
+			// OpaqueWidget::onHoverKey(e);
+		}
+    } 
 
 };
 

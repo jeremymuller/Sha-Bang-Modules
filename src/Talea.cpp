@@ -164,6 +164,9 @@ struct Talea : Module {
     };
     enum BPMModes {
         BPM_CV,
+        BPM_P2,
+        BPM_P4,
+        BPM_P8,
         BPM_P12,
         BPM_P24,
         NUM_BPM_MODES
@@ -436,17 +439,40 @@ struct Talea : Module {
         if (inputs[EXT_CLOCK_INPUT].isConnected()) {
             if (bpmInputMode == BPM_CV) {
                 clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
-            } else if (bpmInputMode == BPM_P12) {
-                ppqn = 12; 
-                bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
-                if (bpmDetect)
-                    clockOn = true;
             } else {
-                ppqn = 24;
                 bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
                 if (bpmDetect)
                     clockOn = true;
+                switch(bpmInputMode) {
+                    case BPM_P2:
+                        ppqn = 2;
+                        break;
+                    case BPM_P4:
+                        ppqn = 4;
+                        break;
+                    case BPM_P8:
+                        ppqn = 8;
+                        break;
+                    case BPM_P12:
+                        ppqn = 12;
+                        break;
+                    case BPM_P24:
+                        ppqn = 24;
+                        break;
+                }
             }
+            
+            // else if (bpmInputMode == BPM_P12) {
+            //     ppqn = 12; 
+            //     bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
+            //     if (bpmDetect)
+            //         clockOn = true;
+            // } else {
+            //     ppqn = 24;
+            //     bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
+            //     if (bpmDetect)
+            //         clockOn = true;
+            // }
         } else {
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
@@ -575,7 +601,7 @@ struct ExternalClockModeItem : MenuItem {
     Talea *module;
     Menu *createChildMenu() override {
         Menu *menu = new Menu;
-        std::vector<std::string> bpmModeNames = {"CV", "12 PPQN", "24 PPQN"};
+        std::vector<std::string> bpmModeNames = {"CV (0V = 120 bpm)", "2 PPQN", "4 PPQN", "8 PPQN", "12 PPQN", "24 PPQN"};
         for (int i = 0; i < Talea::NUM_BPM_MODES; i++) {
             Talea::BPMModes bpmMode = (Talea::BPMModes) i;
             ExternalClockModeValueItem *item = new ExternalClockModeValueItem;

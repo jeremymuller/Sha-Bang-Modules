@@ -52,7 +52,7 @@ struct StochSeq : Module, Quantize {
 	int randLight;
 	float pitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
-	int visibleSliders = NUM_OF_SLIDERS;
+	bool enableKBShortcuts = true;
 
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -87,6 +87,7 @@ struct StochSeq : Module, Quantize {
 		}
 		json_object_set_new(rootJ, "probs", probsJ);
 		json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
+		json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
 
 		return rootJ;
 	}
@@ -94,6 +95,9 @@ struct StochSeq : Module, Quantize {
 	void dataFromJson(json_t *rootJ) override {
         json_t *percentagesJ = json_object_get(rootJ, "percentages");
         if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
+
+		json_t *kbshortcutsJ = json_object_get(rootJ, "kbshortcuts");
+		if (kbshortcutsJ) enableKBShortcuts = json_boolean_value(kbshortcutsJ);
 
 		json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
 		if (currentPatternJ) {
@@ -196,6 +200,42 @@ struct StochSeq : Module, Quantize {
 		delete[] tempArray;
 	}
 
+	void shiftPatternLeft() {
+		float temp = gateProbabilities[0]; // this goes at the end
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			if (i == NUM_OF_SLIDERS-1) {
+				gateProbabilities[i] = temp;
+			} else {
+				gateProbabilities[i] = gateProbabilities[i+1];
+			}
+		}
+	}
+
+	void shiftPatternRight() {
+		float temp = gateProbabilities[NUM_OF_SLIDERS-1]; // this goes at the beginning
+		for (int i = NUM_OF_SLIDERS-1; i >= 0; i--) {
+			if (i == 0) {
+				gateProbabilities[i] = temp;
+			} else {
+				gateProbabilities[i] = gateProbabilities[i-1];
+			}
+		}
+	}
+
+	void shiftPatternUp() {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			gateProbabilities[i] += 0.05;
+			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
+		}
+	}
+
+	void shiftPatternDown() {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			gateProbabilities[i] -= 0.05;
+			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
+		}
+	}
+
 	void genPatterns(int c) {
 		switch (c) {
 			case 0:
@@ -272,6 +312,32 @@ namespace StochSeqNS {
             return menu;
         }
     };
+
+	struct EnableShortcutsValueItem : MenuItem {
+		StochSeq *module;
+		bool enableKBShortcuts;
+		void onAction(const event::Action &e) override {
+			module->enableKBShortcuts = enableKBShortcuts;
+		}
+	};
+
+	struct EnableShortcutsItem : MenuItem {
+		StochSeq *module;
+		Menu *createChildMenu() override {
+			Menu *menu = new Menu;
+			std::vector<std::string> enabled = {"on", "off"};
+            for (int i = 0; i < 2; i++) {
+                EnableShortcutsValueItem *item = new EnableShortcutsValueItem;
+                item->text = enabled[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->enableKBShortcuts == isOn);
+                item->module = module;
+				item->enableKBShortcuts = isOn;
+				menu->addChild(item);
+            }
+            return menu;
+		}
+	};
 }
 
 struct StochSeqDisplay : Widget {
@@ -552,7 +618,118 @@ struct StochSeqWidget : ModuleWidget {
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
 		showTextItem->module = module;
 		menu->addChild(showTextItem);
+
+		StochSeqNS::EnableShortcutsItem *enableShortcutItem = new StochSeqNS::EnableShortcutsItem;
+		enableShortcutItem->text = "Keyboard Shortcuts";
+		if (module->enableKBShortcuts) enableShortcutItem->rightText = std::string("on") + " " + RIGHT_ARROW;
+		else enableShortcutItem->rightText = std::string("off") + " " + RIGHT_ARROW;
+		enableShortcutItem->module = module;
+		menu->addChild(enableShortcutItem);
 	}
+
+	void onHoverKey(const event::HoverKey &e) override {
+		StochSeq *module = dynamic_cast<StochSeq *>(this->module);
+		if (!module->enableKBShortcuts) {
+			ModuleWidget::onHoverKey(e);
+			return;
+		}
+
+		if (e.key == GLFW_KEY_LEFT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternLeft();
+			}
+		} else if (e.key == GLFW_KEY_RIGHT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternRight();
+			}
+		} else if (e.key == GLFW_KEY_UP && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternUp();
+			}
+		} else if (e.key == GLFW_KEY_DOWN && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternDown();
+			}
+		} else {
+			ModuleWidget::onHoverKey(e);
+			// OpaqueWidget::onHoverKey(e);
+		}
+
+		// OpaqueWidget::onHoverKey(e);
+		// if (e.isConsumed())
+		// 	return;
+
+		// if (e.action == GLFW_PRESS || e.action == RACK_HELD) {
+		// 	StochSeq *module = dynamic_cast<StochSeq *>(this->module);
+
+		// 	if (e.key == GLFW_KEY_LEFT_BRACKET && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+		// 		module->shiftPatternLeft();
+		// 		e.consume(this);
+		// 	} else {
+		// 		OpaqueWidget::onHoverKey(e);
+		// 	}
+			// else if (e.key == GLFW_KEY_RIGHT_BRACKET && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			// 	module->shiftPatternRight();
+			// 	e.consume(this);
+			// }
+		// } 
+		// else {
+		// 	OpaqueWidget::onHoverKey(e);
+		// }
+		// else if (e.action == GLFW_PRESS && e.key == GLFW_KEY_RIGHT_BRACKET)
+		// {
+		// 	if ((e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+		// 		module->shiftPatternRight();
+		// 		e.consume(this);
+		// 	}
+		// }
+		// else {
+		// 	OpaqueWidget::onHoverKey(e);
+		// }
+			// if (e.action == GLFW_PRESS) {
+			// 	// bool control = (e.mods & RACK_MOD_MASK) == GLFW_MOD_CONTROL;
+			// 	bool tabAndCtrl = e.key == (GLFW_KEY_TAB | RACK_MOD_CTRL);
+			// 	bool left = e.key == GLFW_KEY_LEFT;
+			// 	bool ctl = (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL;
+
+			// 	if (tabAndCtrl) {
+			// 		e.consume(this);
+			// 		DEBUG("tab + control!!");
+			// 	}
+			// 	// if (tab) {
+			// 	// 	e.consume(this);
+			// 	// 	DEBUG("tab + control!!");
+			// 	// } else if (left) {
+			// 	// 	e.consume(this);
+			// 	// 	DEBUG("tab + left!!!!");
+			// 	// }
+			// } else {
+			// 	OpaqueWidget::onHoverKey(e);
+			// }
+
+			// if (e.action == GLFW_PRESS && e.key == GLFW_KEY_LEFT) {
+			// 	DEBUG("got here");
+			// 	e.consume(this);
+			// }
+
+			// if (e.action == GLFW_PRESS) {
+			// 	if (e.key == GLFW_KEY_LEFT) {
+			// 		e.consume(this);
+			// 		DEBUG("actino!!");
+			// 	}
+			// }
+			// if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
+			// 	DEBUG("SHIFT!!!!");
+			// }
+			// if (e.mods == GLFW_MOD_SHIFT) {
+			// 	e.consume(this);
+			// 	DEBUG("shift!!!!");
+			// }
+		}
 };
 
 
