@@ -10,10 +10,12 @@ struct Sequencer {
     dsp::SchmittTrigger randomTrig;
     dsp::SchmittTrigger invertTrig;
     dsp::PulseGenerator gatePulse;
+    dsp::PulseGenerator notGatePulse;
     int seqLength;
     int gateIndex;
     int currentPattern = 0;
     float volts = 0.0;
+    float invVolts = 0.0;
     float gateProbabilities[NUM_OF_SLIDERS];
 
     Sequencer() {
@@ -30,11 +32,14 @@ struct Sequencer {
         // gate
         float prob = gateProbabilities[gateIndex];
         if (random::uniform() < prob) {
-            gatePulse.trigger(1e-3);
+            gatePulse.trigger(1e-1);
+        } else {
+            notGatePulse.trigger(1e-1);
         }
 
         // pitch
         volts = prob * (2 * spread) - spread;
+        invVolts = (1.0 - prob) * (2 * spread) - spread;
     }
 };
 
@@ -67,9 +72,13 @@ struct StochSeq4 : Module, Quantize {
 		NUM_INPUTS = DIMINUTION_INPUT + NUM_SEQS
 	};
 	enum OutputIds {
-		GATES_OUTPUT = NUM_SEQS,
-		VOLTS_OUTPUT = GATES_OUTPUT + NUM_SEQS,
-		NUM_OUTPUTS = VOLTS_OUTPUT + NUM_SEQS
+        OR_OUTPUT,
+        XOR_OUTPUT,
+		GATES_OUTPUT = XOR_OUTPUT + NUM_SEQS,
+        NOT_GATES_OUTPUT = GATES_OUTPUT + NUM_SEQS,
+		VOLTS_OUTPUT = NOT_GATES_OUTPUT + NUM_SEQS,
+        INV_VOLTS_OUTPUT = VOLTS_OUTPUT + NUM_SEQS,
+		NUM_OUTPUTS = INV_VOLTS_OUTPUT + NUM_SEQS
 	};
 	enum LightIds {
 		NUM_LIGHTS
@@ -214,12 +223,26 @@ struct StochSeq4 : Module, Quantize {
         }
         int rootNote = params[ROOT_NOTE_PARAM].getValue();
         int scale = params[SCALE_PARAM].getValue();
+        bool orGate = false;
+        int xorGate = 0;
         for (int i = 0; i < NUM_SEQS; i++) {
             float pitchVoltage = Quantize::quantizeRawVoltage(seqs[i].volts, rootNote, scale);
+            float invPitchVoltage = Quantize::quantizeRawVoltage(seqs[i].invVolts, rootNote, scale);
             bool pulse = seqs[i].gatePulse.process(1.0 / args.sampleRate);
+            bool notPulse = seqs[i].notGatePulse.process(1.0 / args.sampleRate);
+            if (pulse) {
+                orGate = true;
+                xorGate++;
+            }
+            
             outputs[GATES_OUTPUT + i].setVoltage(pulse ? 10.0 : 0.0);
+            outputs[NOT_GATES_OUTPUT + i].setVoltage(notPulse ? 10.0 : 0.0);
             outputs[VOLTS_OUTPUT + i].setVoltage(pitchVoltage);
+            outputs[INV_VOLTS_OUTPUT + i].setVoltage(invPitchVoltage);
         }
+
+        outputs[OR_OUTPUT].setVoltage(orGate ? 10.0 : 0.0);
+        outputs[XOR_OUTPUT].setVoltage((xorGate == 1) ? 10.0 : 0.0);
     }
 
     void clockStep() {
@@ -631,28 +654,28 @@ struct StochSeq4Widget : ModuleWidget {
         StochSeq4Display *displayPurple = new StochSeq4Display();
         displayPurple->module = module;
         displayPurple->seqId = StochSeq4::PURPLE_SEQ;
-        displayPurple->box.pos = Vec(211.1, 18.2);
+        displayPurple->box.pos = Vec(277.6, 18.2);
         displayPurple->box.size = Vec(480, 80.7);
         addChild(displayPurple);
 
         StochSeq4Display *displayBlue = new StochSeq4Display();
         displayBlue->module = module;
         displayBlue->seqId = StochSeq4::BLUE_SEQ;
-        displayBlue->box.pos = Vec(211.1, 105.7);
+        displayBlue->box.pos = Vec(277.6, 105.7);
         displayBlue->box.size = Vec(480, 80.7);
         addChild(displayBlue);
 
         StochSeq4Display *displayAqua = new StochSeq4Display();
         displayAqua->module = module;
         displayAqua->seqId = StochSeq4::AQUA_SEQ;
-        displayAqua->box.pos = Vec(211.1, 193.2);
+        displayAqua->box.pos = Vec(277.6, 193.2);
         displayAqua->box.size = Vec(480, 80.7);
         addChild(displayAqua);
 
         StochSeq4Display *displayRed = new StochSeq4Display();
         displayRed->module = module;
         displayRed->seqId = StochSeq4::RED_SEQ;
-        displayRed->box.pos = Vec(211.1, 280.6);
+        displayRed->box.pos = Vec(277.6, 280.6);
         displayRed->box.size = Vec(480, 80.7);
         addChild(displayRed);
 
@@ -692,10 +715,10 @@ struct StochSeq4Widget : ModuleWidget {
         addParam(createParamCentered<TinyAquaButton>(Vec(184, 219.8), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::AQUA_SEQ));
         addParam(createParamCentered<TinyRedButton>(Vec(184, 278), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::RED_SEQ));
         // spreads
-        addParam(createParamCentered<TinyPurpleKnob>(Vec(750.6, 66.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<TinyBlueKnob>(Vec(750.6, 153.7), module, StochSeq4::SPREAD_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<TinyAquaKnob>(Vec(750.6, 241.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<TinyRedKnob>(Vec(750.6, 328.6), module, StochSeq4::SPREAD_PARAM + StochSeq4::RED_SEQ));
+        addParam(createParamCentered<TinyPurpleKnob>(Vec(264.6, 114.8), module, StochSeq4::SPREAD_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<TinyBlueKnob>(Vec(264.6, 172.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<TinyAquaKnob>(Vec(264.6, 229.5), module, StochSeq4::SPREAD_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<TinyRedKnob>(Vec(264.6, 286.9), module, StochSeq4::SPREAD_PARAM + StochSeq4::RED_SEQ));
 
         // note and scale knobs
         PurpleNoteKnob *noteKnob = dynamic_cast<PurpleNoteKnob *>(createParamCentered<PurpleNoteKnob>(Vec(26.3, 321), module, StochSeq4::ROOT_NOTE_PARAM));
@@ -722,14 +745,26 @@ struct StochSeq4Widget : ModuleWidget {
             addInput(createInputCentered<TinyPJ301M>(Vec(184, 124.8 + (i * 57.3)), module, StochSeq4::DIMINUTION_INPUT + i));
         }
 
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(705.3, 66.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(728.7, 66.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(705.3, 153.7), module, StochSeq4::GATES_OUTPUT + StochSeq4::BLUE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(728.7, 153.7), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(705.3, 241.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::AQUA_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(728.7, 241.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(705.3, 328.6), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(728.7, 328.6), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(219.3, 104.8), module, StochSeq4::GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(219.3, 124.8), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(242.7, 104.8), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(242.7, 124.8), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(219.3, 162.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(219.3, 182.1), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(242.7, 162.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(242.7, 182.1), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(219.3, 219.6), module, StochSeq4::GATES_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(219.3, 239.5), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(242.7, 219.6), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(242.7, 239.5), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(219.3, 276.9), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(219.3, 296.9), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(242.7, 276.9), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(242.7, 296.9), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+
+        // or, xor
+        addOutput(createOutputCentered<PJ301MPort>(Vec(226.4, 345.4), module, StochSeq4::OR_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(254.9, 345.4), module, StochSeq4::XOR_OUTPUT));
     }
 
 	void appendContextMenu(Menu *menu) override {
