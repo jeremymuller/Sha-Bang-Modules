@@ -7,6 +7,7 @@
 
 struct StochSeq : Module, Quantize {
 	enum ParamIds {
+		RESET_PARAM,
 		PATTERN_PARAM,
 		RANDOM_PARAM,
 		INVERT_PARAM,
@@ -28,6 +29,8 @@ struct StochSeq : Module, Quantize {
 	enum OutputIds {
 		GATES_OUTPUT = NUM_OF_SLIDERS,
 		GATE_MAIN_OUTPUT = GATES_OUTPUT + NUM_OF_SLIDERS,
+		NOT_GATE_MAIN_OUTPUT,
+		INV_VOLT_OUTPUT,
 		VOLT_OUTPUT,
 		NUM_OUTPUTS
 	};
@@ -42,6 +45,7 @@ struct StochSeq : Module, Quantize {
 	dsp::SchmittTrigger randomTrig;
 	dsp::SchmittTrigger invertTrig;
 	dsp::PulseGenerator gatePulse;
+	dsp::PulseGenerator notGatePulse;
 	int seqLength = NUM_OF_SLIDERS;
 	int gateIndex = -1;
 	int currentGateOut = gateIndex;
@@ -51,11 +55,13 @@ struct StochSeq : Module, Quantize {
 	bool showPercentages = true;
 	int randLight;
 	float pitchVoltage = 0.0;
+	float invPitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
 	bool enableKBShortcuts = true;
 
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+		configParam(RESET_PARAM, 0.0, 1.0, 0.0, "reset");
 		configParam(PATTERN_PARAM, 0.0, 7.0, 0.0, "pattern");
 		configParam(INVERT_PARAM, 0.0, 1.0, 0.0, "invert pattern");
 		configParam(RANDOM_PARAM, 0.0, 1.0, 0.0, "randomize pattern");
@@ -115,7 +121,7 @@ struct StochSeq : Module, Quantize {
 	}
 
 	void process(const ProcessArgs& args) override {
-		if (resetTrig.process(inputs[RESET_INPUT].getVoltage())) {
+		if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
 			resetMode = true;
 		}
 		if ((int)params[PATTERN_PARAM].getValue() != currentPattern) {
@@ -141,9 +147,12 @@ struct StochSeq : Module, Quantize {
 		}
 
 		bool gateVolt = gatePulse.process(1.0 / args.sampleRate);
+		bool notGateVolt = notGatePulse.process(1.0 / args.sampleRate);
 		// float blink = lightBlink ? 1.0 : 0.0;
 		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt ? 10.0 : 0.0);
 		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt ? 10.0 : 0.0);
+		outputs[NOT_GATE_MAIN_OUTPUT].setVoltage(notGateVolt ? 10.0 : 0.0); // todo
+		outputs[INV_VOLT_OUTPUT].setVoltage(invPitchVoltage);
 		outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
 		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
@@ -164,15 +173,20 @@ struct StochSeq : Module, Quantize {
 
 		float prob = gateProbabilities[gateIndex];
 		if (random::uniform() < prob) {
-			gatePulse.trigger(1e-3);
+			gatePulse.trigger(1e-1);
 			currentGateOut = gateIndex;
 			lightBlink = true;
 			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
+		} else {
+			notGatePulse.trigger(1e-1);
 		}
 
 		float spread = params[SPREAD_PARAM].getValue();
 		float volts = prob * (2 * spread) - spread;
+		float invVolts = (1.0 - prob) * (2 * spread) - spread;
 		pitchVoltage = Quantize::quantizeRawVoltage(volts, rootNote, scale);
+		invPitchVoltage = Quantize::quantizeRawVoltage(invVolts, rootNote, scale);
+
 		// pitchVoltage = prob * (2 * spread) - spread;
 	}
 
@@ -525,12 +539,13 @@ struct StochSeqWidget : ModuleWidget {
 		addChild(createWidget<JeremyScrew>(Vec(457.1, 2)));
 		addChild(createWidget<JeremyScrew>(Vec(457.1, box.size.y-14)));
 
+		addParam(createParamCentered<TinyBlueButton>(Vec(71.4, 256.8), module, StochSeq::RESET_PARAM));
 		addParam(createParamCentered<BlueInvertKnob>(Vec(105.9, 228.7), module, StochSeq::LENGTH_PARAM));
 		addParam(createParamCentered<BlueInvertKnob>(Vec(140.5, 228.7), module, StochSeq::PATTERN_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(175, 228.7), module, StochSeq::RANDOM_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(209.5, 228.7), module, StochSeq::INVERT_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(244.1, 228.7), module, StochSeq::DIMINUTION_PARAM));
-		addParam(createParamCentered<BlueKnob>(Vec(399.5, 256.8), module, StochSeq::SPREAD_PARAM));
+		addParam(createParamCentered<BlueKnob>(Vec(451.7, 256.8), module, StochSeq::SPREAD_PARAM));
 
 		// note and scale knobs
 		BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(282, 228.7), module, StochSeq::ROOT_NOTE_PARAM));
@@ -555,7 +570,9 @@ struct StochSeqWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 228.7), module, StochSeq::CLOCK_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 228.7), module, StochSeq::RESET_INPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(360.7, 228.7), module, StochSeq::GATE_MAIN_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(399.5, 228.7), module, StochSeq::VOLT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(397.1, 228.7), module, StochSeq::NOT_GATE_MAIN_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(433.5, 228.7), module, StochSeq::INV_VOLT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(469.9, 228.7), module, StochSeq::VOLT_OUTPUT));
 
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
@@ -658,78 +675,7 @@ struct StochSeqWidget : ModuleWidget {
 			ModuleWidget::onHoverKey(e);
 			// OpaqueWidget::onHoverKey(e);
 		}
-
-		// OpaqueWidget::onHoverKey(e);
-		// if (e.isConsumed())
-		// 	return;
-
-		// if (e.action == GLFW_PRESS || e.action == RACK_HELD) {
-		// 	StochSeq *module = dynamic_cast<StochSeq *>(this->module);
-
-		// 	if (e.key == GLFW_KEY_LEFT_BRACKET && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
-		// 		module->shiftPatternLeft();
-		// 		e.consume(this);
-		// 	} else {
-		// 		OpaqueWidget::onHoverKey(e);
-		// 	}
-			// else if (e.key == GLFW_KEY_RIGHT_BRACKET && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
-			// 	module->shiftPatternRight();
-			// 	e.consume(this);
-			// }
-		// } 
-		// else {
-		// 	OpaqueWidget::onHoverKey(e);
-		// }
-		// else if (e.action == GLFW_PRESS && e.key == GLFW_KEY_RIGHT_BRACKET)
-		// {
-		// 	if ((e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
-		// 		module->shiftPatternRight();
-		// 		e.consume(this);
-		// 	}
-		// }
-		// else {
-		// 	OpaqueWidget::onHoverKey(e);
-		// }
-			// if (e.action == GLFW_PRESS) {
-			// 	// bool control = (e.mods & RACK_MOD_MASK) == GLFW_MOD_CONTROL;
-			// 	bool tabAndCtrl = e.key == (GLFW_KEY_TAB | RACK_MOD_CTRL);
-			// 	bool left = e.key == GLFW_KEY_LEFT;
-			// 	bool ctl = (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL;
-
-			// 	if (tabAndCtrl) {
-			// 		e.consume(this);
-			// 		DEBUG("tab + control!!");
-			// 	}
-			// 	// if (tab) {
-			// 	// 	e.consume(this);
-			// 	// 	DEBUG("tab + control!!");
-			// 	// } else if (left) {
-			// 	// 	e.consume(this);
-			// 	// 	DEBUG("tab + left!!!!");
-			// 	// }
-			// } else {
-			// 	OpaqueWidget::onHoverKey(e);
-			// }
-
-			// if (e.action == GLFW_PRESS && e.key == GLFW_KEY_LEFT) {
-			// 	DEBUG("got here");
-			// 	e.consume(this);
-			// }
-
-			// if (e.action == GLFW_PRESS) {
-			// 	if (e.key == GLFW_KEY_LEFT) {
-			// 		e.consume(this);
-			// 		DEBUG("actino!!");
-			// 	}
-			// }
-			// if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
-			// 	DEBUG("SHIFT!!!!");
-			// }
-			// if (e.mods == GLFW_MOD_SHIFT) {
-			// 	e.consume(this);
-			// 	DEBUG("shift!!!!");
-			// }
-		}
+	}
 };
 
 
