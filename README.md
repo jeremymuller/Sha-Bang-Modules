@@ -325,6 +325,9 @@ Watch the tutorial:
 
 [![StochSeq_video](docs/StochSeq-video.png)](https://youtu.be/QtNtazAv73M "Stochastic Sequencer tutorial")
 
+##### KEYBOARD SHORTCUTS:
+- `CTL+LEFT` shifts pattern left
+
 ##### INPUTS:
 - `CLK` controls timing.
 - `RST` resets sequence to beginning of timeline.
@@ -344,7 +347,9 @@ Watch the tutorial:
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
 - `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
+- `INV` outputs invert of `V/OCT`.
 - `GATES` outputs correspond to each position in the sequence.
+- `NOT` outputs only when `GATE` isn't triggered.
 
 ---
 
@@ -381,7 +386,11 @@ Watch the tutorial:
 - `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current individual sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
+- `NOT` outputs only when `GATE` isn't triggered.
 - `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
+- `INV` outputs invert of `V/OCT`.
+- `OR` outputs pulse when at least one of the gates is on.
+- `XOR` outputs pulse when ONLY one gate is on. 
 
 ---
 
