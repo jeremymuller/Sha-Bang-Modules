@@ -3,10 +3,12 @@
 #define DISPLAY_SIZE_WIDTH 690
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
+#define BUFFER_SIZE 512 // 512
 
 struct Photron : Module {
     enum ParamIds {
         COLOR_PARAM,
+        TRIG_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -17,6 +19,8 @@ struct Photron : Module {
         COLOR_TRIGGER_INPUT,
         INVERT_INPUT,
         RESET_INPUT,
+        X_INPUT,
+        Y_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -26,8 +30,15 @@ struct Photron : Module {
 		NUM_LIGHTS
 	};
 
+    float bufferX[BUFFER_SIZE] = {};
+    float bufferY[BUFFER_SIZE] = {};
+    int bufferIndex = 0;
+    float frameIndex = 0;
+    dsp::SchmittTrigger resetTrigger;
+
     dsp::SchmittTrigger colorTrig, invertTrig, resetTrig, velTrig;
     bool isColor = true;
+    bool lissajous = true;
     int resetIndex = 0;
     int checkParams = 0;
     // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
@@ -185,6 +196,54 @@ struct Photron : Module {
         if (sr >= 1.0) {
             sr = 0.0;
         }
+
+        /************ SCOPE STUFF ************/
+        // Compute time
+        float deltaTime = powf(2.0, -14.0); // powf(2.0, params[TIME_PARAM].value);
+        int frameCount = (int)ceilf(deltaTime * args.sampleRate);
+
+        // Add frame to buffer
+        if (bufferIndex < BUFFER_SIZE) {
+            if (++frameIndex > frameCount) {
+                frameIndex = 0;
+                bufferX[bufferIndex] = inputs[X_INPUT].value;
+                bufferY[bufferIndex] = inputs[Y_INPUT].value;
+                bufferIndex++;
+            }
+        }
+
+        	// Are we waiting on the next trigger?
+	if (bufferIndex >= BUFFER_SIZE) {
+		// Trigger immediately if external but nothing plugged in, or in Lissajous mode
+		// if (lissajous || (external && !inputs[TRIG_INPUT].isConnected())) {
+        if (lissajous) {
+			bufferIndex = 0;
+			frameIndex = 0;
+			return;
+		}
+
+		// Reset the Schmitt trigger so we don't trigger immediately if the input is high
+		if (frameIndex == 0) {
+			resetTrigger.reset();
+		}
+		frameIndex++;
+
+		// Must go below 0.1V to trigger
+		// resetTrigger.setThresholds(params[TRIG_PARAM].getValue() - 0.1, params[TRIG_PARAM].getValue());
+		// float gate = external ? inputs[TRIG_INPUT].getVoltage() : inputs[X_INPUT].getVoltage();
+        float gate = inputs[X_INPUT].getVoltage();
+
+		// Reset if triggered
+		float holdTime = 0.1;
+		if (resetTrigger.process(gate) || (frameIndex >= args.sampleRate * holdTime)) {
+			bufferIndex = 0; frameIndex = 0; return;
+		}
+
+		// Reset if we've waited too long
+		if (frameIndex >= args.sampleRate * holdTime) {
+			bufferIndex = 0; frameIndex = 0; return;
+		}
+	}
     }
 
     void resetBlocks() {
@@ -265,6 +324,41 @@ struct PhotronDisplay : Widget {
     //     }
     // }
 
+	void drawWaveform(NVGcontext *vg, float *valuesX, float *valuesY) {
+		if (!valuesX)
+			return;
+		nvgSave(vg);
+		Rect b = Rect(Vec(0, 15), box.size.minus(Vec(0, 15*2)));
+		nvgScissor(vg, b.pos.x, b.pos.y, b.size.x, b.size.y);
+		nvgBeginPath(vg);
+		// Draw maximum display left to right
+		for (int i = 0; i < BUFFER_SIZE; i++) {
+			float x, y;
+			if (valuesY) {
+				x = valuesX[i] / 2.0 + 0.5;
+				y = valuesY[i] / 2.0 + 0.5;
+			}
+			else {
+				x = (float)i / (BUFFER_SIZE - 1);
+				y = valuesX[i] / 2.0 + 0.5;
+			}
+			Vec p;
+			p.x = b.pos.x + b.size.x * x;
+			p.y = b.pos.y + b.size.y * (1.0 - y);
+			if (i == 0)
+				nvgMoveTo(vg, p.x, p.y);
+			else
+				nvgLineTo(vg, p.x, p.y);
+		}
+		nvgLineCap(vg, NVG_ROUND);
+		nvgMiterLimit(vg, 2.0);
+		nvgStrokeWidth(vg, 1.5);
+		nvgGlobalCompositeOperation(vg, NVG_LIGHTER);
+		nvgStroke(vg);
+		nvgResetScissor(vg);
+		nvgRestore(vg);
+	}
+
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
@@ -289,6 +383,48 @@ struct PhotronDisplay : Widget {
                 nvgFill(args.vg);
             }
         }
+
+        /************ SCOPE STUFF ************/
+        float gainX = 1.f; // powf(2.0, roundf(module->params[Photron::X_SCALE_PARAM].value));
+		float gainY = 1.f; // powf(2.0, roundf(module->params[Photron::Y_SCALE_PARAM].value));
+		float offsetX = 0.f; // module->params[Photron::X_POS_PARAM].value;
+		float offsetY = 0.f; // module->params[Photron::Y_POS_PARAM].value;
+
+		float valuesX[BUFFER_SIZE];
+		float valuesY[BUFFER_SIZE];
+		for (int i = 0; i < BUFFER_SIZE; i++) {
+			int j = i;
+			// Lock display to buffer if buffer update deltaTime <= 2^-11
+			if (module->lissajous)
+				j = (i + module->bufferIndex) % BUFFER_SIZE;
+			valuesX[i] = (module->bufferX[j] + offsetX) * gainX / 10.0;
+			valuesY[i] = (module->bufferY[j] + offsetY) * gainY / 10.0;
+		}
+
+		// Draw waveforms
+		if (module->lissajous) { // module->lissajous
+			// X x Y
+			if (module->inputs[Photron::X_INPUT].active || module->inputs[Photron::Y_INPUT].active) {
+				nvgStrokeColor(args.vg, nvgRGBA(0x9f, 0xe4, 0x36, 0xc0));
+				drawWaveform(args.vg, valuesX, valuesY);
+			}
+		}
+		else {
+			// Y
+			if (module->inputs[Photron::Y_INPUT].active) {
+                nvgStrokeColor(args.vg, nvgRGBA(0xe1, 0x02, 0x78, 0xc0));
+                drawWaveform(args.vg, valuesY, NULL);
+            }
+
+			// X
+			if (module->inputs[Photron::X_INPUT].active) {
+                nvgStrokeColor(args.vg, nvgRGBA(0x28, 0xb0, 0xf3, 0xc0));
+                drawWaveform(args.vg, valuesX, NULL);
+            }
+
+			float valueTrig = (module->params[Photron::TRIG_PARAM].value + offsetX) * gainX / 10.0;
+            // drawTrig(args.vg, valueTrig);
+        }
     }
 };
 
@@ -307,6 +443,9 @@ struct PhotronWidget : ModuleWidget {
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 27.9), module, Photron::ALIGN_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 46.1), module, Photron::COHESION_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 64.4), module, Photron::TARGET_INPUT));
+
+        addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 178.7), module, Photron::X_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 201.3), module, Photron::Y_INPUT));
 
         addParam(createParamCentered<TinyBlueButton>(Vec(9.7, 316.2), module, Photron::COLOR_PARAM));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 333.8), module, Photron::COLOR_TRIGGER_INPUT));

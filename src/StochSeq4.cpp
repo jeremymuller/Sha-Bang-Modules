@@ -91,6 +91,7 @@ struct StochSeq4 : Module, Quantize {
     bool showPercentages = true;
     bool enableKBShortcuts = true;
     int focusedSeq = PURPLE_SEQ;
+    Sequencer clipBoard;
     Sequencer seqs[NUM_SEQS];
 
     StochSeq4() {
@@ -285,6 +286,21 @@ struct StochSeq4 : Module, Quantize {
             seqs[id].gateProbabilities[i] = tempArray[i % 16];
         }
         delete[] tempArray;
+    }
+
+    void copyPatternToClipBoard() {
+        for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+            clipBoard.gateProbabilities[i] = seqs[focusedSeq].gateProbabilities[i];
+            
+        }
+        clipBoard.seqLength = params[LENGTH_PARAM + focusedSeq].getValue();
+    }
+
+    void pastePattern() {
+        for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+            seqs[focusedSeq].gateProbabilities[i] = clipBoard.gateProbabilities[i];
+        }
+        params[LENGTH_PARAM + focusedSeq].setValue(clipBoard.seqLength);
     }
 
     void shiftFocus() {
@@ -818,7 +834,17 @@ struct StochSeq4Widget : ModuleWidget {
 			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
                 module->shiftPatternDown(module->focusedSeq);
             }
-		} else {
+		} else if (e.key == GLFW_KEY_C && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS) {
+                module->copyPatternToClipBoard();
+            }
+        } else if (e.key == GLFW_KEY_V && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS) {
+                module->pastePattern();
+            }
+        } else {
 			ModuleWidget::onHoverKey(e);
 			// OpaqueWidget::onHoverKey(e);
 		}
