@@ -245,11 +245,12 @@ Watch the tutorial:
 ##### RIGHT-CLICK MENU:
 - External Clock Mode:
   - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
-  - `12 PPQN` controls bpm based on 12 pulses per quarter note.
-  - `24 PPQN` controls bpm based on 24 pulses per quarter note.
-- If the mode is set to either of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
+  - `2, 4, 8, 12, 24` `PPQN` controls bpm based on the number pulses per quarter note.
+- If the mode is set to any of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
 ##### INPUT:
+- `RST` resets the clock phases.
 - `EXT` is an external clock to control the PolyrhythmClock determined by the External Clock Mode.
+- 0v-2v map to 0-24 for the inputs under each knob.
 ##### BUTTON:
 - on or off
 ##### KNOBS:
@@ -333,7 +334,10 @@ Watch the tutorial:
 [![StochSeq_video](docs/StochSeq-video.png)](https://youtu.be/QtNtazAv73M "Stochastic Sequencer tutorial")
 
 ##### KEYBOARD SHORTCUTS:
-- `CTL+LEFT` shifts pattern left
+- Ctrl+Left shifts sliders to the left.
+- Ctrl+Right shifts sliders to the right.
+- Ctrl+Up shifts sliders up by 5%.
+- Ctrl+Down shifts sliders down by 5%.
 
 ##### INPUTS:
 - `CLK` controls timing.
@@ -371,6 +375,13 @@ Click and/or drag to draw your own patterns!
 Watch the tutorial:
 
 [![StochSeq4_video](docs/StochSeq4-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq 4 tutorial")
+
+##### KEYBOARD SHORTCUTS:
+- Ctrl+Enter focuses and highlights a single pattern.
+- Ctrl+Left shifts focused sliders to the left.
+- Ctrl+Right shifts focused sliders to the right.
+- Ctrl+Up shifts focused sliders up by 5%.
+- Ctrl+Down shifts focused sliders down by 5%.
 
 ##### INPUTS:
 - `MCLK` controls timing of all patterns (overrides all individual clocks).
@@ -414,9 +425,8 @@ Watch the tutorial:
 ##### RIGHT-CLICK MENU:
 - External Clock Mode:
   - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
-  - `12 PPQN` controls bpm based on 12 pulses per quarter note.
-  - `24 PPQN` controls bpm based on 24 pulses per quarter note.
-  - If the mode is set to either of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
+  - `2, 4, 8, 12, 24` `PPQN` controls bpm based on the number pulses per quarter note.
+  - If the mode is set to any of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
 - Polyrhythm Mode:
   - `Fixed` means each note is fixed and centered around middle C (C4, volts = 0.0). This note will take the current tempo of the BPM knob and all other notes are a ratio based on this note/tempo.
   - `Movable` means that the first note played will take the current tempo of the BPM knob and all other notes are a ratio based on this first note/tempo.
