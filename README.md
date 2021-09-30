@@ -193,20 +193,27 @@ Watch the tutorial:
 
 ##### RIGHT-CLICK MENU:
 - Processing rate (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
-##### BUTTON:
-- color version or black & white version.
+- Lissajous mode on or off.
+##### BUTTONS:
+- Waveform mode: lines, blocks, or off.
+- Background mode: color, black & white, or black.
+##### KNOBS:
+- Purple knobs adjust the X and Y offset of the waveform(s).
+- Blue knobs adjust the X and Y scaling of the waveform(s).
 ##### INPUTS:
-- Top 4 inputs (zero volts is default values):
+- TOP 4 inputs (zero volts is default values):
   - CV controls the separation of colors between adjacent blocks. Higher voltage = more separation.
   - CV controls the alignment of block colors which is their rate of change. Higher voltage = more alignment and thus their color velocities will become the same.
   - CV controls the cohesion of block colors which is converging on a single color. Higher voltage = more cohesion and thus their colors will quickly become the same and Photron will look like one color.
   - V/OCT controls the target color for Photron. Blocks will drift towards the target color and hover around it. See the image below for corresponding notes & colors:
 
 ![notes_spectrum](/docs/Notes_Spectrum.png)
-- Bottom 3 inputs are triggers:
-  - color version of black & white version.
+- MIDDLE 2 inputs are the X and Y waveforms.
+
+- BOTTOM 3 inputs are triggers:
+  - Waveform mode: lines, blocks, or off.
+  - Background mode: color, black & white, or black.
   - invert colors.
-  - reinitialize all blocks (alternates between randomizing all colors or 4 colors in 4 quadrants).
 
 ---
 
@@ -351,7 +358,9 @@ Watch the tutorial:
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
 - `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
+- `INV` outputs invert of `V/OCT`.
 - `GATES` outputs correspond to each position in the sequence.
+- `NOT` outputs only when `GATE` isn't triggered.
 
 ---
 
@@ -395,7 +404,11 @@ Watch the tutorial:
 - `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
 ##### OUTPUTS:
 - `GATE` outputs a pulse based on the probability of the current individual sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
+- `NOT` outputs only when `GATE` isn't triggered.
 - `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
+- `INV` outputs invert of `V/OCT`.
+- `OR` outputs pulse when at least one of the gates is on.
+- `XOR` outputs pulse when ONLY one gate is on. 
 
 ---
 

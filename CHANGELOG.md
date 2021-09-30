@@ -1,3 +1,11 @@
+v1.3.5 (9-30-2021)
+- Added NOT gate and INV v/oct to StochSeq and all StochSeq4 patterns
+- Added OR and XOR gates to StochSeq4 patterns
+- StochSeq and StochSeq4 variable width sliders depending on pattern length
+- Added keyboard shortcuts to StochSeq and StochSeq4
+- more PPQN options to Talea and PolyrhythmClock
+- added waveform capabilities to Photron
+
 v1.3.4 (9-17-2021)
 - Small changes to interfaces of StochSeq and StochSeq4
 - Added Reset input to PolyrhythmClock

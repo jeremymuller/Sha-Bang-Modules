@@ -10,10 +10,12 @@ struct Sequencer {
     dsp::SchmittTrigger randomTrig;
     dsp::SchmittTrigger invertTrig;
     dsp::PulseGenerator gatePulse;
+    dsp::PulseGenerator notGatePulse;
     int seqLength;
     int gateIndex;
     int currentPattern = 0;
     float volts = 0.0;
+    float invVolts = 0.0;
     float gateProbabilities[NUM_OF_SLIDERS];
 
     Sequencer() {
@@ -30,11 +32,14 @@ struct Sequencer {
         // gate
         float prob = gateProbabilities[gateIndex];
         if (random::uniform() < prob) {
-            gatePulse.trigger(1e-3);
+            gatePulse.trigger(1e-1);
+        } else {
+            notGatePulse.trigger(1e-1);
         }
 
         // pitch
         volts = prob * (2 * spread) - spread;
+        invVolts = (1.0 - prob) * (2 * spread) - spread;
     }
 };
 
@@ -67,9 +72,13 @@ struct StochSeq4 : Module, Quantize {
 		NUM_INPUTS = DIMINUTION_INPUT + NUM_SEQS
 	};
 	enum OutputIds {
-		GATES_OUTPUT = NUM_SEQS,
-		VOLTS_OUTPUT = GATES_OUTPUT + NUM_SEQS,
-		NUM_OUTPUTS = VOLTS_OUTPUT + NUM_SEQS
+        OR_OUTPUT,
+        XOR_OUTPUT,
+		GATES_OUTPUT = XOR_OUTPUT + NUM_SEQS,
+        NOT_GATES_OUTPUT = GATES_OUTPUT + NUM_SEQS,
+		VOLTS_OUTPUT = NOT_GATES_OUTPUT + NUM_SEQS,
+        INV_VOLTS_OUTPUT = VOLTS_OUTPUT + NUM_SEQS,
+		NUM_OUTPUTS = INV_VOLTS_OUTPUT + NUM_SEQS
 	};
 	enum LightIds {
 		NUM_LIGHTS
@@ -80,6 +89,9 @@ struct StochSeq4 : Module, Quantize {
     dsp::SchmittTrigger resetTrig;
     bool resetMode = false;
     bool showPercentages = true;
+    bool enableKBShortcuts = true;
+    int focusedSeq = PURPLE_SEQ;
+    Sequencer clipBoard;
     Sequencer seqs[NUM_SEQS];
 
     StochSeq4() {
@@ -132,6 +144,8 @@ struct StochSeq4 : Module, Quantize {
         json_object_set_new(rootJ, "currentPatterns", currentPatternsJ);
         json_object_set_new(rootJ, "seqsProbs", seqsProbsJ);
         json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
+        json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
+        json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
 
         return rootJ;
     }
@@ -139,6 +153,12 @@ struct StochSeq4 : Module, Quantize {
     void dataFromJson(json_t *rootJ) override {
         json_t *percentagesJ = json_object_get(rootJ, "percentages");
         if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
+
+		json_t *kbshortcutsJ = json_object_get(rootJ, "kbshortcuts");
+		if (kbshortcutsJ) enableKBShortcuts = json_boolean_value(kbshortcutsJ);
+
+        json_t *focusIdJ = json_object_get(rootJ, "focusId");
+        if (focusIdJ) focusedSeq = json_integer_value(focusIdJ);
 
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
@@ -204,12 +224,26 @@ struct StochSeq4 : Module, Quantize {
         }
         int rootNote = params[ROOT_NOTE_PARAM].getValue();
         int scale = params[SCALE_PARAM].getValue();
+        bool orGate = false;
+        int xorGate = 0;
         for (int i = 0; i < NUM_SEQS; i++) {
             float pitchVoltage = Quantize::quantizeRawVoltage(seqs[i].volts, rootNote, scale);
+            float invPitchVoltage = Quantize::quantizeRawVoltage(seqs[i].invVolts, rootNote, scale);
             bool pulse = seqs[i].gatePulse.process(1.0 / args.sampleRate);
+            bool notPulse = seqs[i].notGatePulse.process(1.0 / args.sampleRate);
+            if (pulse) {
+                orGate = true;
+                xorGate++;
+            }
+            
             outputs[GATES_OUTPUT + i].setVoltage(pulse ? 10.0 : 0.0);
+            outputs[NOT_GATES_OUTPUT + i].setVoltage(notPulse ? 10.0 : 0.0);
             outputs[VOLTS_OUTPUT + i].setVoltage(pitchVoltage);
+            outputs[INV_VOLTS_OUTPUT + i].setVoltage(invPitchVoltage);
         }
+
+        outputs[OR_OUTPUT].setVoltage(orGate ? 10.0 : 0.0);
+        outputs[XOR_OUTPUT].setVoltage((xorGate == 1) ? 10.0 : 0.0);
     }
 
     void clockStep() {
@@ -253,6 +287,61 @@ struct StochSeq4 : Module, Quantize {
         }
         delete[] tempArray;
     }
+
+    void copyPatternToClipBoard() {
+        for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+            clipBoard.gateProbabilities[i] = seqs[focusedSeq].gateProbabilities[i];
+            
+        }
+        clipBoard.seqLength = params[LENGTH_PARAM + focusedSeq].getValue();
+    }
+
+    void pastePattern() {
+        for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+            seqs[focusedSeq].gateProbabilities[i] = clipBoard.gateProbabilities[i];
+        }
+        params[LENGTH_PARAM + focusedSeq].setValue(clipBoard.seqLength);
+    }
+
+    void shiftFocus() {
+        focusedSeq = (focusedSeq + 1) % NUM_SEQS;
+    }
+
+    void shiftPatternLeft(int id) {
+		float temp = seqs[id].gateProbabilities[0]; // this goes at the end
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			if (i == NUM_OF_SLIDERS-1) {
+				seqs[id].gateProbabilities[i] = temp;
+			} else {
+				seqs[id].gateProbabilities[i] = seqs[id].gateProbabilities[i+1];
+			}
+		}
+	}
+
+	void shiftPatternRight(int id) {
+		float temp = seqs[id].gateProbabilities[NUM_OF_SLIDERS-1]; // this goes at the beginning
+		for (int i = NUM_OF_SLIDERS-1; i >= 0; i--) {
+			if (i == 0) {
+				seqs[id].gateProbabilities[i] = temp;
+			} else {
+                seqs[id].gateProbabilities[i] = seqs[id].gateProbabilities[i - 1];
+            }
+		}
+	}
+
+	void shiftPatternUp(int id) {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			seqs[id].gateProbabilities[i] += 0.05;
+            seqs[id].gateProbabilities[i] = clamp(seqs[id].gateProbabilities[i], 0.0, 1.0);
+        }
+	}
+
+	void shiftPatternDown(int id) {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			seqs[id].gateProbabilities[i] -= 0.05;
+            seqs[id].gateProbabilities[i] = clamp(seqs[id].gateProbabilities[i], 0.0, 1.0);
+        }
+	}
 
     void genPatterns(int c, int id) {
 		switch (c) {
@@ -330,6 +419,32 @@ namespace StochSeq4NS {
             return menu;
         }
     };
+
+	struct EnableShortcutsValueItem : MenuItem {
+		StochSeq4 *module;
+		bool enableKBShortcuts;
+		void onAction(const event::Action &e) override {
+			module->enableKBShortcuts = enableKBShortcuts;
+		}
+	};
+
+	struct EnableShortcutsItem : MenuItem {
+		StochSeq4 *module;
+		Menu *createChildMenu() override {
+			Menu *menu = new Menu;
+			std::vector<std::string> enabled = {"on", "off"};
+            for (int i = 0; i < 2; i++) {
+                EnableShortcutsValueItem *item = new EnableShortcutsValueItem;
+                item->text = enabled[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->enableKBShortcuts == isOn);
+                item->module = module;
+				item->enableKBShortcuts = isOn;
+				menu->addChild(item);
+            }
+            return menu;
+		}
+	};
 }
 
 struct StochSeq4Display : Widget {
@@ -338,6 +453,7 @@ struct StochSeq4Display : Widget {
     float initY = 0;
     float dragX = 0;
     float dragY = 0;
+    float sliderWidth = SLIDER_WIDTH;
     int seqId;
     StochSeq4Display() {}
 
@@ -363,7 +479,7 @@ struct StochSeq4Display : Widget {
 
     void setProbabilities(float currentX, float dragY) {
         if (currentX < 0) currentX = 0;
-        int index = (int)(currentX / SLIDER_WIDTH);
+        int index = (int)(currentX / sliderWidth);
         if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
         if (dragY < 0) dragY = 0;
         else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
@@ -404,50 +520,62 @@ struct StochSeq4Display : Widget {
 
         // sliders
         nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
-        for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+        int visibleSliders = (int)module->params[StochSeq4::LENGTH_PARAM+seqId].getValue();
+        sliderWidth = box.size.x / (float)visibleSliders;
+        for (int i = 0; i < visibleSliders; i++) {
             nvgStrokeWidth(args.vg, (i % 4 == 0 ? 2 : 0.5));
             nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, i * SLIDER_WIDTH, 0);
-            nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
+            nvgMoveTo(args.vg, i * sliderWidth, 0);
+            nvgLineTo(args.vg, i * sliderWidth, box.size.y);
             nvgStroke(args.vg);
 
             float sHeight = getSliderHeight(i);
 
-            if (i < module->params[StochSeq4::LENGTH_PARAM+seqId].getValue()) {
-                nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-                nvgFill(args.vg);
+            nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+            nvgFill(args.vg);
 
-                nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-                nvgFill(args.vg);
-            } else {
-                nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-                nvgFill(args.vg);
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+            nvgFill(args.vg);
 
-                nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-                nvgFill(args.vg);
-            }
+            // if (i < module->params[StochSeq4::LENGTH_PARAM+seqId].getValue()) {
+            //     nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
+            //     nvgFill(args.vg);
+
+            //     nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
+            //     nvgFill(args.vg);
+            // } else {
+            //     nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
+            //     nvgFill(args.vg);
+
+            //     nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
+            //     nvgBeginPath(args.vg);
+            //     nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
+            //     nvgFill(args.vg);
+            // }
 
             // text
             if (module->showPercentages) {
                 nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
                 nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-                nvgFontSize(args.vg, 9);
-                float w = i * SLIDER_WIDTH;
+                nvgFontSize(args.vg, 9 + (sliderWidth / SLIDER_WIDTH));
+                float w = i * sliderWidth;
                 float yText = sHeight;
                 if (sHeight < SLIDER_TOP + 3) {
                     yText = (SLIDER_TOP * 2) + sHeight + 3;
                     nvgFillColor(args.vg, nvgRGB(0, 0, 0));
                 }
                 std::string probText = std::to_string(static_cast<int>(module->seqs[seqId].gateProbabilities[i] * 100));
-                nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+                nvgText(args.vg, w + sliderWidth/2.0, yText, probText.c_str(), NULL);
             }
 
         }
@@ -472,39 +600,65 @@ struct StochSeq4Display : Widget {
             }
             // nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
             nvgBeginPath(args.vg);
-            nvgRect(args.vg, module->seqs[seqId].gateIndex * SLIDER_WIDTH, 1, SLIDER_WIDTH, box.size.y - 1);
+            nvgRect(args.vg, module->seqs[seqId].gateIndex * sliderWidth, 1, sliderWidth, box.size.y - 1);
             nvgStroke(args.vg);
         }
 
-        // faded out non-pattern
-        if (module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() < NUM_OF_SLIDERS) {
-            float x = module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() * SLIDER_WIDTH;
-            nvgStrokeWidth(args.vg, 2.0);
-            switch (seqId) {
-            case 0:
-                nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
-                break;
-            case 1:
-                nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
-                break;
-            case 2:
-                nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
-                break;
-            case 3:
-                nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-                break;
+        // focus rect
+        if (module->enableKBShortcuts) {
+            if (module->focusedSeq == seqId) {
+                nvgStrokeWidth(args.vg, 4.0);
+                // nvgStrokeColor(args.vg, nvgRGB(255, 255, 255));
+                switch (seqId) {
+                    case 0:
+                        nvgStrokeColor(args.vg, nvgRGBA(128, 0, 219, 100));
+                        break;
+                    case 1:
+                        nvgStrokeColor(args.vg, nvgRGBA(38, 0, 255, 100));
+                        break;
+                    case 2:
+                        nvgStrokeColor(args.vg, nvgRGBA(0, 238, 255, 100));
+                        break;
+                    case 3:
+                        nvgStrokeColor(args.vg, nvgRGBA(255, 0, 0, 100));
+                        break;
+                }
+                nvgBeginPath(args.vg);
+                nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+                nvgStroke(args.vg);
             }
-            // nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, x, 0);
-            nvgLineTo(args.vg, x, box.size.y);
-            nvgStroke(args.vg);
-
-            nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
-            nvgFill(args.vg);
         }
+
+        /***** OLD STUFF *****/
+        // faded out non-pattern
+        // if (module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() < NUM_OF_SLIDERS) {
+        //     float x = module->params[StochSeq4::LENGTH_PARAM+seqId].getValue() * SLIDER_WIDTH;
+        //     nvgStrokeWidth(args.vg, 2.0);
+        //     switch (seqId) {
+        //     case 0:
+        //         nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+        //         break;
+        //     case 1:
+        //         nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
+        //         break;
+        //     case 2:
+        //         nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
+        //         break;
+        //     case 3:
+        //         nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+        //         break;
+        //     }
+        //     // nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+        //     nvgBeginPath(args.vg);
+        //     nvgMoveTo(args.vg, x, 0);
+        //     nvgLineTo(args.vg, x, box.size.y);
+        //     nvgStroke(args.vg);
+
+        //     nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
+        //     nvgBeginPath(args.vg);
+        //     nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
+        //     nvgFill(args.vg);
+        // }
     }
 };
 
@@ -516,28 +670,28 @@ struct StochSeq4Widget : ModuleWidget {
         StochSeq4Display *displayPurple = new StochSeq4Display();
         displayPurple->module = module;
         displayPurple->seqId = StochSeq4::PURPLE_SEQ;
-        displayPurple->box.pos = Vec(211.1, 18.2);
+        displayPurple->box.pos = Vec(277.6, 18.2);
         displayPurple->box.size = Vec(480, 80.7);
         addChild(displayPurple);
 
         StochSeq4Display *displayBlue = new StochSeq4Display();
         displayBlue->module = module;
         displayBlue->seqId = StochSeq4::BLUE_SEQ;
-        displayBlue->box.pos = Vec(211.1, 105.7);
+        displayBlue->box.pos = Vec(277.6, 105.7);
         displayBlue->box.size = Vec(480, 80.7);
         addChild(displayBlue);
 
         StochSeq4Display *displayAqua = new StochSeq4Display();
         displayAqua->module = module;
         displayAqua->seqId = StochSeq4::AQUA_SEQ;
-        displayAqua->box.pos = Vec(211.1, 193.2);
+        displayAqua->box.pos = Vec(277.6, 193.2);
         displayAqua->box.size = Vec(480, 80.7);
         addChild(displayAqua);
 
         StochSeq4Display *displayRed = new StochSeq4Display();
         displayRed->module = module;
         displayRed->seqId = StochSeq4::RED_SEQ;
-        displayRed->box.pos = Vec(211.1, 280.6);
+        displayRed->box.pos = Vec(277.6, 280.6);
         displayRed->box.size = Vec(480, 80.7);
         addChild(displayRed);
 
@@ -577,10 +731,10 @@ struct StochSeq4Widget : ModuleWidget {
         addParam(createParamCentered<TinyAquaButton>(Vec(184, 219.8), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::AQUA_SEQ));
         addParam(createParamCentered<TinyRedButton>(Vec(184, 278), module, StochSeq4::DIMINUTION_PARAM + StochSeq4::RED_SEQ));
         // spreads
-        addParam(createParamCentered<TinyPurpleKnob>(Vec(750.6, 66.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::PURPLE_SEQ));
-        addParam(createParamCentered<TinyBlueKnob>(Vec(750.6, 153.7), module, StochSeq4::SPREAD_PARAM + StochSeq4::BLUE_SEQ));
-        addParam(createParamCentered<TinyAquaKnob>(Vec(750.6, 241.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::AQUA_SEQ));
-        addParam(createParamCentered<TinyRedKnob>(Vec(750.6, 328.6), module, StochSeq4::SPREAD_PARAM + StochSeq4::RED_SEQ));
+        addParam(createParamCentered<TinyPurpleKnob>(Vec(264.6, 114.8), module, StochSeq4::SPREAD_PARAM + StochSeq4::PURPLE_SEQ));
+        addParam(createParamCentered<TinyBlueKnob>(Vec(264.6, 172.2), module, StochSeq4::SPREAD_PARAM + StochSeq4::BLUE_SEQ));
+        addParam(createParamCentered<TinyAquaKnob>(Vec(264.6, 229.5), module, StochSeq4::SPREAD_PARAM + StochSeq4::AQUA_SEQ));
+        addParam(createParamCentered<TinyRedKnob>(Vec(264.6, 286.9), module, StochSeq4::SPREAD_PARAM + StochSeq4::RED_SEQ));
 
         // note and scale knobs
         PurpleNoteKnob *noteKnob = dynamic_cast<PurpleNoteKnob *>(createParamCentered<PurpleNoteKnob>(Vec(26.3, 321), module, StochSeq4::ROOT_NOTE_PARAM));
@@ -607,14 +761,26 @@ struct StochSeq4Widget : ModuleWidget {
             addInput(createInputCentered<TinyPJ301M>(Vec(184, 124.8 + (i * 57.3)), module, StochSeq4::DIMINUTION_INPUT + i));
         }
 
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(705.3, 66.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(728.7, 66.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(705.3, 153.7), module, StochSeq4::GATES_OUTPUT + StochSeq4::BLUE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(728.7, 153.7), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(705.3, 241.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::AQUA_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(728.7, 241.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(705.3, 328.6), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
-        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(728.7, 328.6), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(219.3, 104.8), module, StochSeq4::GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(219.3, 124.8), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(242.7, 104.8), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MPurple>(Vec(242.7, 124.8), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::PURPLE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(219.3, 162.2), module, StochSeq4::GATES_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(219.3, 182.1), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(242.7, 162.2), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(242.7, 182.1), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::BLUE_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(219.3, 219.6), module, StochSeq4::GATES_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(219.3, 239.5), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(242.7, 219.6), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(242.7, 239.5), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::AQUA_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(219.3, 276.9), module, StochSeq4::GATES_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(219.3, 296.9), module, StochSeq4::NOT_GATES_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(242.7, 276.9), module, StochSeq4::VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(242.7, 296.9), module, StochSeq4::INV_VOLTS_OUTPUT + StochSeq4::RED_SEQ));
+
+        // or, xor
+        addOutput(createOutputCentered<PJ301MPort>(Vec(226.4, 345.4), module, StochSeq4::OR_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(254.9, 345.4), module, StochSeq4::XOR_OUTPUT));
     }
 
 	void appendContextMenu(Menu *menu) override {
@@ -627,7 +793,62 @@ struct StochSeq4Widget : ModuleWidget {
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
 		showTextItem->module = module;
 		menu->addChild(showTextItem);
+
+        StochSeq4NS::EnableShortcutsItem *enableShortcutItem = new StochSeq4NS::EnableShortcutsItem;
+		enableShortcutItem->text = "Keyboard Shortcuts";
+		if (module->enableKBShortcuts) enableShortcutItem->rightText = std::string("on") + " " + RIGHT_ARROW;
+		else enableShortcutItem->rightText = std::string("off") + " " + RIGHT_ARROW;
+		enableShortcutItem->module = module;
+		menu->addChild(enableShortcutItem);
 	}
+
+    void onHoverKey(const event::HoverKey &e) override {
+        StochSeq4 *module = dynamic_cast<StochSeq4 *>(this->module);
+		if (!module->enableKBShortcuts) {
+			ModuleWidget::onHoverKey(e);
+			return;
+		}
+
+        if (e.key == GLFW_KEY_ENTER && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftFocus();
+            }
+        } else if (e.key == GLFW_KEY_LEFT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternLeft(module->focusedSeq);
+			}
+		} else if (e.key == GLFW_KEY_RIGHT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftPatternRight(module->focusedSeq);
+            }
+		} else if (e.key == GLFW_KEY_UP && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftPatternUp(module->focusedSeq);
+            }
+		} else if (e.key == GLFW_KEY_DOWN && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+                module->shiftPatternDown(module->focusedSeq);
+            }
+		} else if (e.key == GLFW_KEY_C && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS) {
+                module->copyPatternToClipBoard();
+            }
+        } else if (e.key == GLFW_KEY_V && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS) {
+                module->pastePattern();
+            }
+        } else {
+			ModuleWidget::onHoverKey(e);
+			// OpaqueWidget::onHoverKey(e);
+		}
+    } 
 
 };
 

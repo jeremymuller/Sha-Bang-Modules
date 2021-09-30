@@ -7,6 +7,7 @@
 
 struct StochSeq : Module, Quantize {
 	enum ParamIds {
+		RESET_PARAM,
 		PATTERN_PARAM,
 		RANDOM_PARAM,
 		INVERT_PARAM,
@@ -28,6 +29,8 @@ struct StochSeq : Module, Quantize {
 	enum OutputIds {
 		GATES_OUTPUT = NUM_OF_SLIDERS,
 		GATE_MAIN_OUTPUT = GATES_OUTPUT + NUM_OF_SLIDERS,
+		NOT_GATE_MAIN_OUTPUT,
+		INV_VOLT_OUTPUT,
 		VOLT_OUTPUT,
 		NUM_OUTPUTS
 	};
@@ -42,6 +45,7 @@ struct StochSeq : Module, Quantize {
 	dsp::SchmittTrigger randomTrig;
 	dsp::SchmittTrigger invertTrig;
 	dsp::PulseGenerator gatePulse;
+	dsp::PulseGenerator notGatePulse;
 	int seqLength = NUM_OF_SLIDERS;
 	int gateIndex = -1;
 	int currentGateOut = gateIndex;
@@ -51,10 +55,13 @@ struct StochSeq : Module, Quantize {
 	bool showPercentages = true;
 	int randLight;
 	float pitchVoltage = 0.0;
+	float invPitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
+	bool enableKBShortcuts = true;
 
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+		configParam(RESET_PARAM, 0.0, 1.0, 0.0, "reset");
 		configParam(PATTERN_PARAM, 0.0, 7.0, 0.0, "pattern");
 		configParam(INVERT_PARAM, 0.0, 1.0, 0.0, "invert pattern");
 		configParam(RANDOM_PARAM, 0.0, 1.0, 0.0, "randomize pattern");
@@ -86,6 +93,7 @@ struct StochSeq : Module, Quantize {
 		}
 		json_object_set_new(rootJ, "probs", probsJ);
 		json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
+		json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
 
 		return rootJ;
 	}
@@ -93,6 +101,9 @@ struct StochSeq : Module, Quantize {
 	void dataFromJson(json_t *rootJ) override {
         json_t *percentagesJ = json_object_get(rootJ, "percentages");
         if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
+
+		json_t *kbshortcutsJ = json_object_get(rootJ, "kbshortcuts");
+		if (kbshortcutsJ) enableKBShortcuts = json_boolean_value(kbshortcutsJ);
 
 		json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
 		if (currentPatternJ) {
@@ -110,7 +121,7 @@ struct StochSeq : Module, Quantize {
 	}
 
 	void process(const ProcessArgs& args) override {
-		if (resetTrig.process(inputs[RESET_INPUT].getVoltage())) {
+		if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
 			resetMode = true;
 		}
 		if ((int)params[PATTERN_PARAM].getValue() != currentPattern) {
@@ -136,9 +147,12 @@ struct StochSeq : Module, Quantize {
 		}
 
 		bool gateVolt = gatePulse.process(1.0 / args.sampleRate);
+		bool notGateVolt = notGatePulse.process(1.0 / args.sampleRate);
 		// float blink = lightBlink ? 1.0 : 0.0;
 		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt ? 10.0 : 0.0);
 		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt ? 10.0 : 0.0);
+		outputs[NOT_GATE_MAIN_OUTPUT].setVoltage(notGateVolt ? 10.0 : 0.0); // todo
+		outputs[INV_VOLT_OUTPUT].setVoltage(invPitchVoltage);
 		outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
 		// int randLight = int(random::uniform() * NUM_OF_LIGHTS);
 		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
@@ -159,15 +173,20 @@ struct StochSeq : Module, Quantize {
 
 		float prob = gateProbabilities[gateIndex];
 		if (random::uniform() < prob) {
-			gatePulse.trigger(1e-3);
+			gatePulse.trigger(1e-1);
 			currentGateOut = gateIndex;
 			lightBlink = true;
 			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
+		} else {
+			notGatePulse.trigger(1e-1);
 		}
 
 		float spread = params[SPREAD_PARAM].getValue();
 		float volts = prob * (2 * spread) - spread;
+		float invVolts = (1.0 - prob) * (2 * spread) - spread;
 		pitchVoltage = Quantize::quantizeRawVoltage(volts, rootNote, scale);
+		invPitchVoltage = Quantize::quantizeRawVoltage(invVolts, rootNote, scale);
+
 		// pitchVoltage = prob * (2 * spread) - spread;
 	}
 
@@ -193,6 +212,42 @@ struct StochSeq : Module, Quantize {
 			gateProbabilities[i] = tempArray[i % 16];
 		}
 		delete[] tempArray;
+	}
+
+	void shiftPatternLeft() {
+		float temp = gateProbabilities[0]; // this goes at the end
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			if (i == NUM_OF_SLIDERS-1) {
+				gateProbabilities[i] = temp;
+			} else {
+				gateProbabilities[i] = gateProbabilities[i+1];
+			}
+		}
+	}
+
+	void shiftPatternRight() {
+		float temp = gateProbabilities[NUM_OF_SLIDERS-1]; // this goes at the beginning
+		for (int i = NUM_OF_SLIDERS-1; i >= 0; i--) {
+			if (i == 0) {
+				gateProbabilities[i] = temp;
+			} else {
+				gateProbabilities[i] = gateProbabilities[i-1];
+			}
+		}
+	}
+
+	void shiftPatternUp() {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			gateProbabilities[i] += 0.05;
+			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
+		}
+	}
+
+	void shiftPatternDown() {
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			gateProbabilities[i] -= 0.05;
+			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
+		}
 	}
 
 	void genPatterns(int c) {
@@ -271,6 +326,32 @@ namespace StochSeqNS {
             return menu;
         }
     };
+
+	struct EnableShortcutsValueItem : MenuItem {
+		StochSeq *module;
+		bool enableKBShortcuts;
+		void onAction(const event::Action &e) override {
+			module->enableKBShortcuts = enableKBShortcuts;
+		}
+	};
+
+	struct EnableShortcutsItem : MenuItem {
+		StochSeq *module;
+		Menu *createChildMenu() override {
+			Menu *menu = new Menu;
+			std::vector<std::string> enabled = {"on", "off"};
+            for (int i = 0; i < 2; i++) {
+                EnableShortcutsValueItem *item = new EnableShortcutsValueItem;
+                item->text = enabled[i];
+                bool isOn = (i == 0) ? true : false;
+                item->rightText = CHECKMARK(module->enableKBShortcuts == isOn);
+                item->module = module;
+				item->enableKBShortcuts = isOn;
+				menu->addChild(item);
+            }
+            return menu;
+		}
+	};
 }
 
 struct StochSeqDisplay : Widget {
@@ -279,6 +360,7 @@ struct StochSeqDisplay : Widget {
 	float initY = 0;
 	float dragX = 0;
 	float dragY = 0;
+	float sliderWidth = SLIDER_WIDTH;
 	StochSeqDisplay() {}
 
 	void onButton(const event::Button &e) override {
@@ -302,7 +384,7 @@ struct StochSeqDisplay : Widget {
 	}
 
 	void setProbabilities(float currentX, float dragY) {
-		int index = (int)(currentX / SLIDER_WIDTH);
+		int index = (int)(currentX / sliderWidth);
 		if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
 		if (dragY < 0) dragY = 0;
 		else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
@@ -350,53 +432,65 @@ struct StochSeqDisplay : Widget {
 
 		// sliders
 		nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
-		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+		int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
+		sliderWidth = box.size.x / (float)visibleSliders;
+		for (int i = 0; i < visibleSliders; i++) {
 			nvgStrokeWidth(args.vg, (i % 4 == 0 ? 2 : 0.5));
 			nvgBeginPath(args.vg);
-			nvgMoveTo(args.vg, i * SLIDER_WIDTH, 0);
-			nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
+			nvgMoveTo(args.vg, i * sliderWidth, 0);
+			nvgLineTo(args.vg, i * sliderWidth, box.size.y);
 			nvgStroke(args.vg);
 			float sHeight = getSliderHeight(i);
 
 			// float sHeight = sliderHeights[i];
 
-			if (i < module->params[StochSeq::LENGTH_PARAM].getValue()) {
-				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
-				// nvgFillColor(args.vg, nvgRGBA(0, 238, 255, 191)); // bottoms
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-				nvgFill(args.vg);
+			nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+			nvgFill(args.vg);
 
-				nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
-				// nvgFillColor(args.vg, nvgRGB(0, 238, 255)); // tops
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-				nvgFill(args.vg);
-			} else {
-				nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, box.size.y - sHeight);
-				nvgFill(args.vg);
+			nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+			nvgFill(args.vg);
 
-				nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * SLIDER_WIDTH, sHeight, SLIDER_WIDTH, SLIDER_TOP);
-				nvgFill(args.vg);
-			}
+			// if (i < module->params[StochSeq::LENGTH_PARAM].getValue()) {
+			// 	nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
+			// 	// nvgFillColor(args.vg, nvgRGBA(0, 238, 255, 191)); // bottoms
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+			// 	nvgFill(args.vg);
+
+			// 	nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
+			// 	// nvgFillColor(args.vg, nvgRGB(0, 238, 255)); // tops
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+			// 	nvgFill(args.vg);
+			// } else {
+			// 	nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+			// 	nvgFill(args.vg);
+
+			// 	nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
+			// 	nvgBeginPath(args.vg);
+			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
+			// 	nvgFill(args.vg);
+			// }
 
 			// percentage texts for each slider
 			if (module->showPercentages) {
 				nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
 				nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-				nvgFontSize(args.vg, 9);
-				float w = i * SLIDER_WIDTH;
+				nvgFontSize(args.vg, 9 + (sliderWidth / SLIDER_WIDTH));
+				float w = i * sliderWidth;
 				float yText = sHeight;
 				if (sHeight < SLIDER_TOP + 3) {
 					yText = (SLIDER_TOP * 2) + sHeight + 3;
 					nvgFillColor(args.vg, nvgRGB(0, 0, 0));
 				}
 				std::string probText = std::to_string(static_cast<int>(module->gateProbabilities[i] * 100));
-				nvgText(args.vg, w + SLIDER_WIDTH/2.0, yText, probText.c_str(), NULL);
+				nvgText(args.vg, w + sliderWidth/2.0, yText, probText.c_str(), NULL);
 			}
 		}
 
@@ -406,25 +500,26 @@ struct StochSeqDisplay : Widget {
 			// nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
 			nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
 			nvgBeginPath(args.vg);
-			nvgRect(args.vg, module->gateIndex * SLIDER_WIDTH, 1, SLIDER_WIDTH, box.size.y - 1);
+			nvgRect(args.vg, module->gateIndex * sliderWidth, 1, sliderWidth, box.size.y - 1);
 			nvgStroke(args.vg);
 		}
 
+		/***** OLD STUFF *****/
 		// faded out non-pattern
-		if (module->params[StochSeq::LENGTH_PARAM].getValue() < NUM_OF_SLIDERS) {
-			float x = module->params[StochSeq::LENGTH_PARAM].getValue() * SLIDER_WIDTH;
-			nvgStrokeWidth(args.vg, 2.0);
-			nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-			nvgBeginPath(args.vg);
-			nvgMoveTo(args.vg, x, 0);
-			nvgLineTo(args.vg, x, box.size.y);
-			nvgStroke(args.vg);
+		// if (module->params[StochSeq::LENGTH_PARAM].getValue() < NUM_OF_SLIDERS) {
+		// 	float x = module->params[StochSeq::LENGTH_PARAM].getValue() * SLIDER_WIDTH;
+		// 	nvgStrokeWidth(args.vg, 2.0);
+		// 	nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+		// 	nvgBeginPath(args.vg);
+		// 	nvgMoveTo(args.vg, x, 0);
+		// 	nvgLineTo(args.vg, x, box.size.y);
+		// 	nvgStroke(args.vg);
 
-			nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
-			nvgBeginPath(args.vg);
-			nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
-			nvgFill(args.vg);
-		}
+		// 	nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
+		// 	nvgBeginPath(args.vg);
+		// 	nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
+		// 	nvgFill(args.vg);
+		// }
 	}
 };
 
@@ -444,12 +539,13 @@ struct StochSeqWidget : ModuleWidget {
 		addChild(createWidget<JeremyScrew>(Vec(457.1, 2)));
 		addChild(createWidget<JeremyScrew>(Vec(457.1, box.size.y-14)));
 
+		addParam(createParamCentered<TinyBlueButton>(Vec(71.4, 256.8), module, StochSeq::RESET_PARAM));
 		addParam(createParamCentered<BlueInvertKnob>(Vec(105.9, 228.7), module, StochSeq::LENGTH_PARAM));
 		addParam(createParamCentered<BlueInvertKnob>(Vec(140.5, 228.7), module, StochSeq::PATTERN_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(175, 228.7), module, StochSeq::RANDOM_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(209.5, 228.7), module, StochSeq::INVERT_PARAM));
 		addParam(createParamCentered<DefaultButton>(Vec(244.1, 228.7), module, StochSeq::DIMINUTION_PARAM));
-		addParam(createParamCentered<BlueKnob>(Vec(399.5, 256.8), module, StochSeq::SPREAD_PARAM));
+		addParam(createParamCentered<BlueKnob>(Vec(451.7, 256.8), module, StochSeq::SPREAD_PARAM));
 
 		// note and scale knobs
 		BlueNoteKnob *noteKnob = dynamic_cast<BlueNoteKnob *>(createParamCentered<BlueNoteKnob>(Vec(282, 228.7), module, StochSeq::ROOT_NOTE_PARAM));
@@ -474,7 +570,9 @@ struct StochSeqWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 228.7), module, StochSeq::CLOCK_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 228.7), module, StochSeq::RESET_INPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(360.7, 228.7), module, StochSeq::GATE_MAIN_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(399.5, 228.7), module, StochSeq::VOLT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(397.1, 228.7), module, StochSeq::NOT_GATE_MAIN_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(433.5, 228.7), module, StochSeq::INV_VOLT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(469.9, 228.7), module, StochSeq::VOLT_OUTPUT));
 
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
@@ -537,6 +635,46 @@ struct StochSeqWidget : ModuleWidget {
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
 		showTextItem->module = module;
 		menu->addChild(showTextItem);
+
+		StochSeqNS::EnableShortcutsItem *enableShortcutItem = new StochSeqNS::EnableShortcutsItem;
+		enableShortcutItem->text = "Keyboard Shortcuts";
+		if (module->enableKBShortcuts) enableShortcutItem->rightText = std::string("on") + " " + RIGHT_ARROW;
+		else enableShortcutItem->rightText = std::string("off") + " " + RIGHT_ARROW;
+		enableShortcutItem->module = module;
+		menu->addChild(enableShortcutItem);
+	}
+
+	void onHoverKey(const event::HoverKey &e) override {
+		StochSeq *module = dynamic_cast<StochSeq *>(this->module);
+		if (!module->enableKBShortcuts) {
+			ModuleWidget::onHoverKey(e);
+			return;
+		}
+
+		if (e.key == GLFW_KEY_LEFT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternLeft();
+			}
+		} else if (e.key == GLFW_KEY_RIGHT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternRight();
+			}
+		} else if (e.key == GLFW_KEY_UP && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternUp();
+			}
+		} else if (e.key == GLFW_KEY_DOWN && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+			e.consume(this);
+			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+				module->shiftPatternDown();
+			}
+		} else {
+			ModuleWidget::onHoverKey(e);
+			// OpaqueWidget::onHoverKey(e);
+		}
 	}
 };
 
