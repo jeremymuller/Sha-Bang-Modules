@@ -4,7 +4,7 @@ A collection of innovative, probabilistic, generative, and rhythmically complex 
 
 Add these modules to VCVRack through the [Rack library](https://library.vcvrack.com/?brand=Sha%23Bang!%20Modules).
 
-![modulesall](/docs/Modules_ALL.gif)
+![modulesall](/docs/Modules_ALL3.gif)
 
 ## Contents:
 
@@ -333,12 +333,14 @@ Watch the tutorial:
 
 [![StochSeq_video](docs/StochSeq-video.png)](https://youtu.be/QtNtazAv73M "Stochastic Sequencer tutorial")
 
+##### RIGHT-CLICK MENU:
+- Show or hide slider percentages.
+- Enable keyboard shortcuts.
 ##### KEYBOARD SHORTCUTS:
-- Ctrl+Left shifts sliders to the left.
-- Ctrl+Right shifts sliders to the right.
-- Ctrl+Up shifts sliders up by 5%.
-- Ctrl+Down shifts sliders down by 5%.
-
+- `Ctrl+Left` shifts sliders to the left.
+- `Ctrl+Right` shifts sliders to the right.
+- `Ctrl+Up` shifts sliders up by 5%.
+- `Ctrl+Down` shifts sliders down by 5%.
 ##### INPUTS:
 - `CLK` controls timing.
 - `RST` resets sequence to beginning of timeline.
@@ -376,13 +378,17 @@ Watch the tutorial:
 
 [![StochSeq4_video](docs/StochSeq4-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq 4 tutorial")
 
+##### RIGHT-CLICK MENU:
+- Show or hide slider percentages.
+- Enable keyboard shortcuts.
 ##### KEYBOARD SHORTCUTS:
-- Ctrl+Enter focuses and highlights a single pattern.
-- Ctrl+Left shifts focused sliders to the left.
-- Ctrl+Right shifts focused sliders to the right.
-- Ctrl+Up shifts focused sliders up by 5%.
-- Ctrl+Down shifts focused sliders down by 5%.
-
+- `Ctrl+C` copies focused pattern and length.
+- `Ctrl+V` pastes the copied pattern and length to the focused one.
+- `Ctrl+Enter` focuses and highlights a single pattern.
+- `Ctrl+Left` shifts focused sliders to the left.
+- `Ctrl+Right` shifts focused sliders to the right.
+- `Ctrl+Up` shifts focused sliders up by 5%.
+- `Ctrl+Down` shifts focused sliders down by 5%.
 ##### INPUTS:
 - `MCLK` controls timing of all patterns (overrides all individual clocks).
 - `CLK` controls timing of individual patterns.
