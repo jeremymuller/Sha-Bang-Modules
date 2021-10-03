@@ -173,12 +173,12 @@ struct StochSeq : Module, Quantize {
 
 		float prob = gateProbabilities[gateIndex];
 		if (random::uniform() < prob) {
-			gatePulse.trigger(1e-1);
+			gatePulse.trigger(1e-3);
 			currentGateOut = gateIndex;
 			lightBlink = true;
 			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 		} else {
-			notGatePulse.trigger(1e-1);
+			notGatePulse.trigger(1e-3);
 		}
 
 		float spread = params[SPREAD_PARAM].getValue();
@@ -388,7 +388,8 @@ struct StochSeqDisplay : Widget {
 		if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
 		if (dragY < 0) dragY = 0;
 		else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
-		module->gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+		float prob = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+		module->gateProbabilities[index] = clamp(prob, 0.0, 1.0);
 	}
 
 	float getSliderHeight(int index) {
