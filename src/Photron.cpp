@@ -505,7 +505,7 @@ struct PhotronDisplay : Widget {
 
 			// X
 			if (module->inputs[Photron::X_INPUT].active) {
-                Vec3 rgb = module->blocks[12][12].rgb;
+                Vec3 rgb = module->blocks[module->rows-1][module->cols-1].rgb;
                 nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
                 // nvgStrokeColor(args.vg, nvgRGBA(0x28, 0xb0, 0xf3, 0xc0));
                 drawWaveform(args.vg, valuesX, NULL);

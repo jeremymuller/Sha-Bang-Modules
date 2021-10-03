@@ -1,3 +1,7 @@
+v1.3.6 (10-02-2021)
+- Put gates back to 1e-3 on StochSeq and StochSeq4
+- Fixed UI bug in sliders that would allow for < 0%
+
 v1.3.5 (9-30-2021)
 - Added NOT gate and INV v/oct to StochSeq and all StochSeq4 patterns
 - Added OR and XOR gates to StochSeq4 patterns

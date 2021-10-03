@@ -32,9 +32,9 @@ struct Sequencer {
         // gate
         float prob = gateProbabilities[gateIndex];
         if (random::uniform() < prob) {
-            gatePulse.trigger(1e-1);
+            gatePulse.trigger(1e-3);
         } else {
-            notGatePulse.trigger(1e-1);
+            notGatePulse.trigger(1e-3);
         }
 
         // pitch
@@ -483,7 +483,8 @@ struct StochSeq4Display : Widget {
         if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
         if (dragY < 0) dragY = 0;
         else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
-        module->seqs[seqId].gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+        float prob = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+        module->seqs[seqId].gateProbabilities[index] = clamp(prob, 0.0, 1.0);
     }
 
     float getSliderHeight(int index) {
