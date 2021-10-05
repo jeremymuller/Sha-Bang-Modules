@@ -126,22 +126,31 @@ struct Cosmosis : Module, Constellations, Quantize {
 
     Cosmosis() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(SPEED_PARAM, -2.0, 2.0, 0.0);
-        configParam(PLAY_PARAM, 0.0, 1.0, 0.0);
-        configParam(RANDOM_POS_PARAM, 0.0, 1.0, 0.0, "Randomize position");
-        configParam(RANDOM_RAD_PARAM, 0.0, 1.0, 0.0, "Randomize radius");
+        configParam(SPEED_PARAM, -2.0, 2.0, 0.0, "Line speed");
+        configInput(SPEED_INPUT, "Lines speed");
+        configButton(PLAY_PARAM, "Play");
+        configInput(EXT_PLAY_INPUT, "Play");
+        configInput(RESET_INPUT, "Reset");
+        configInput(PITCH_CV_INPUT, "Root note");
+        configButton(RANDOM_POS_PARAM, "Randomize position");
+        configInput(RANDOM_POS_INPUT, "Randomize position");
+        configButton(RANDOM_RAD_PARAM, "Randomize radius");
+        configInput(RANDOM_RAD_INPUT, "Randomize radius");
         configParam(RANDOM_SIZE_PARAM, 0.0, 1.0, 0.0, "Randomize constellation size");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode");
+        configSwitch(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode", {"size", "position"});
         configParam(PATTERN_PARAM, 0.0, Constellations::NUM_OF_CONSTELLATIONS-1, 0.0, "Constellation");
-        configParam(OCTAVE_PARAM + PURPLE_SEQ, -5.0, 5.0, 0.0, "Purple Octave");
-        configParam(OCTAVE_PARAM + BLUE_SEQ, -5.0, 5.0, 0.0, "Blue Octave");
-        configParam(OCTAVE_PARAM + AQUA_SEQ, -5.0, 5.0, 0.0, "Aqua Octave");
-        configParam(OCTAVE_PARAM + RED_SEQ, -5.0, 5.0, 0.0, "Red Octave");
+        configParam(OCTAVE_PARAM + PURPLE_SEQ, -5.0, 5.0, 0.0, "Purple", " oct");
+        configParam(OCTAVE_PARAM + BLUE_SEQ, -5.0, 5.0, 0.0, "Blue", " oct");
+        configParam(OCTAVE_PARAM + AQUA_SEQ, -5.0, 5.0, 0.0, "Aqua", " oct");
+        configParam(OCTAVE_PARAM + RED_SEQ, -5.0, 5.0, 0.0, "Red", " oct");
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation"); // OLD
-        configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
+        configButton(CLEAR_STARS_PARAM, "Clear stars");
         configParam(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode");
+
+        configOutput(VOLT_OUT, "Pitch (V/OCT)");
+        configOutput(GATE_OUT, "Trigger");
 
         Vec corner = Vec(0, 0);
         Vec dir = corner.minus(center);
@@ -190,6 +199,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         json_object_set_new(rootJ, "constellationText", json_string(constellationText.c_str())); // errors here
         json_object_set_new(rootJ, "currentConstellation", json_integer(currentConstellation));
         json_object_set_new(rootJ, "channels", json_integer(channels));
+        json_object_set_new(rootJ, "playing", json_boolean(isPlaying));
         json_object_set_new(rootJ, "stars", starsJ);
 
         return rootJ;
@@ -198,6 +208,9 @@ struct Cosmosis : Module, Constellations, Quantize {
     void dataFromJson(json_t *rootJ) override {
         json_t *channelsJ = json_object_get(rootJ, "channels");
         if (channelsJ) channels = json_integer_value(channelsJ);
+
+        json_t *playingJ = json_object_get(rootJ, "playing");
+        if (playingJ) isPlaying = json_boolean_value(playingJ);
 
         json_t *currConstJ = json_object_get(rootJ, "currentConstellation");
         if (currConstJ) currentConstellation = json_integer_value(currConstJ);
@@ -608,13 +621,13 @@ struct CosmosisDisplay : Widget {
     }
 
     void onDragStart(const event::DragStart &e) override {
-        dragX = APP->scene->rack->mousePos.x;
-        dragY = APP->scene->rack->mousePos.y;
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float newDragX = APP->scene->rack->mousePos.x;
-        float newDragY = APP->scene->rack->mousePos.y;
+        float newDragX = APP->scene->rack->getMousePos().x;
+        float newDragY = APP->scene->rack->getMousePos().y;
 
         for (int i = 0; i < MAX_STARS; i++) {
             if (module->stars[i].visible && !module->stars[i].locked) {
@@ -644,11 +657,14 @@ struct CosmosisDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
+
         //background
         nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
+
+        nvgGlobalTint(args.vg, color::WHITE);
 
         // name of constellation
         std::string text = module->constellationText;
@@ -716,8 +732,8 @@ struct CosmosisDisplay : Widget {
 struct ModeKnob : BlueInvertKnobLabelCentered {
 	ModeKnob(){}
 	std::string formatCurrentValue() override {
-		if(paramQuantity != NULL){
-			switch(int(paramQuantity->getValue())){
+		if(getParamQuantity() != NULL){
+			switch(int(getParamQuantity()->getValue())){
 				case Cosmosis::PURPLE_SEQ:              return "→";
 				case Cosmosis::BLUE_SEQ:                return "↓";
 				case Cosmosis::AQUA_SEQ:                return "←";

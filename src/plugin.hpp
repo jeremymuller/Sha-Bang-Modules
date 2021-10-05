@@ -25,7 +25,7 @@ extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
 extern Model *modelCollider;
-// extern Model *modelQuantal;
+extern Model *modelQuantal;
 
 /************************** INLINE FUNCTIONS **************************/
 
@@ -428,8 +428,8 @@ struct PurpleInvertKnobLabel : PurpleInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -459,8 +459,8 @@ struct PurpleInvertKnobLabelCentered : PurpleInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -489,8 +489,8 @@ struct BlueInvertKnobLabel : BlueInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -520,8 +520,8 @@ struct BlueInvertKnobLabelCentered : BlueInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -532,8 +532,8 @@ struct PurpleNoteKnob : PurpleInvertKnobLabel {
     PurpleNoteKnob() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -544,8 +544,8 @@ struct PurpleScaleKnob : PurpleInvertKnobLabel {
     PurpleScaleKnob() {}  
     
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -557,8 +557,8 @@ struct PurpleNoteKnobCentered : PurpleInvertKnobLabelCentered {
     PurpleNoteKnobCentered() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -569,8 +569,8 @@ struct PurpleScaleKnobCentered : PurpleInvertKnobLabelCentered {
     PurpleScaleKnobCentered() {}  
     
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -581,8 +581,8 @@ struct BlueNoteKnobCentered : BlueInvertKnobLabelCentered {
     BlueNoteKnobCentered() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -593,8 +593,8 @@ struct BlueNoteKnob : BlueInvertKnobLabel {
     BlueNoteKnob() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -605,8 +605,8 @@ struct BlueScaleKnob : BlueInvertKnobLabel {
     BlueScaleKnob() {}  
     
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }

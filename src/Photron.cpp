@@ -74,11 +74,22 @@ struct Photron : Module {
         configParam(Y_POS_PARAM, -10.0, 10.0, 0.0, "Y offset");
         configParam(X_SCALE_PARAM, -2.0, 8.0, 0.5, "X scale");
         configParam(Y_SCALE_PARAM, -2.0, 8.0, 0.5, "Y scale");
-        configParam(COLOR_PARAM, 0.0, 1.0, 0.0, "Background");
-        configParam(WAVEFORM_PARAM, 0.0, 1.0, 0.0, "Waveform");
+        configButton(WAVEFORM_PARAM, "Waveform");
+        configButton(COLOR_PARAM, "Background");
 
-        for (int y = 0; y < rows; y++)
-        {
+        configInput(SEPARATE_INPUT, "Separate");
+        configInput(ALIGN_INPUT, "Align");
+        configInput(COHESION_INPUT, "Cohesion");
+        configInput(TARGET_INPUT, "Target color");
+
+        configInput(X_INPUT, "X");
+        configInput(Y_INPUT, "Y");
+
+        configInput(WAVEFORM_INPUT, "Waveform");
+        configInput(COLOR_TRIGGER_INPUT, "Background");
+        configInput(INVERT_INPUT, "Invert background");
+
+        for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
                 Block b(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE);
                 blocks[y][x] = b;
@@ -428,6 +439,8 @@ struct PhotronDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
+        nvgGlobalTint(args.vg, color::WHITE);
+
         //background
         // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgFillColor(args.vg, nvgRGB(255, 255, 255));
@@ -436,21 +449,21 @@ struct PhotronDisplay : Widget {
         nvgFill(args.vg);
 
         /************ COLOR FLOCKING STUFF ************/
+    if (module->background == Photron::BLACK) {
+        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+        nvgBeginPath(args.vg);
+        nvgRect(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
+        nvgFill(args.vg);
+    } else {
         for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
             for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
                 Vec3 rgb = module->blocks[y][x].rgb;
-                switch (module->background) {
-                    case Photron::COLOR:
-                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        break;
-                    case Photron::B_AND_W: {
-                        NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        break;
-                    }
-                    case Photron::BLACK:
-                        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
-                        break;
+                if (module->background == Photron::COLOR) {
+                    nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                } else {
+                    NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                    nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+
                 }
 
                 // if (module->isColor) {
@@ -465,6 +478,8 @@ struct PhotronDisplay : Widget {
                 nvgFill(args.vg);
             }
         }
+    }
+
 
         /************ SCOPE STUFF ************/
         // code modified from: https://github.com/VCVRack/Fundamental/blob/v0.4.0/src/Scope.cpp

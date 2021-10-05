@@ -575,8 +575,8 @@ namespace TaleaNS {
 struct TaleaModeKnob : BlueInvertKnobLabelCentered {
     TaleaModeKnob(){}
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            switch(int(paramQuantity->getValue())) {
+        if (getParamQuantity() != NULL) {
+            switch(int(getParamQuantity()->getValue())) {
                 case Talea::UP:         return "↑";
                 case Talea::DOWN:       return "↓";
                 case Talea::DOUBLE:     return "2x";

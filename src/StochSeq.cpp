@@ -173,12 +173,12 @@ struct StochSeq : Module, Quantize {
 
 		float prob = gateProbabilities[gateIndex];
 		if (random::uniform() < prob) {
-			gatePulse.trigger(1e-1);
+			gatePulse.trigger(1e-3);
 			currentGateOut = gateIndex;
 			lightBlink = true;
 			randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 		} else {
-			notGatePulse.trigger(1e-1);
+			notGatePulse.trigger(1e-3);
 		}
 
 		float spread = params[SPREAD_PARAM].getValue();
@@ -373,13 +373,13 @@ struct StochSeqDisplay : Widget {
 	}
 
 	void onDragStart(const event::DragStart &e) override {
-		dragX = APP->scene->rack->mousePos.x;
-		dragY = APP->scene->rack->mousePos.y;
+		dragX = APP->scene->rack->getMousePos().x;
+		dragY = APP->scene->rack->getMousePos().y;
 	}
 
 	void onDragMove(const event::DragMove &e) override {
-		float newDragX = APP->scene->rack->mousePos.x;
-		float newDragY = APP->scene->rack->mousePos.y;
+		float newDragX = APP->scene->rack->getMousePos().x;
+		float newDragY = APP->scene->rack->getMousePos().y;
 		setProbabilities(initX + (newDragX - dragX), initY + (newDragY - dragY));
 	}
 

@@ -809,13 +809,13 @@ struct NeutrinodeDisplay : Widget {
     }
 
     void onDragStart(const event::DragStart &e) override {
-        dragX = APP->scene->rack->mousePos.x;
-        dragY = APP->scene->rack->mousePos.y;
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float newDragX = APP->scene->rack->mousePos.x;
-        float newDragY = APP->scene->rack->mousePos.y;
+        float newDragX = APP->scene->rack->getMousePos().x;
+        float newDragY = APP->scene->rack->getMousePos().y;
 
         for (int i = 0; i < NUM_OF_NODES; i++) {
             if (!module->nodes[i].locked) {
@@ -869,11 +869,15 @@ struct NeutrinodeDisplay : Widget {
     void draw(const DrawArgs &args) override {
 
         if (module != NULL) {
+
             //background
             nvgFillColor(args.vg, nvgRGB(40, 40, 40));
             nvgBeginPath(args.vg);
             nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
             nvgFill(args.vg);
+
+            nvgGlobalTint(args.vg, color::WHITE);
+            
             // draw nodes
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {

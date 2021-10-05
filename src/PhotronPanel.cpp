@@ -261,6 +261,8 @@ struct PhotronPanelDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
+        nvgGlobalTint(args.vg, color::WHITE);
+
         //background
         // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgFillColor(args.vg, nvgRGB(255, 255, 255));
