@@ -238,22 +238,38 @@ struct Neutrinode : Module, Quantize {
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
-        configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Continuous / 1-shot");
-        configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
+        configButton(PLAY_PARAM, "Continuous / 1-shot");
+        configButton(MOVE_PARAM, "Move nodes");
         configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(PITCH_PARAM, 0.0, 1.0, 1.0, "Pitch mode");
-        configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
-        configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
-        configParam(ON_PARAM + PURPLE_NODE, 0.0, 1.0, 0.0, "toggle purple node");
-        configParam(ON_PARAM + BLUE_NODE, 0.0, 1.0, 0.0, "toggle blue node");
-        configParam(ON_PARAM + AQUA_NODE, 0.0, 1.0, 0.0, "toggle aqua node");
-        configParam(ON_PARAM + RED_NODE, 0.0, 1.0, 0.0, "toggle red node");
-        configParam(OCTAVE_PARAMS + PURPLE_NODE, -5.0, 5.0, 0.0, "octave purple node");
-        configParam(OCTAVE_PARAMS + BLUE_NODE, -5.0, 5.0, 0.0, "octave blue node");
-        configParam(OCTAVE_PARAMS + AQUA_NODE, -5.0, 5.0, 0.0, "octave aqua node");
-        configParam(OCTAVE_PARAMS + RED_NODE, -5.0, 5.0, 0.0, "octave red node");
+        configSwitch(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode", {"size", "position"});
+        configButton(RND_PARTICLES_PARAM, "Randomize particles");
+        configButton(CLEAR_PARTICLES_PARAM, "Clear particles");
+        configButton(ON_PARAM + PURPLE_NODE, "toggle purple node");
+        configButton(ON_PARAM + BLUE_NODE, "toggle blue node");
+        configButton(ON_PARAM + AQUA_NODE, "toggle aqua node");
+        configButton(ON_PARAM + RED_NODE, "toggle red node");
+        configParam(OCTAVE_PARAMS + PURPLE_NODE, -5.0, 5.0, 0.0, "Purple", " oct");
+        configParam(OCTAVE_PARAMS + BLUE_NODE, -5.0, 5.0, 0.0, "Blue", " oct");
+        configParam(OCTAVE_PARAMS + AQUA_NODE, -5.0, 5.0, 0.0, "Aqua", " oct");
+        configParam(OCTAVE_PARAMS + RED_NODE, -5.0, 5.0, 0.0, "Red", " oct");
+
+        configInput(PLAY_INPUT, "Continuous / 1-shot");
+        configInput(MOVE_INPUT, "Move nodes");
+        configInput(BPM_INPUT, "bpm");
+        configInput(PITCH_CV_INPUT, "Root note");
+
+        configOutput(VOLTS_ALL_OUTPUTS, "Pitch (V/OCT) ALL");
+        configOutput(GATES_ALL_OUTPUTS, "Trigger ALL");
+        configOutput(VOLT_OUTPUTS + PURPLE_NODE, "Purple Pitch (V/OCT)");
+        configOutput(VOLT_OUTPUTS + BLUE_NODE, "Blue Pitch (V/OCT)");
+        configOutput(VOLT_OUTPUTS + AQUA_NODE, "Aqua Pitch (V/OCT)");
+        configOutput(VOLT_OUTPUTS + RED_NODE, "Red Pitch (V/OCT)");
+        configOutput(GATE_OUTPUTS + PURPLE_NODE, "Purple Trigger");
+        configOutput(GATE_OUTPUTS + BLUE_NODE, "Blue Trigger");
+        configOutput(GATE_OUTPUTS + AQUA_NODE, "Aqua Trigger");
+        configOutput(GATE_OUTPUTS + RED_NODE, "Red Trigger");
 
         nodes[0].color = nvgRGBA(128, 0, 219, 255);
         nodes[1].color = nvgRGBA(38, 0, 255, 255);

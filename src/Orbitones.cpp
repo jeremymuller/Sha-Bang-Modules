@@ -202,18 +202,34 @@ struct Orbitones : Module {
     Orbitones() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(OFFSET_PARAM, -5.0, 5.0, 0.0, "Offset", " V");
-        configParam(REMOVE_PARTICLE_PARAM, 0.0, 1.0, 0.0, "Remove previous particle");
-        configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
-        configParam(MOVE_ATTRACTORS_PARAM, 0.0, 1.0, 0.0, "Move attractors");
+        configButton(REMOVE_PARTICLE_PARAM, "Remove previous particle");
+        configButton(CLEAR_PARTICLES_PARAM, "Clear particles");
+        configButton(MOVE_ATTRACTORS_PARAM, "Move attractors");
         configParam(GLOBAL_GRAVITY_PARAM, 1.0, 50.0, 30.0, "Global gravity");
-        configParam(ON_PARAMS + PURPLE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle purple attractor");
-        configParam(ON_PARAMS + BLUE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle blue attractor");
-        configParam(ON_PARAMS + AQUA_ATTRACTOR, 0.0, 1.0, 0.0, "toggle aqua attractor");
-        configParam(ON_PARAMS + RED_ATTRACTOR, 0.0, 1.0, 0.0, "toggle red attractor");
+        configButton(ON_PARAMS + PURPLE_ATTRACTOR, "toggle purple attractor");
+        configButton(ON_PARAMS + BLUE_ATTRACTOR, "toggle blue attractor");
+        configButton(ON_PARAMS + AQUA_ATTRACTOR, "toggle aqua attractor");
+        configButton(ON_PARAMS + RED_ATTRACTOR, "toggle red attractor");
         configParam(GRAVITY_PARAMS + PURPLE_ATTRACTOR, -1.0, 2.0, 1.0, "Purple attractor gravity");
         configParam(GRAVITY_PARAMS + BLUE_ATTRACTOR, -1.0, 2.0, 1.0, "Blue attractor gravity");
         configParam(GRAVITY_PARAMS + AQUA_ATTRACTOR, -1.0, 2.0, 1.0, "Aqua attractor gravity");
         configParam(GRAVITY_PARAMS + RED_ATTRACTOR, -1.0, 2.0, 1.0, "Red attractor gravity");
+
+        configInput(MOVE_ATTRACTORS_INPUT, "Move attractors");
+        configInput(GLOBAL_GRAVITY_INPUT, "Global gravity");
+
+        configOutput(AVG_X_OUTPUT, "average X");
+        configOutput(AVG_Y_OUTPUT, "average Y");
+        configOutput(MAX_X_OUTPUT, "max X");
+        configOutput(MAX_Y_OUTPUT, "max Y");
+        configOutput(MIN_X_OUTPUT, "min X");
+        configOutput(MIN_Y_OUTPUT, "min Y");
+        configOutput(X_POLY_OUTPUT, "X");
+        configOutput(Y_POLY_OUTPUT, "Y");
+        configOutput(NEG_X_POLY_OUTPUT, "-X");
+        configOutput(NEG_Y_POLY_OUTPUT, "-Y");
+        configOutput(VEL_X_POLY_OUTPUT, "X velocity");
+        configOutput(VEL_Y_POLY_OUTPUT, "Y velocity");
 
         attractors[0].color = nvgRGBA(128, 0, 219, 255);
         attractors[1].color = nvgRGBA(38, 0, 255, 255);
