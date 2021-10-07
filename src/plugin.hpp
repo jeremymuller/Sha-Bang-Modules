@@ -617,6 +617,8 @@ struct BlueScaleKnob : BlueInvertKnobLabel {
 struct JeremyPurpleLight : ModuleLightWidget {
     JeremyPurpleLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(128, 0, 219, 0);
         addBaseColor(nvgRGB(128, 0, 219));
     }
 };
@@ -624,13 +626,18 @@ struct JeremyPurpleLight : ModuleLightWidget {
 struct JeremyBlueLight : ModuleLightWidget {
     JeremyBlueLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 0, 255, 0);
         addBaseColor(nvgRGB(0, 0, 255));
+
     }
 };
 
 struct JeremyAquaLight : ModuleLightWidget {
     JeremyAquaLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 238, 255, 0);
         addBaseColor(nvgRGB(0, 238, 255));
     }
 };
@@ -638,7 +645,18 @@ struct JeremyAquaLight : ModuleLightWidget {
 struct JeremyRedLight : ModuleLightWidget {
     JeremyRedLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(255, 0, 0, 0);
         addBaseColor(nvgRGB(255, 0, 0));
+    }
+};
+
+struct DisplayPurpleLight : ModuleLightWidget {
+    DisplayPurpleLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(128, 0, 219, 0);
+        addBaseColor(nvgRGB(128, 0, 219));
     }
 };
 

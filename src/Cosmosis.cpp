@@ -766,7 +766,7 @@ struct CosmosisWidget : ModuleWidget {
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
 
-        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(15.9 - 3.21, 276.8 - 3.21), module, Cosmosis::PURPLE_LIGHT));
+        addChild(createLight<SmallLight<DisplayPurpleLight>>(Vec(15.9 - 3.21, 276.8 - 3.21), module, Cosmosis::PURPLE_LIGHT));
         addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(26.4 - 3.21, 267.1 - 3.21), module, Cosmosis::BLUE_LIGHT));
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(37 - 3.21, 276.8 - 3.21), module, Cosmosis::AQUA_LIGHT));
         addChild(createLight<SmallLight<JeremyRedLight>>(Vec(26.4 - 3.21, 286.6 - 3.21), module, Cosmosis::RED_LIGHT));

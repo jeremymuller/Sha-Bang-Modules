@@ -91,7 +91,7 @@ struct PolyrhythmClock : Module {
         configInput(TUPLET3_RHYTHM_INPUT, "Tuplet 3 rhythm");
         configInput(TUPLET3_DUR_INPUT, "Tuplet 3 duration");
 
-        configOutput(MASTER_PULSE_OUTPUT, "Parent pulse");
+        configOutput(MASTER_PULSE_OUTPUT, "Main pulse");
         configOutput(TUPLET1_OUTPUT, "Tuplet 1");
         configOutput(TUPLET2_OUTPUT, "Tuplet 2");
         configOutput(TUPLET3_OUTPUT, "Tuplet 3");

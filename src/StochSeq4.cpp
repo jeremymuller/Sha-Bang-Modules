@@ -98,32 +98,51 @@ struct StochSeq4 : Module, Quantize {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(LENGTH_PARAM + PURPLE_SEQ, 1.0, 32.0, 32.0, "purple seq length");
-        configParam(LENGTH_PARAM + BLUE_SEQ, 1.0, 32.0, 32.0, "blue seq length");
-        configParam(LENGTH_PARAM + AQUA_SEQ, 1.0, 32.0, 32.0, "aqua seq length");
-        configParam(LENGTH_PARAM + RED_SEQ, 1.0, 32.0, 32.0, "red seq length");
-        configParam(PATTERN_PARAM + PURPLE_SEQ, 0.0, 7.0, 0.0, "purple pattern");
-        configParam(PATTERN_PARAM + BLUE_SEQ, 0.0, 7.0, 0.0, "blue pattern");
-        configParam(PATTERN_PARAM + AQUA_SEQ, 0.0, 7.0, 0.0, "aqua pattern");
-        configParam(PATTERN_PARAM + RED_SEQ, 0.0, 7.0, 0.0, "red pattern");
+        configParam(LENGTH_PARAM + PURPLE_SEQ, 1.0, 32.0, 32.0, "Purple seq length");
+        configParam(LENGTH_PARAM + BLUE_SEQ, 1.0, 32.0, 32.0, "Blue seq length");
+        configParam(LENGTH_PARAM + AQUA_SEQ, 1.0, 32.0, 32.0, "Aqua seq length");
+        configParam(LENGTH_PARAM + RED_SEQ, 1.0, 32.0, 32.0, "Red seq length");
+        configParam(PATTERN_PARAM + PURPLE_SEQ, 0.0, 7.0, 0.0, "Purple pattern");
+        configParam(PATTERN_PARAM + BLUE_SEQ, 0.0, 7.0, 0.0, "Blue pattern");
+        configParam(PATTERN_PARAM + AQUA_SEQ, 0.0, 7.0, 0.0, "Aqua pattern");
+        configParam(PATTERN_PARAM + RED_SEQ, 0.0, 7.0, 0.0, "Red pattern");
 
-        configParam(RANDOM_PARAM + PURPLE_SEQ, 0.0, 1.0, 0.0, "randomize purple pattern");
-        configParam(RANDOM_PARAM + BLUE_SEQ, 0.0, 1.0, 0.0, "randomize blue pattern");
-        configParam(RANDOM_PARAM + AQUA_SEQ, 0.0, 1.0, 0.0, "randomize aqua pattern");
-        configParam(RANDOM_PARAM + RED_SEQ, 0.0, 1.0, 0.0, "randomize red pattern");
-        configParam(INVERT_PARAM + PURPLE_SEQ, 0.0, 1.0, 0.0, "invert purple pattern");
-        configParam(INVERT_PARAM + BLUE_SEQ, 0.0, 1.0, 0.0, "invert blue pattern");
-        configParam(INVERT_PARAM + AQUA_SEQ, 0.0, 1.0, 0.0, "invert aqua pattern");
-        configParam(INVERT_PARAM + RED_SEQ, 0.0, 1.0, 0.0, "invert red pattern");
-        configParam(DIMINUTION_PARAM + PURPLE_SEQ, 0.0, 1.0, 0.0, "diminish purple pattern");
-        configParam(DIMINUTION_PARAM + BLUE_SEQ, 0.0, 1.0, 0.0, "diminish blue pattern");
-        configParam(DIMINUTION_PARAM + AQUA_SEQ, 0.0, 1.0, 0.0, "diminish aqua pattern");
-        configParam(DIMINUTION_PARAM + RED_SEQ, 0.0, 1.0, 0.0, "diminish red pattern");
+        configButton(RANDOM_PARAM + PURPLE_SEQ, "Randomize purple pattern");
+        configButton(RANDOM_PARAM + BLUE_SEQ, "Randomize blue pattern");
+        configButton(RANDOM_PARAM + AQUA_SEQ, "Randomize aqua pattern");
+        configButton(RANDOM_PARAM + RED_SEQ, "Randomize red pattern");
+        configButton(INVERT_PARAM + PURPLE_SEQ, "Invert purple pattern");
+        configButton(INVERT_PARAM + BLUE_SEQ, "Invert blue pattern");
+        configButton(INVERT_PARAM + AQUA_SEQ, "Invert aqua pattern");
+        configButton(INVERT_PARAM + RED_SEQ, "Invert red pattern");
+        configButton(DIMINUTION_PARAM + PURPLE_SEQ, "Diminish purple pattern");
+        configButton(DIMINUTION_PARAM + BLUE_SEQ, "Diminish blue pattern");
+        configButton(DIMINUTION_PARAM + AQUA_SEQ, "Diminish aqua pattern");
+        configButton(DIMINUTION_PARAM + RED_SEQ, "Diminish red pattern");
 
-        configParam(SPREAD_PARAM + PURPLE_SEQ, -4.0, 4.0, 1.0, "purple spread");
-        configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 1.0, "blue spread");
-        configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 1.0, "aqua spread");
-        configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 1.0, "red spread");
+        configParam(SPREAD_PARAM + PURPLE_SEQ, -4.0, 4.0, 1.0, "Purple spread");
+        configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 1.0, "Blue spread");
+        configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 1.0, "Aqua spread");
+        configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 1.0, "Red spread");
+
+        configInput(MASTER_CLOCK_INPUT, "Master clock");
+        configInput(RESET_INPUT, "Reset");
+        configInput(CLOCKS_INPUT + PURPLE_SEQ, "Purple clock");
+        configInput(CLOCKS_INPUT + BLUE_SEQ, "Blue clock");
+        configInput(CLOCKS_INPUT + AQUA_SEQ, "Aqua clock");
+        configInput(CLOCKS_INPUT + RED_SEQ, "Red clock");
+        configInput(RANDOM_INPUT + PURPLE_SEQ, "Randomize purple pattern");
+        configInput(RANDOM_INPUT + BLUE_SEQ, "Randomize blue pattern");
+        configInput(RANDOM_INPUT + AQUA_SEQ, "Randomize aqua pattern");
+        configInput(RANDOM_INPUT + RED_SEQ, "Randomize red pattern");
+        configInput(INVERT_INPUT + PURPLE_SEQ, "Invert purple pattern");
+        configInput(INVERT_INPUT + BLUE_SEQ, "Invert blue pattern");
+        configInput(INVERT_INPUT + AQUA_SEQ, "Invert aqua pattern");
+        configInput(INVERT_INPUT + RED_SEQ, "Invert red pattern");
+        configInput(DIMINUTION_INPUT + PURPLE_SEQ, "Diminish purple pattern");
+        configInput(DIMINUTION_INPUT + BLUE_SEQ, "Diminish blue pattern");
+        configInput(DIMINUTION_INPUT + AQUA_SEQ, "Diminish aqua pattern");
+        configInput(DIMINUTION_INPUT + RED_SEQ, "Diminish red pattern");
     }
 
     json_t *dataToJson() override {

@@ -61,18 +61,30 @@ struct StochSeq : Module, Quantize {
 
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(RESET_PARAM, 0.0, 1.0, 0.0, "reset");
-		configParam(PATTERN_PARAM, 0.0, 7.0, 0.0, "pattern");
-		configParam(INVERT_PARAM, 0.0, 1.0, 0.0, "invert pattern");
-		configParam(RANDOM_PARAM, 0.0, 1.0, 0.0, "randomize pattern");
-		configParam(DIMINUTION_PARAM, 0.0, 1.0, 0.0, "diminish pattern");
-		configParam(LENGTH_PARAM, 1.0, 32.0, 32.0, "seq length");
-		configParam(SPREAD_PARAM, -4.0, 4.0, 1.0, "spread");
+		configButton(RESET_PARAM, "Reset");
+		configParam(PATTERN_PARAM, 0.0, 7.0, 0.0, "Pattern");
+		configButton(INVERT_PARAM, "Invert pattern");
+		configButton(RANDOM_PARAM, "Randomize pattern");
+		configButton(DIMINUTION_PARAM, "Diminish pattern");
+		configParam(LENGTH_PARAM, 1.0, 32.0, 32.0, "Seq length");
+		configParam(SPREAD_PARAM, -4.0, 4.0, 1.0, "Spread");
 		configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
 		configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
 
+		configInput(CLOCK_INPUT, "Clock");
+		configInput(RESET_INPUT, "Reset");
+		configInput(INVERT_INPUT, "Invert pattern");
+		configInput(RANDOM_INPUT, "Randomize pattern");
+		configInput(DIMINUTION_INPUT, "Diminish pattern");
+
+		configOutput(GATE_MAIN_OUTPUT, "Gates");
+		configOutput(NOT_GATE_MAIN_OUTPUT, "Not Gates");
+		configOutput(VOLT_OUTPUT, "Pitch (V/OCT)");
+		configOutput(INV_VOLT_OUTPUT, "Inverted Pitch (V/OCT)");
+
 		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 			gateProbabilities[i] = random::uniform();
+			configOutput(GATES_OUTPUT + i, "Gate " + std::to_string(i+1));
 		}
 
 		randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
