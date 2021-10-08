@@ -143,6 +143,30 @@ struct StochSeq4 : Module, Quantize {
         configInput(DIMINUTION_INPUT + BLUE_SEQ, "Diminish blue pattern");
         configInput(DIMINUTION_INPUT + AQUA_SEQ, "Diminish aqua pattern");
         configInput(DIMINUTION_INPUT + RED_SEQ, "Diminish red pattern");
+
+
+
+        configOutput(OR_OUTPUT, "Or");
+        configOutput(XOR_OUTPUT, "Xor");
+
+        configOutput(GATES_OUTPUT + PURPLE_SEQ, "Purple Gates");
+        configOutput(GATES_OUTPUT + BLUE_SEQ, "Blue Gates");
+        configOutput(GATES_OUTPUT + AQUA_SEQ, "Aqua Gates");
+        configOutput(GATES_OUTPUT + RED_SEQ, "Red Gates");
+        configOutput(NOT_GATES_OUTPUT + PURPLE_SEQ, "Purple Not Gates");
+        configOutput(NOT_GATES_OUTPUT + BLUE_SEQ, "Blue Not Gates");
+        configOutput(NOT_GATES_OUTPUT + AQUA_SEQ, "Aqua Not Gates");
+        configOutput(NOT_GATES_OUTPUT + RED_SEQ, "Red Not Gates");
+
+        // configOutput(INV_VOLT_OUTPUT, "Inverted Pitch (V/OCT)");
+        configOutput(VOLTS_OUTPUT + PURPLE_SEQ, "Purple Pitch (V/OCT)");
+        configOutput(VOLTS_OUTPUT + BLUE_SEQ, "Blue Pitch (V/OCT)");
+        configOutput(VOLTS_OUTPUT + AQUA_SEQ, "Aqua Pitch (V/OCT)");
+        configOutput(VOLTS_OUTPUT + RED_SEQ, "Red Pitch (V/OCT)");
+        configOutput(INV_VOLTS_OUTPUT + PURPLE_SEQ, "Purple Inverted Pitch (V/OCT)");
+        configOutput(INV_VOLTS_OUTPUT + BLUE_SEQ, "Blue Inverted Pitch (V/OCT)");
+        configOutput(INV_VOLTS_OUTPUT + AQUA_SEQ, "Aqua Inverted Pitch (V/OCT)");
+        configOutput(INV_VOLTS_OUTPUT + RED_SEQ, "Red Inverted Pitch (V/OCT)");
     }
 
     json_t *dataToJson() override {

@@ -238,13 +238,20 @@ struct Talea : Module {
 
     Talea() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
+        configButton(CLOCK_TOGGLE_PARAM, "toggle clock");
         configParam(BPM_PARAM, -2.0, 6.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
-        configParam(OCT_PARAM, 0.0, 1.0, 0.0, "Octaves");
-        configParam(MODE_PARAM, 0.0, Talea::NUM_ARP_MODES - 1, 0.0, "Pattern Mode");
-        configParam(HOLD_PARAM, 0.0, 1.0, 0.0, "Hold Pattern");
+        configButton(OCT_PARAM, "Octaves");
+        configSwitch(MODE_PARAM, 0.0, Talea::NUM_ARP_MODES - 1, 0.0, "Pattern Mode", {"Up", "Down", "Doubled", "As played", "Random"});
+        configButton(HOLD_PARAM, "Hold Pattern");
         configParam(GATE_LENGTH_PARAM, 0.0, 1.0, 0.5, "Gate length", "%", 0.0, 100.0);
-        configParam(POLYRHYTHM_MODE_PARAM, 0.0, 1.0, 0.0, "Polyrhythm Mode");
+        configButton(POLYRHYTHM_MODE_PARAM, "Polyrhythm Mode");
+
+        configInput(EXT_CLOCK_INPUT, "External clock");
+        configInput(VOLTS_INPUT, "Pitch (V/OCT)");
+        configInput(GATES_INPUT, "Gate");
+
+        configOutput(VOLTS_OUTPUT, "Pitch (V/OCT)");
+        configOutput(GATES_OUTPUT, "Gate");
 
         for (int i = 0; i < MAX_CHANNELS; i++) {
             phases[i] = 0.0;
