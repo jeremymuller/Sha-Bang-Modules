@@ -90,6 +90,7 @@ struct StochSeq4 : Module, Quantize {
     bool resetMode = false;
     bool showPercentages = true;
     bool enableKBShortcuts = true;
+    bool isCtrlClick = false;
     int focusedSeq = PURPLE_SEQ;
     Sequencer clipBoard;
     Sequencer seqs[NUM_SEQS];
@@ -502,10 +503,20 @@ struct StochSeq4Display : Widget {
 
     void onButton(const event::Button &e) override {
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-            e.consume(this);
-            initX = e.pos.x;
-            initY = e.pos.y;
-            setProbabilities(initX, initY);
+            if ((e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+                module->isCtrlClick = true;
+                e.consume(this);
+                initX = e.pos.x;
+                initY = e.pos.y;
+                toggleProbabilities(initX);
+            }
+            else {
+                module->isCtrlClick = false;
+                e.consume(this);
+                initX = e.pos.x;
+                initY = e.pos.y;
+                setProbabilities(initX, initY);
+            }
         }
     }
 
@@ -515,9 +526,11 @@ struct StochSeq4Display : Widget {
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float newDragX = APP->scene->rack->getMousePos().x;
-        float newDragY = APP->scene->rack->getMousePos().y;
-        setProbabilities(initX + (newDragX - dragX), initY + (newDragY - dragY));
+        if (!module->isCtrlClick) {
+            float newDragX = APP->scene->rack->getMousePos().x;
+            float newDragY = APP->scene->rack->getMousePos().y;
+            setProbabilities(initX + (newDragX - dragX), initY + (newDragY - dragY));
+        }
     }
 
     void setProbabilities(float currentX, float dragY) {
@@ -527,6 +540,14 @@ struct StochSeq4Display : Widget {
         if (dragY < 0) dragY = 0;
         else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
         module->seqs[seqId].gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+    }
+
+    void toggleProbabilities(float currentX) {
+        if (currentX < 0) currentX = 0;
+        int index = (int)(currentX / sliderWidth);
+        if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
+        float p = module->seqs[seqId].gateProbabilities[index];
+        module->seqs[seqId].gateProbabilities[index] = p < 0.5 ? 1.0 : 0.0;
     }
 
     float getSliderHeight(int index) {

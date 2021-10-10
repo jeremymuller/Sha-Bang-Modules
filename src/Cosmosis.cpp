@@ -147,7 +147,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         configParam(OCTAVE_PARAM + RED_SEQ, -5.0, 5.0, 0.0, "Red", " oct");
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation"); // OLD
         configButton(CLEAR_STARS_PARAM, "Clear stars");
-        configParam(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode");
+        configSwitch(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode", {"Purple", "Blue", "Aqua", "Red", "Clockwise", "Counter clockwise", "Random"});
 
         configOutput(VOLT_OUT, "Pitch (V/OCT)");
         configOutput(GATE_OUT, "Trigger");

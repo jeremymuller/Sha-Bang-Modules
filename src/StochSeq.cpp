@@ -58,6 +58,7 @@ struct StochSeq : Module, Quantize {
 	float invPitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
 	bool enableKBShortcuts = true;
+	bool isCtrlClick = false;
 
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -376,12 +377,22 @@ struct StochSeqDisplay : Widget {
 	StochSeqDisplay() {}
 
 	void onButton(const event::Button &e) override {
-		if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-			e.consume(this);
-			initX = e.pos.x;
-			initY = e.pos.y;
-			setProbabilities(initX, initY);
-		}
+        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+            if ((e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+                module->isCtrlClick = true;
+                e.consume(this);
+                initX = e.pos.x;
+                initY = e.pos.y;
+                toggleProbabilities(initX);
+            }
+            else {
+                module->isCtrlClick = false;
+                e.consume(this);
+                initX = e.pos.x;
+                initY = e.pos.y;
+                setProbabilities(initX, initY);
+            }
+        }
 	}
 
 	void onDragStart(const event::DragStart &e) override {
@@ -390,9 +401,11 @@ struct StochSeqDisplay : Widget {
 	}
 
 	void onDragMove(const event::DragMove &e) override {
-		float newDragX = APP->scene->rack->getMousePos().x;
-		float newDragY = APP->scene->rack->getMousePos().y;
-		setProbabilities(initX + (newDragX - dragX), initY + (newDragY - dragY));
+		if (!module->isCtrlClick) {
+			float newDragX = APP->scene->rack->getMousePos().x;
+			float newDragY = APP->scene->rack->getMousePos().y;
+			setProbabilities(initX + (newDragX - dragX), initY + (newDragY - dragY));
+		}
 	}
 
 	void setProbabilities(float currentX, float dragY) {
@@ -402,6 +415,14 @@ struct StochSeqDisplay : Widget {
 		else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
 		module->gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
 	}
+
+	void toggleProbabilities(float currentX) {
+        if (currentX < 0) currentX = 0;
+        int index = (int)(currentX / sliderWidth);
+        if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
+        float p = module->gateProbabilities[index];
+        module->gateProbabilities[index] = p < 0.5 ? 1.0 : 0.0;
+    }
 
 	float getSliderHeight(int index) {
 		float y = box.size.y - SLIDER_TOP;
