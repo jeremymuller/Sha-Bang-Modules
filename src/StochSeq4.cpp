@@ -11,6 +11,8 @@ struct Sequencer {
     dsp::SchmittTrigger invertTrig;
     dsp::PulseGenerator gatePulse;
     dsp::PulseGenerator notGatePulse;
+    bool gateOn = false;
+    bool notGateOn = false;
     int seqLength;
     int gateIndex;
     int currentPattern = 0;
@@ -33,8 +35,12 @@ struct Sequencer {
         float prob = gateProbabilities[gateIndex];
         if (random::uniform() < prob) {
             gatePulse.trigger(1e-3);
+            gateOn = true;
+            notGateOn = false;
         } else {
             notGatePulse.trigger(1e-3);
+            gateOn = false;
+            notGateOn = true;
         }
 
         // pitch
@@ -44,6 +50,13 @@ struct Sequencer {
 };
 
 struct StochSeq4 : Module, Quantize {
+    enum ModeIds {
+		GATE_MODE,
+		TRIG_MODE,
+		VOLT_INDEPENDENT_MODE,
+		VOLT_SAMPHOLD_MODE,
+		NUM_MODES
+    };
     enum SequencerIds {
         PURPLE_SEQ,
         BLUE_SEQ,
@@ -87,6 +100,8 @@ struct StochSeq4 : Module, Quantize {
     dsp::SchmittTrigger clockTrig;
     dsp::SchmittTrigger clockTriggers[NUM_SEQS];
     dsp::SchmittTrigger resetTrig;
+    int gateMode = GATE_MODE;
+    int voltMode = VOLT_INDEPENDENT_MODE;
     bool resetMode = false;
     bool showPercentages = true;
     bool enableKBShortcuts = true;
@@ -145,8 +160,6 @@ struct StochSeq4 : Module, Quantize {
         configInput(DIMINUTION_INPUT + AQUA_SEQ, "Diminish aqua pattern");
         configInput(DIMINUTION_INPUT + RED_SEQ, "Diminish red pattern");
 
-
-
         configOutput(OR_OUTPUT, "Or");
         configOutput(XOR_OUTPUT, "Xor");
 
@@ -190,6 +203,7 @@ struct StochSeq4 : Module, Quantize {
         json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
         json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
         json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
+        json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
 
         return rootJ;
     }
@@ -203,6 +217,9 @@ struct StochSeq4 : Module, Quantize {
 
         json_t *focusIdJ = json_object_get(rootJ, "focusId");
         if (focusIdJ) focusedSeq = json_integer_value(focusIdJ);
+
+        json_t * gateModeJ = json_object_get(rootJ, "gateMode");
+        if (gateModeJ) gateMode = json_integer_value(gateModeJ);
 
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
@@ -273,8 +290,15 @@ struct StochSeq4 : Module, Quantize {
         for (int i = 0; i < NUM_SEQS; i++) {
             float pitchVoltage = Quantize::quantizeRawVoltage(seqs[i].volts, rootNote, scale);
             float invPitchVoltage = Quantize::quantizeRawVoltage(seqs[i].invVolts, rootNote, scale);
-            bool pulse = seqs[i].gatePulse.process(1.0 / args.sampleRate);
-            bool notPulse = seqs[i].notGatePulse.process(1.0 / args.sampleRate);
+
+            bool pulse, notPulse;
+            if (gateMode == GATE_MODE) {
+                pulse = seqs[i].gateOn;
+                notPulse = seqs[i].notGateOn;
+            } else {
+                pulse = seqs[i].gatePulse.process(1.0 / args.sampleRate);
+                notPulse = seqs[i].notGatePulse.process(1.0 / args.sampleRate);
+            }
             if (pulse) {
                 orGate = true;
                 xorGate++;
@@ -438,6 +462,31 @@ struct StochSeq4 : Module, Quantize {
 };
 
 namespace StochSeq4NS {
+	struct GateModeValueItem : MenuItem {
+		StochSeq4 *module;
+		int gateMode;
+		void onAction(const event::Action &e) override {
+			module->gateMode = gateMode;
+		}
+	};
+
+	struct GateModeItem : MenuItem {
+		StochSeq4 *module;
+		Menu *createChildMenu() override {
+			Menu *menu = new Menu;
+			std::vector<std::string> modes = {"Gates", "Triggers"};
+			for (int i = 0; i < 2; i++) {
+				GateModeValueItem *item = new GateModeValueItem;
+				item->text = modes[i];
+				item->rightText = CHECKMARK(module->gateMode == i);
+				item->module = module;
+				item->gateMode = i;
+				menu->addChild(item);
+			}
+			return menu;
+		}
+	};
+
 	struct ShowTextValueItem : MenuItem {
         StochSeq4 *module;
         bool showPercentages;
@@ -539,7 +588,9 @@ struct StochSeq4Display : Widget {
         if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
         if (dragY < 0) dragY = 0;
         else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
-        module->seqs[seqId].gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+        // module->seqs[seqId].gateProbabilities[index] = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+        float prob = 1.0 - dragY / (box.size.y - SLIDER_TOP);
+        module->seqs[seqId].gateProbabilities[index] = clamp(prob, 0.0, 1.0);
     }
 
     void toggleProbabilities(float currentX) {
@@ -581,6 +632,8 @@ struct StochSeq4Display : Widget {
 			}
             return;
         }
+
+        nvgGlobalTint(args.vg, color::WHITE);
 
         // sliders
         nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
@@ -849,9 +902,18 @@ struct StochSeq4Widget : ModuleWidget {
 
 	void appendContextMenu(Menu *menu) override {
 		StochSeq4 *module = dynamic_cast<StochSeq4*>(this->module);
-		menu->addChild(new MenuEntry);
+        menu->addChild(new MenuEntry);
+        
+        StochSeq4NS::GateModeItem *gateModeItem = new StochSeq4NS::GateModeItem;
+		gateModeItem->text = "Gate mode";
+		if (module->gateMode == StochSeq4::GATE_MODE) gateModeItem->rightText = std::string("Gates") + " " + RIGHT_ARROW;
+		else gateModeItem->rightText = std::string("Triggers") + " " + RIGHT_ARROW;
+		gateModeItem->module = module;
+		menu->addChild(gateModeItem);
 
-		StochSeq4NS::ShowTextItem *showTextItem = new StochSeq4NS::ShowTextItem;
+        menu->addChild(new MenuEntry);
+
+        StochSeq4NS::ShowTextItem *showTextItem = new StochSeq4NS::ShowTextItem;
 		showTextItem->text = "Slider Percentages";
 		if (module->showPercentages) showTextItem->rightText = std::string("show") + " " + RIGHT_ARROW;
 		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
