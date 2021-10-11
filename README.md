@@ -1,6 +1,6 @@
 # Sha#Bang! Modules
 
-A collection of innovative, probabilistic, generative, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). These modules are free for download but please consider a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller).
+A collection of innovative, probabilistic, generative, and rhythmically complex modules for [VCVRack](https://vcvrack.com/). Created by [Jeremy Muller](http://jeremymuller.com/). If you enjoy using these modules and/or have made money with these, please consider [sponsoring](https://github.com/sponsors/jeremymuller) this project or giving a donation through [PayPal](https://www.paypal.com/paypalme/jeremysmuller). Huge shoutout to **Andras Szabo** for being the very first sponsor of Sha#Bang! Modules! Thank you :pray:
 
 Add these modules to VCVRack through the [Rack library](https://library.vcvrack.com/?brand=Sha%23Bang!%20Modules).
 
