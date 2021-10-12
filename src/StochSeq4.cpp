@@ -204,6 +204,7 @@ struct StochSeq4 : Module, Quantize {
         json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
         json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
+        json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
 
         return rootJ;
     }
@@ -218,8 +219,11 @@ struct StochSeq4 : Module, Quantize {
         json_t *focusIdJ = json_object_get(rootJ, "focusId");
         if (focusIdJ) focusedSeq = json_integer_value(focusIdJ);
 
-        json_t * gateModeJ = json_object_get(rootJ, "gateMode");
+        json_t *gateModeJ = json_object_get(rootJ, "gateMode");
         if (gateModeJ) gateMode = json_integer_value(gateModeJ);
+
+        json_t *voltModeJ = json_object_get(rootJ, "voltMode");
+        if (voltModeJ) voltMode = json_integer_value(voltModeJ);
 
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
@@ -306,8 +310,13 @@ struct StochSeq4 : Module, Quantize {
             
             outputs[GATES_OUTPUT + i].setVoltage(pulse ? 10.0 : 0.0);
             outputs[NOT_GATES_OUTPUT + i].setVoltage(notPulse ? 10.0 : 0.0);
-            outputs[VOLTS_OUTPUT + i].setVoltage(pitchVoltage);
-            outputs[INV_VOLTS_OUTPUT + i].setVoltage(invPitchVoltage);
+            if (voltMode == VOLT_SAMPHOLD_MODE && pulse) {
+                outputs[VOLTS_OUTPUT + i].setVoltage(pitchVoltage);
+                outputs[INV_VOLTS_OUTPUT + i].setVoltage(invPitchVoltage);
+            } else if (voltMode == VOLT_INDEPENDENT_MODE) {
+                outputs[VOLTS_OUTPUT + i].setVoltage(pitchVoltage);
+                outputs[INV_VOLTS_OUTPUT + i].setVoltage(invPitchVoltage);
+            }
         }
 
         outputs[OR_OUTPUT].setVoltage(orGate ? 10.0 : 0.0);
@@ -487,6 +496,31 @@ namespace StochSeq4NS {
 		}
 	};
 
+	struct VoltModeValueItem : MenuItem {
+		StochSeq4 *module;
+		int voltMode;
+		void onAction(const event::Action &e) override {
+			module->voltMode = voltMode;
+		}
+	};
+
+	struct VoltModeItem : MenuItem {
+		StochSeq4 *module;
+		Menu *createChildMenu() override {
+			Menu *menu = new Menu;
+			std::vector<std::string> modes = {"Independent", "Sample and Hold"};
+			for (int i = 0; i < 2; i++) {
+				VoltModeValueItem *item = new VoltModeValueItem;
+				item->text = modes[i];
+				item->rightText = CHECKMARK(module->voltMode == i + StochSeq4::VOLT_INDEPENDENT_MODE);
+				item->module = module;
+				item->voltMode = i + StochSeq4::VOLT_INDEPENDENT_MODE;
+				menu->addChild(item);
+			}
+			return menu;
+		}
+	};
+
 	struct ShowTextValueItem : MenuItem {
         StochSeq4 *module;
         bool showPercentages;
@@ -633,8 +667,6 @@ struct StochSeq4Display : Widget {
             return;
         }
 
-        nvgGlobalTint(args.vg, color::WHITE);
-
         // sliders
         nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
         int visibleSliders = (int)module->params[StochSeq4::LENGTH_PARAM+seqId].getValue();
@@ -696,6 +728,8 @@ struct StochSeq4Display : Widget {
             }
 
         }
+
+        nvgGlobalTint(args.vg, color::WHITE);
 
         // seq position
         if (module->seqs[seqId].gateIndex >= 0) {
@@ -910,6 +944,13 @@ struct StochSeq4Widget : ModuleWidget {
 		else gateModeItem->rightText = std::string("Triggers") + " " + RIGHT_ARROW;
 		gateModeItem->module = module;
 		menu->addChild(gateModeItem);
+
+		StochSeq4NS::VoltModeItem *voltModeItem = new StochSeq4NS::VoltModeItem;
+		voltModeItem->text = "V/OCT mode";
+		if (module->voltMode == StochSeq4::VOLT_INDEPENDENT_MODE) voltModeItem->rightText = std::string("Independent") + " " + RIGHT_ARROW;
+		else voltModeItem->rightText = std::string("Sample and Hold") + " " + RIGHT_ARROW;
+		voltModeItem->module = module;
+		menu->addChild(voltModeItem);
 
         menu->addChild(new MenuEntry);
 
