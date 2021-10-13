@@ -981,7 +981,30 @@ struct StochSeq4Widget : ModuleWidget {
             if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
                 module->shiftFocus();
             }
-        } else if (e.key == GLFW_KEY_LEFT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+		} else if (e.key == GLFW_KEY_C && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS) {
+                module->copyPatternToClipBoard();
+            }
+        } else if (e.key == GLFW_KEY_V && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS) {
+                module->pastePattern();
+            }
+        } else {
+			ModuleWidget::onHoverKey(e);
+			// OpaqueWidget::onHoverKey(e);
+		}
+    } 
+
+    void onSelectKey(const event::SelectKey &e) override {
+		StochSeq4 *module = dynamic_cast<StochSeq4 *>(this->module);
+		if (!module->enableKBShortcuts) {
+			ModuleWidget::onSelectKey(e);
+			return;
+		}
+
+        if (e.key == GLFW_KEY_LEFT && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
 			e.consume(this);
 			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
 				module->shiftPatternLeft(module->focusedSeq);
@@ -1001,22 +1024,8 @@ struct StochSeq4Widget : ModuleWidget {
 			if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
                 module->shiftPatternDown(module->focusedSeq);
             }
-		} else if (e.key == GLFW_KEY_C && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
-            e.consume(this);
-            if (e.action == GLFW_PRESS) {
-                module->copyPatternToClipBoard();
-            }
-        } else if (e.key == GLFW_KEY_V && (e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
-            e.consume(this);
-            if (e.action == GLFW_PRESS) {
-                module->pastePattern();
-            }
-        } else {
-			ModuleWidget::onHoverKey(e);
-			// OpaqueWidget::onHoverKey(e);
-		}
-    } 
-
+        }
+	}
 };
 
 Model *modelStochSeq4 = createModel<StochSeq4, StochSeq4Widget>("StochSeq4");

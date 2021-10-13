@@ -779,10 +779,10 @@ struct StochSeqWidget : ModuleWidget {
 		menu->addChild(enableShortcutItem);
 	}
 
-	void onHoverKey(const event::HoverKey &e) override {
+	void onSelectKey(const event::SelectKey &e) override {
 		StochSeq *module = dynamic_cast<StochSeq *>(this->module);
 		if (!module->enableKBShortcuts) {
-			ModuleWidget::onHoverKey(e);
+			ModuleWidget::onSelectKey(e);
 			return;
 		}
 
@@ -807,8 +807,8 @@ struct StochSeqWidget : ModuleWidget {
 				module->shiftPatternDown();
 			}
 		} else {
-			ModuleWidget::onHoverKey(e);
-			// OpaqueWidget::onHoverKey(e);
+			// ModuleWidget::onSelectKey(e);
+			OpaqueWidget::onSelectKey(e);
 		}
 	}
 };
