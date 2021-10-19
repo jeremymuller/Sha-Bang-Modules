@@ -657,75 +657,79 @@ struct CosmosisDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
-
-        //background
+        // background
         nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
+    }
 
-        nvgGlobalTint(args.vg, color::WHITE);
+    void drawLayer(const DrawArgs &args, int layer) override {
+        if (module == NULL) return;
 
-        // name of constellation
-        std::string text = module->constellationText;
-        nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
-        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-        // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
-        nvgFontSize(args.vg, 12);
-        nvgText(args.vg, 5, 12, text.c_str(), NULL);
+        if (layer == 1) {
 
-        // draw stars
-        for (int i = 0; i < MAX_STARS; i++) {
-            if (module->stars[i].visible) {
-                Vec pos = module->stars[i].getPos();
+            // name of constellation
+            std::string text = module->constellationText;
+            nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
+            nvgFontSize(args.vg, 12);
+            nvgText(args.vg, 5, 12, text.c_str(), NULL);
 
-                if (module->stars[i].blipTrigger) {
-                    // use current seq line color
-                    nvgFillColor(args.vg, nvgTransRGBA(module->blipColor, module->stars[i].haloAlpha));
+            // draw stars
+            for (int i = 0; i < MAX_STARS; i++) {
+                if (module->stars[i].visible) {
+                    Vec pos = module->stars[i].getPos();
+
+                    if (module->stars[i].blipTrigger) {
+                        // use current seq line color
+                        nvgFillColor(args.vg, nvgTransRGBA(module->blipColor, module->stars[i].haloAlpha));
+                        nvgBeginPath(args.vg);
+                        nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
+                        nvgFill(args.vg);
+                    }
+
+                    nvgFillColor(args.vg, nvgTransRGBA(module->stars[i].color, 90));
                     nvgBeginPath(args.vg);
-                    nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
+                    nvgCircle(args.vg, pos.x, pos.y, module->stars[i].radius);
+                    nvgFill(args.vg);
+
+                    nvgFillColor(args.vg, module->stars[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
                     nvgFill(args.vg);
                 }
-
-                nvgFillColor(args.vg, nvgTransRGBA(module->stars[i].color, 90));
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->stars[i].radius);
-                nvgFill(args.vg);
-
-                nvgFillColor(args.vg, module->stars[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                nvgFill(args.vg);
             }
+
+            nvgStrokeWidth(args.vg, 2.0);
+
+            // draw Purple line
+            nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], 0);
+            nvgLineTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], box.size.y);
+            nvgStroke(args.vg);
+            // draw Blue line
+            nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::BLUE_SEQ]);
+            nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::BLUE_SEQ]);
+            nvgStroke(args.vg);
+            // draw Aqua line
+            nvgStrokeColor(args.vg, nvgRGB(0, 238, 219));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], 0);
+            nvgLineTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], box.size.y);
+            nvgStroke(args.vg);
+            // draw Red line
+            nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::RED_SEQ]);
+            nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::RED_SEQ]);
+            nvgStroke(args.vg);
         }
-
-        nvgStrokeWidth(args.vg, 2.0);
-
-        // draw Purple line
-        nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], 0);
-        nvgLineTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], box.size.y);
-        nvgStroke(args.vg);
-        // draw Blue line
-        nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::BLUE_SEQ]);
-        nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::BLUE_SEQ]);
-        nvgStroke(args.vg);
-        // draw Aqua line
-        nvgStrokeColor(args.vg, nvgRGB(0, 238, 219));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], 0);
-        nvgLineTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], box.size.y);
-        nvgStroke(args.vg);
-        // draw Red line
-        nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::RED_SEQ]);
-        nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::RED_SEQ]);
-        nvgStroke(args.vg);
-
+        Widget::drawLayer(args, layer);
     }
 };
 

@@ -891,8 +891,14 @@ struct NeutrinodeDisplay : Widget {
             nvgBeginPath(args.vg);
             nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
             nvgFill(args.vg);
+        }
 
-            nvgGlobalTint(args.vg, color::WHITE);
+    }
+
+    void drawLayer(const DrawArgs &args, int layer) override {
+		if (module == NULL) return;
+
+        if (layer == 1) {
             
             // draw nodes
             for (int i = 0; i < NUM_OF_NODES; i++) {
@@ -975,9 +981,8 @@ struct NeutrinodeDisplay : Widget {
                     nvgFill(args.vg);
                 }
             }
-
         }
-
+        Widget::drawLayer(args, layer);
     }
 
 };

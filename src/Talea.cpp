@@ -216,7 +216,7 @@ struct Talea : Module {
     int ppqn = 0;
     float period = 0.0;
     float gateLength = 0.5;
-    int timeOut = 1; // seconds
+    int timeOut = 2; // seconds
     int extPulseIndex = 0;
     int currentPitch = 0;
     int playIndex = 0;
@@ -492,7 +492,7 @@ struct Talea : Module {
                     period += args.sampleTime;
                     if (period > timeOut) clockOn = false;
                     if (bpmDetect) {
-                        if (extPulseIndex > 1) {
+                        if (extPulseIndex > 0) {
                             clockFreq = (1.0 / period) / (float)ppqn;
                         }
 

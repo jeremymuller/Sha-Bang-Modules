@@ -706,63 +706,69 @@ struct OrbitonesDisplay : Widget {
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
+    }
 
-        nvgGlobalTint(args.vg, color::WHITE);
+    void drawLayer(const DrawArgs &args, int layer) override {
+        if (module == NULL) return;
 
-        for (int i = 0; i < Orbitones::NUM_ATTRACTORS; i++) {
-            if (module->attractors[i].visible) {
-                // display attractors
-                Vec pos = module->attractors[i].box.getCenter();
-                nvgStrokeColor(args.vg, module->attractors[i].color);
-                nvgStrokeWidth(args.vg, 2);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius);
-                nvgStroke(args.vg);
+        if (layer == 1) {
+            for (int i = 0; i < Orbitones::NUM_ATTRACTORS; i++) {
+                if (module->attractors[i].visible) {
+                    // display attractors
+                    Vec pos = module->attractors[i].box.getCenter();
+                    nvgStrokeColor(args.vg, module->attractors[i].color);
+                    nvgStrokeWidth(args.vg, 2);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius);
+                    nvgStroke(args.vg);
 
-                nvgFillColor(args.vg, module->attractors[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
-                nvgFill(args.vg);
-            }
-        }
-        for (int i = 0; i < MAX_PARTICLES; i++) {
-            if (module->particles[i].visible) {
-                // trails
-                nvgScissor(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT); // clip trails to display area
-                if (module->drawTrails) {
-                    bool updated = module->particles[i].updateHistory();
-                    if (!updated) break;
-                    for (int j = 1; j < module->particles[i].currentHistorySize; j++) {
-                        Trail trailPos = module->particles[i].history[j];
-                        Trail trailPosPrev = module->particles[i].history[j-1];
-                        nvgBeginPath(args.vg);
-                        nvgMoveTo(args.vg, trailPos.x, trailPos.y);
-                        nvgLineTo(args.vg, trailPosPrev.x, trailPosPrev.y);
-                        int _alpha = module->particles[i].history[j].alpha;
-                        module->particles[i].history[j].alpha -= 7;
-                        if (_alpha < 0) _alpha = 0;
-                        float trailWidth = rescale(_alpha, 255, 0, 2.0, 0.5);
-                        nvgStrokeColor(args.vg, nvgTransRGBA(module->particles[i].trailColor, _alpha));
-                        nvgStrokeWidth(args.vg, trailWidth);
-                        nvgStroke(args.vg);
-                    }
+                    nvgFillColor(args.vg, module->attractors[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
+                    nvgFill(args.vg);
                 }
+            }
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                if (module->particles[i].visible) {
+                    // trails
+                    nvgScissor(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT); // clip trails to display area
+                    if (module->drawTrails) {
+                        bool updated = module->particles[i].updateHistory();
+                        if (!updated) break;
+                        for (int j = 1; j < module->particles[i].currentHistorySize; j++) {
+                            Trail trailPos = module->particles[i].history[j];
+                            Trail trailPosPrev = module->particles[i].history[j-1];
+                            nvgBeginPath(args.vg);
+                            nvgMoveTo(args.vg, trailPos.x, trailPos.y);
+                            nvgLineTo(args.vg, trailPosPrev.x, trailPosPrev.y);
+                            int _alpha = module->particles[i].history[j].alpha;
+                            module->particles[i].history[j].alpha -= 7;
+                            if (_alpha < 0) _alpha = 0;
+                            float trailWidth = rescale(_alpha, 255, 0, 2.0, 0.5);
+                            nvgStrokeColor(args.vg, nvgTransRGBA(module->particles[i].trailColor, _alpha));
+                            nvgStrokeWidth(args.vg, trailWidth);
+                            nvgStroke(args.vg);
+                        }
+                    }
 
-                // particles
-                Vec pos = module->particles[i].box.getCenter();
-                nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
-                nvgFill(args.vg);
+                    // particles
+                    Vec pos = module->particles[i].box.getCenter();
+                    nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
+                    nvgFill(args.vg);
 
-                nvgFillColor(args.vg, module->particles[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                nvgFill(args.vg);
-                if (module->particleBoundary)
-                    checkEdgesParticle(i);
+                    nvgFillColor(args.vg, module->particles[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
+                    nvgFill(args.vg);
+                    if (module->particleBoundary)
+                        checkEdgesParticle(i);
+                }
             }
         }
+        Widget::drawLayer(args, layer);
+
     }
 };
 

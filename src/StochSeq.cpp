@@ -514,12 +514,6 @@ struct StochSeqDisplay : Widget {
 	}
 
 	void draw(const DrawArgs& args) override {
-		//background
-		nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-		nvgBeginPath(args.vg);
-		nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-		nvgFill(args.vg);
-
 
 		if (module == NULL) {
 			// draw stuff for preview
@@ -547,6 +541,12 @@ struct StochSeqDisplay : Widget {
 			return;
 		}
 
+		//background
+		nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+		nvgBeginPath(args.vg);
+		nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+		nvgFill(args.vg);
+
 		// sliders
 		nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
 		int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
@@ -571,30 +571,6 @@ struct StochSeqDisplay : Widget {
 			nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
 			nvgFill(args.vg);
 
-			// if (i < module->params[StochSeq::LENGTH_PARAM].getValue()) {
-			// 	nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
-			// 	// nvgFillColor(args.vg, nvgRGBA(0, 238, 255, 191)); // bottoms
-			// 	nvgBeginPath(args.vg);
-			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
-			// 	nvgFill(args.vg);
-
-			// 	nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // tops
-			// 	// nvgFillColor(args.vg, nvgRGB(0, 238, 255)); // tops
-			// 	nvgBeginPath(args.vg);
-			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
-			// 	nvgFill(args.vg);
-			// } else {
-			// 	nvgFillColor(args.vg, nvgRGBA(150, 150, 150, 191)); // bottoms
-			// 	nvgBeginPath(args.vg);
-			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
-			// 	nvgFill(args.vg);
-
-			// 	nvgFillColor(args.vg, nvgRGB(150, 150, 150)); // tops
-			// 	nvgBeginPath(args.vg);
-			// 	nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, SLIDER_TOP);
-			// 	nvgFill(args.vg);
-			// }
-
 			// percentage texts for each slider
 			if (module->showPercentages) {
 				nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
@@ -611,34 +587,28 @@ struct StochSeqDisplay : Widget {
 			}
 		}
 
-		nvgGlobalTint(args.vg, color::WHITE);
+	}
 
-		// seq position
-		if (module->gateIndex >= 0) {
-			nvgStrokeWidth(args.vg, 2.0);
-			// nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
-			nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
-			nvgBeginPath(args.vg);
-			nvgRect(args.vg, module->gateIndex * sliderWidth, 1, sliderWidth, box.size.y - 1);
-			nvgStroke(args.vg);
+	void drawLayer(const DrawArgs& args, int layer) override {
+
+		if (module == NULL) return;
+
+		if (layer == 1) {
+
+			// seq position
+			if (module->gateIndex >= 0) {
+				nvgStrokeWidth(args.vg, 2.0);
+				// nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+				nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
+				nvgBeginPath(args.vg);
+				float x = clamp(module->gateIndex * sliderWidth, 0.0, box.size.x - sliderWidth);
+				nvgRect(args.vg, x, 1, sliderWidth, box.size.y - 1);
+				nvgStroke(args.vg);
+			}
+
 		}
+		Widget::drawLayer(args, layer);
 
-		/***** OLD STUFF *****/
-		// faded out non-pattern
-		// if (module->params[StochSeq::LENGTH_PARAM].getValue() < NUM_OF_SLIDERS) {
-		// 	float x = module->params[StochSeq::LENGTH_PARAM].getValue() * SLIDER_WIDTH;
-		// 	nvgStrokeWidth(args.vg, 2.0);
-		// 	nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-		// 	nvgBeginPath(args.vg);
-		// 	nvgMoveTo(args.vg, x, 0);
-		// 	nvgLineTo(args.vg, x, box.size.y);
-		// 	nvgStroke(args.vg);
-
-		// 	nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 130));
-		// 	nvgBeginPath(args.vg);
-		// 	nvgRect(args.vg, x, 0, box.size.x - x, box.size.y);
-		// 	nvgFill(args.vg);
-		// }
 	}
 };
 
@@ -811,6 +781,7 @@ struct StochSeqWidget : ModuleWidget {
 			OpaqueWidget::onSelectKey(e);
 		}
 	}
+
 };
 
 
