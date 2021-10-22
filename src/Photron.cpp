@@ -4,6 +4,7 @@
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
 #define BUFFER_SIZE 512 // 512
+#define MARGIN 10
 
 struct Photron : Module {
     enum WaveformIds {
@@ -436,26 +437,74 @@ struct PhotronDisplay : LightWidget {
 		nvgRestore(vg);
 	}
 
+    void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+
+        //background
+        // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+        nvgBeginPath(args.vg);
+        nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+        nvgFill(args.vg);
+
+        /************ COLOR FLOCKING STUFF ************/
+        if (module->background == Photron::BLACK) {
+            nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
+            nvgFill(args.vg);
+        } else {
+            for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
+                for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+
+                    bool topEdge = y < MARGIN;
+                    bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
+                    bool leftEdge = x < MARGIN;
+                    bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
+
+                    if (topEdge || bottomEdge || leftEdge || rightEdge) {
+                        Vec3 rgb = module->blocks[y][x].rgb;
+                        if (module->background == Photron::COLOR) {
+                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        } else {
+                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        }
+
+                        // if (module->isColor) {
+                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        // } else {
+                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        // }
+
+                        nvgBeginPath(args.vg);
+                        nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                        nvgFill(args.vg);
+                    }
+
+                }
+            }
+        }
+
+
+    }
+
     void drawLayer(const DrawArgs &args, int layer) override {
         if (module == NULL) return;
 
         if (layer == 1) {
-            //background
-            // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-            nvgFill(args.vg);
+            // //background
+            // // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+            // nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            // nvgBeginPath(args.vg);
+            // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+            // nvgFill(args.vg);
 
-            /************ COLOR FLOCKING STUFF ************/
-            if (module->background == Photron::BLACK) {
-                nvgFillColor(args.vg, nvgRGB(0, 0, 0));
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
-                nvgFill(args.vg);
-            } else {
-                for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-                    for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+            // /************ COLOR FLOCKING STUFF ************/
+            if (module->background != Photron::BLACK) {
+                for (int y = MARGIN; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN; y++) {
+                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN; x++) {
                         Vec3 rgb = module->blocks[y][x].rgb;
                         if (module->background == Photron::COLOR) {
                             nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
