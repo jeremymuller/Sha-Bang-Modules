@@ -311,9 +311,19 @@ struct TinyRedButton : SvgSwitch {
 
 struct NanoBlueButton : SvgSwitch {
     NanoBlueButton() {
-        momentary = true;
+        // momentary = true;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonDown.svg")));
+    }
+};
+
+struct NanoBlueSwitch :SvgSwitch {
+    NanoBlueSwitch() {
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_1.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_2.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_3.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_4.svg")));
     }
 };
 
@@ -655,8 +665,36 @@ struct DisplayPurpleLight : ModuleLightWidget {
     DisplayPurpleLight() {
         firstLightId = 1;
         this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGB(150, 150, 150);
         // this->bgColor = nvgRGBA(128, 0, 219, 0);
         addBaseColor(nvgRGB(128, 0, 219));
+    }
+};
+
+struct DisplayBlueLight : ModuleLightWidget {
+    DisplayBlueLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 0, 255, 0);
+        addBaseColor(nvgRGB(0, 0, 255));
+    }
+};
+
+struct DisplayAquaLight : ModuleLightWidget {
+    DisplayAquaLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 238, 255, 0);
+        addBaseColor(nvgRGB(0, 238, 255));
+    }
+};
+
+struct DisplayRedLight : ModuleLightWidget {
+    DisplayRedLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(255, 0, 0, 0);
+        addBaseColor(nvgRGB(255, 0, 0));
     }
 };
 

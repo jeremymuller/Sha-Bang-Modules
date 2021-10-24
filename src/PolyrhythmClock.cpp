@@ -446,7 +446,8 @@ struct PolyrhythmClockWidget : ModuleWidget {
 
         addParam(createParamCentered<PurpleKnob>(Vec(45, 76.7), module, PolyrhythmClock::BPM_PARAM));
         addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(45 - 3.21, 54 - 3.21), module, PolyrhythmClock::TOGGLE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(45 - 3, 54 - 3), module, PolyrhythmClock::TOGGLE_LIGHT));
+        // addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(45 - 3.21, 54 - 3.21), module, PolyrhythmClock::TOGGLE_LIGHT));
         // inputs
         addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 76.7), module, PolyrhythmClock::RESET_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 76.7), module, PolyrhythmClock::EXT_CLOCK_INPUT));

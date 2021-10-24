@@ -677,16 +677,16 @@ struct StochSeqWidget : ModuleWidget {
 
 			switch(light) {
 				case 0:
-					addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<DisplayPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 				case 1:
-					addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<DisplayBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 				case 2:
-					addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<DisplayAquaLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 				case 3:
-					addChild(createLight<SmallLight<JeremyRedLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<DisplayRedLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 			}
 

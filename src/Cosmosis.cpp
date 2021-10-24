@@ -768,12 +768,12 @@ struct CosmosisWidget : ModuleWidget {
         // addChild(createWidget<JeremyScrew>(Vec(431, 2)));
         // addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
 
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3, 23.6 - 3), module, Cosmosis::PAUSE_LIGHT));
 
-        addChild(createLight<SmallLight<DisplayPurpleLight>>(Vec(15.9 - 3.21, 276.8 - 3.21), module, Cosmosis::PURPLE_LIGHT));
-        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(26.4 - 3.21, 267.1 - 3.21), module, Cosmosis::BLUE_LIGHT));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(37 - 3.21, 276.8 - 3.21), module, Cosmosis::AQUA_LIGHT));
-        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(26.4 - 3.21, 286.6 - 3.21), module, Cosmosis::RED_LIGHT));
+        addChild(createLight<SmallLight<DisplayPurpleLight>>(Vec(15.9 - 3, 276.8 - 3), module, Cosmosis::PURPLE_LIGHT));
+        addChild(createLight<SmallLight<DisplayBlueLight>>(Vec(26.4 - 3, 267.1 - 3), module, Cosmosis::BLUE_LIGHT));
+        addChild(createLight<SmallLight<DisplayAquaLight>>(Vec(37 - 3, 276.8 - 3), module, Cosmosis::AQUA_LIGHT));
+        addChild(createLight<SmallLight<DisplayRedLight>>(Vec(26.4 - 3, 286.6 - 3), module, Cosmosis::RED_LIGHT));
 
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 65.3), module, Cosmosis::PLAY_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(61.2, 65.3), module, Cosmosis::SPEED_PARAM));
