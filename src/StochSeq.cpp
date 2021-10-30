@@ -42,7 +42,8 @@ struct StochSeq : Module, Quantize {
 		NUM_OUTPUTS
 	};
 	enum LightIds {
-		LIGHTS = NUM_OF_LIGHTS,
+		BANG_LIGHTS = 4,
+		LIGHTS = BANG_LIGHTS + NUM_OF_LIGHTS,
 		NUM_LIGHTS = LIGHTS + NUM_OF_LIGHTS
 	};
 
@@ -201,7 +202,15 @@ struct StochSeq : Module, Quantize {
 			if (currentGateOut == i)
 				lights[LIGHTS + i].setSmoothBrightness((lightBlink ? 1.0 : 0.0), args.sampleTime * 30);
 			else
-				lights[LIGHTS + i].setBrightness(0.0);
+				lights[LIGHTS + i].setBrightness(0.0);			
+		}
+
+		int bangGate = currentGateOut % 4;
+		for (int i = 0; i < 4; i++) {
+			if (bangGate == i)
+				lights[BANG_LIGHTS + i].setSmoothBrightness((lightBlink ? 1.0 : 0.0), args.sampleTime * 30);
+			else
+				lights[BANG_LIGHTS + i].setBrightness(0.0);
 		}
 	}
 
@@ -677,16 +686,16 @@ struct StochSeqWidget : ModuleWidget {
 
 			switch(light) {
 				case 0:
-					addChild(createLight<SmallLight<DisplayPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 				case 1:
-					addChild(createLight<SmallLight<DisplayBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 				case 2:
-					addChild(createLight<SmallLight<DisplayAquaLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 				case 3:
-					addChild(createLight<SmallLight<DisplayRedLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+					addChild(createLight<SmallLight<JeremyRedLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 					break;
 			}
 
@@ -696,6 +705,11 @@ struct StochSeqWidget : ModuleWidget {
 			// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
 		}
+
+		addChild(createLight<SmallLight<JeremyPurpleLight> >(Vec(241.1 - 3, 343.2 - 3), module, StochSeq::BANG_LIGHTS + 0));
+		addChild(createLight<SmallLight<JeremyBlueLight> >(Vec(253.7 - 3, 343.2 - 3), module, StochSeq::BANG_LIGHTS + 1));
+		addChild(createLight<SmallLight<JeremyAquaLight> >(Vec(241.1 - 3, 355.3 - 3), module, StochSeq::BANG_LIGHTS + 2));
+		addChild(createLight<SmallLight<JeremyRedLight> >(Vec(253.7 - 3, 355.3 - 3), module, StochSeq::BANG_LIGHTS + 3));
 
 		float spacing = 27.0;
 		// addOutput(createOutputCentered<TinyPJ301M>(Vec(44.2, 224.7), module, StochSeq::GATES_OUTPUT+1));

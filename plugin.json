@@ -79,12 +79,6 @@
           "tags": ["Utility", "Switch", "Polyphonic"]
       },
       {
-          "slug": "Quantal",
-          "name": "Quantal",
-          "description": "Quantizer",
-          "tags": ["Quantizer", "Polyphonic"]
-      },
-      {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
           "description": "Bit crusher and downsampler with randomization",
