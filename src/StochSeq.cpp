@@ -214,7 +214,7 @@ struct StochSeq : Module, Quantize {
 		}
 	}
 
-	 void clockStep() {
+	void clockStep() {
 		int rootNote = params[ROOT_NOTE_PARAM].getValue();
 		int scale = params[SCALE_PARAM].getValue();
 

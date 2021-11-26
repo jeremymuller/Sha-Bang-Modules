@@ -79,6 +79,12 @@
           "tags": ["Utility", "Switch", "Polyphonic"]
       },
       {
+          "slug": "Quantal",
+          "name": "Quantal",
+          "description": "Quantizer",
+          "tags": ["Quantizer", "Polyphonic"]
+      },
+      {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
           "description": "Bit crusher and downsampler with randomization",
@@ -95,6 +101,12 @@
           "name": "Stochastic Sequencer 4",
           "description": "Probabilistic sequencer with four independent voices",
           "tags": ["Sequencer", "Visual", "Logic"]
+      },
+      {
+          "slug": "StochSeq4X",
+          "name": "Stochastic Sequencer 4 Expander",
+          "description": "Expander for the StochSeq4",
+          "tags": ["Expander"]
       },
       {
           "slug": "Talea",

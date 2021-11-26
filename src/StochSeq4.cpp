@@ -321,6 +321,19 @@ struct StochSeq4 : Module, Quantize {
 
         outputs[OR_OUTPUT].setVoltage(orGate ? 10.0 : 0.0);
         outputs[XOR_OUTPUT].setVoltage((xorGate == 1) ? 10.0 : 0.0);
+
+        // to Expander
+        if (rightExpander.module && (rightExpander.module->model == modelStochSeq4X)) {
+            float *messageToExpander = (float *)(rightExpander.module->leftExpander.producerMessage);
+
+            for (int i = 0; i < NUM_OF_SLIDERS * NUM_SEQS; i++) {
+                int indexSeq = floor(i / 32);
+                int index = i % NUM_OF_SLIDERS;
+                messageToExpander[i] = (seqs[indexSeq].gateIndex == index) ? outputs[GATES_OUTPUT + indexSeq].getVoltage() : 0.0;
+            }
+
+            rightExpander.module->leftExpander.messageFlipRequested = true;
+        }
     }
 
     void clockStep() {

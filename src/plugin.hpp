@@ -25,6 +25,8 @@ extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
 extern Model *modelCollider;
+extern Model *modelQuantal;
+extern Model *modelStochSeq4X;
 
 /************************** INLINE FUNCTIONS **************************/
 
@@ -308,11 +310,35 @@ struct TinyRedButton : SvgSwitch {
     }
 };
 
+struct NanoPurpleButton : SvgSwitch {
+    NanoPurpleButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoPurpleButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoPurpleButtonDown.svg")));
+    }
+};
+
 struct NanoBlueButton : SvgSwitch {
     NanoBlueButton() {
         // momentary = true;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonDown.svg")));
+    }
+};
+
+struct NanoAquaButton : SvgSwitch {
+    NanoAquaButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoAquaButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoAquaButtonDown.svg")));
+    }
+};
+
+struct NanoRedButton : SvgSwitch {
+    NanoRedButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoRedButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoRedButtonDown.svg")));
     }
 };
 

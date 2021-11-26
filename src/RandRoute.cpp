@@ -3,7 +3,7 @@
 #define NUM_OF_OUTPUTS 4
 
 struct RandRoute : Module {
-    	enum ParamIds {
+    enum ParamIds {
         WEIGHTING_PARAM,
 		NUM_PARAMS
 	};
