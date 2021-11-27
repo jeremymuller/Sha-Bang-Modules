@@ -1,5 +1,5 @@
-v2.0.0 (??-??-2021)
-- Added new module, expander to StochSeq4
+v2.0.0 (11-27-2021)
+- Added new module StochSeq4X, an expander to StochSeq4
 - Updated StochSeq UI
 - Added tooltips to all buttons and knobs
 - Updated glowing lights for Rack2 dark room feature
