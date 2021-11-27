@@ -237,10 +237,10 @@ struct Neutrinode : Module, Quantize {
 
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
+        configParam(BPM_PARAM, 15, 240, 30, "Tempo", " bpm");
         configButton(PLAY_PARAM, "Continuous / 1-shot");
         configButton(MOVE_PARAM, "Move nodes");
-        configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
+        configParam(SPEED_PARAM, -2.0, 2.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configSwitch(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode", {"size", "position"});
