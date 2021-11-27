@@ -240,7 +240,7 @@ struct Neutrinode : Module, Quantize {
         configParam(BPM_PARAM, 15, 240, 30, "Tempo", " bpm");
         configButton(PLAY_PARAM, "Continuous / 1-shot");
         configButton(MOVE_PARAM, "Move nodes");
-        configParam(SPEED_PARAM, -2.0, 2.0, 0.0, "Node speed");
+        configParam(SPEED_PARAM, -4.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configSwitch(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode", {"size", "position"});
@@ -619,15 +619,20 @@ struct Neutrinode : Module, Quantize {
     void updateNodePos() {
         float speed = std::pow(2.0, params[SPEED_PARAM].getValue());
         for (int i = 0; i < NUM_OF_NODES; i++) {
-            nodes[i].acc.x = randRange(-0.075, 0.075);
-            nodes[i].acc.y = randRange(-0.075, 0.075);
+            nodes[i].acc.x = randRange(-0.05, 0.05);
+            nodes[i].acc.y = randRange(-0.05, 0.05);
+            // nodes[i].acc.x = randRange(-0.075, 0.075);
+            // nodes[i].acc.y = randRange(-0.075, 0.075);
 
             nodes[i].vel = nodes[i].vel.plus(nodes[i].acc);
-            float magSq = nodes[i].vel.x * nodes[i].vel.x + nodes[i].vel.y * nodes[i].vel.y;
-            if (magSq > 1) {
-                nodes[i].vel = nodes[i].vel.normalize();
-                nodes[i].vel = nodes[i].vel.mult(speed);
-            }
+            nodes[i].vel = nodes[i].vel.normalize();
+            nodes[i].vel = nodes[i].vel.mult(speed);
+
+            // float magSq = nodes[i].vel.x * nodes[i].vel.x + nodes[i].vel.y * nodes[i].vel.y;
+            // if (magSq > 0.5) {
+            //     nodes[i].vel = nodes[i].vel.normalize();
+            //     nodes[i].vel = nodes[i].vel.mult(speed);
+            // }
             nodes[i].box.pos = nodes[i].box.pos.plus(nodes[i].vel);
             checkEdges(i);
         }
