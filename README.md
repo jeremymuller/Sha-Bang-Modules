@@ -20,6 +20,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [RandRoute](#randroute)
 * [StochSeq](#stochseq) :tv:
 * [StochSeq4](#stochseq4) :tv:
+* [StochSeq4X](#stochseq4x)
 * [Talea](#talea) :tv:
 
 ---
@@ -415,6 +416,21 @@ Watch the tutorial:
 - `INV` outputs invert of `V/OCT`.
 - `OR` outputs pulse when at least one of the gates is on.
 - `XOR` outputs pulse when ONLY one gate is on. 
+
+---
+
+### StochSeq4X
+
+![StochSeq4X](/docs/StochSeq4X.png)
+
+*An expander for the StochSeq4. This module must be adjacent to the right side of StochSeq4.*
+
+##### KNOB:
+- The main knob at the top controls which sequence you want to expand from StochSeq4 (Purple, Blue, Aqua, or Red). Additionally, the final option is to have all four columns output the first 8 steps from all sequences. If the `All` option is selected then each column of the outputs go from 1-8.
+##### BUTTONS:
+- The buttons under each column toggle whether they are gates or not gates.
+##### OUTPUTS:
+- All 32 (or first 8) gate outputs from StochSeq4.
 
 ---
 
