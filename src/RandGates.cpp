@@ -29,9 +29,18 @@ struct RandGates : Module {
 
     RandGates() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "weight");
+        configSwitch(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "Weight", {"Purple", "Blue", "Aqua", "Red", "Uniform"});
 
-        
+        configInput(TRIGGER_INPUT, "Trigger");
+        configInput(GATES_INPUT, "Purple");
+        configInput(GATES_INPUT + 1, "Blue");
+        configInput(GATES_INPUT + 2, "Aqua");
+        configInput(GATES_INPUT + 3, "Red");
+
+        configOutput(GATE_OUTPUT, "Main");
+
+        configLight(PURPLE_LIGHT, "Output indicator");
+
         setCurrentGate();
     }
 

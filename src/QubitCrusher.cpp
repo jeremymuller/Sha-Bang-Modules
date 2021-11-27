@@ -34,8 +34,19 @@ struct QubitCrusher : Module {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(BITS_PARAM, 1.0, 16.0, 8.0, "Bit rate");
         configParam(BITS_MOD_PARAM, 0.0, 1.0, 0.0, "Bit rate modulation", "%", 0.0, 100.0);
-        configParam(SAMP_HOLD_PARAM, 0.01, 1.0, 1.0, "Downsampling", " Hz", 0, 44100);
+        configParam(SAMP_HOLD_PARAM, 0.00001, 1.0, 1.0, "Downsampling", " Hz", 0, 44100);
         configParam(SAMP_HOLD_MOD_PARAM, 0.0, 1.0, 0.0, "Sample rate modulation", "%", 0.0, 100.0);
+
+        configInput(BITS_MOD_INPUT, "Bit rate modulation");
+        configInput(RAND_BITS_INPUT, "Randomize bit rate");
+
+        configInput(SAMP_HOLD_MOD_INPUT, "Sample rate modulation");
+        configInput(RAND_SAMP_INPUT, "Randomize sample rate");
+
+        configInput(MAIN_INPUT, "Audio");
+        configOutput(MAIN_OUTPUT, "Audio");
+
+        configBypass(MAIN_INPUT, MAIN_OUTPUT);
     }
 
     void process(const ProcessArgs &args) override {

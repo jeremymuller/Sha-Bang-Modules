@@ -126,22 +126,31 @@ struct Cosmosis : Module, Constellations, Quantize {
 
     Cosmosis() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(SPEED_PARAM, -2.0, 2.0, 0.0);
-        configParam(PLAY_PARAM, 0.0, 1.0, 0.0);
-        configParam(RANDOM_POS_PARAM, 0.0, 1.0, 0.0, "Randomize position");
-        configParam(RANDOM_RAD_PARAM, 0.0, 1.0, 0.0, "Randomize radius");
+        configParam(SPEED_PARAM, -2.0, 2.0, 0.0, "Line speed");
+        configInput(SPEED_INPUT, "Lines speed");
+        configButton(PLAY_PARAM, "Play");
+        configInput(EXT_PLAY_INPUT, "Play");
+        configInput(RESET_INPUT, "Reset");
+        configInput(PITCH_CV_INPUT, "Root note");
+        configButton(RANDOM_POS_PARAM, "Randomize position");
+        configInput(RANDOM_POS_INPUT, "Randomize position");
+        configButton(RANDOM_RAD_PARAM, "Randomize radius");
+        configInput(RANDOM_RAD_INPUT, "Randomize radius");
         configParam(RANDOM_SIZE_PARAM, 0.0, 1.0, 0.0, "Randomize constellation size");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode");
+        configSwitch(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode", {"size", "position"});
         configParam(PATTERN_PARAM, 0.0, Constellations::NUM_OF_CONSTELLATIONS-1, 0.0, "Constellation");
-        configParam(OCTAVE_PARAM + PURPLE_SEQ, -5.0, 5.0, 0.0, "Purple Octave");
-        configParam(OCTAVE_PARAM + BLUE_SEQ, -5.0, 5.0, 0.0, "Blue Octave");
-        configParam(OCTAVE_PARAM + AQUA_SEQ, -5.0, 5.0, 0.0, "Aqua Octave");
-        configParam(OCTAVE_PARAM + RED_SEQ, -5.0, 5.0, 0.0, "Red Octave");
+        configParam(OCTAVE_PARAM + PURPLE_SEQ, -5.0, 5.0, 0.0, "Purple", " oct");
+        configParam(OCTAVE_PARAM + BLUE_SEQ, -5.0, 5.0, 0.0, "Blue", " oct");
+        configParam(OCTAVE_PARAM + AQUA_SEQ, -5.0, 5.0, 0.0, "Aqua", " oct");
+        configParam(OCTAVE_PARAM + RED_SEQ, -5.0, 5.0, 0.0, "Red", " oct");
         configParam(SIZE_PARAM, 0.0, 1.0, 1.0, "Resize Constellation"); // OLD
-        configParam(CLEAR_STARS_PARAM, 0.0, 1.0, 0.0, "Clear stars");
-        configParam(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode");
+        configButton(CLEAR_STARS_PARAM, "Clear stars");
+        configSwitch(MODE_PARAM, 0.0, NUM_SEQ_MODES-1, 0.0, "Mode", {"Purple", "Blue", "Aqua", "Red", "Clockwise", "Counter clockwise", "Random"});
+
+        configOutput(VOLT_OUT, "Pitch (V/OCT)");
+        configOutput(GATE_OUT, "Trigger");
 
         Vec corner = Vec(0, 0);
         Vec dir = corner.minus(center);
@@ -190,6 +199,7 @@ struct Cosmosis : Module, Constellations, Quantize {
         json_object_set_new(rootJ, "constellationText", json_string(constellationText.c_str())); // errors here
         json_object_set_new(rootJ, "currentConstellation", json_integer(currentConstellation));
         json_object_set_new(rootJ, "channels", json_integer(channels));
+        json_object_set_new(rootJ, "playing", json_boolean(isPlaying));
         json_object_set_new(rootJ, "stars", starsJ);
 
         return rootJ;
@@ -198,6 +208,9 @@ struct Cosmosis : Module, Constellations, Quantize {
     void dataFromJson(json_t *rootJ) override {
         json_t *channelsJ = json_object_get(rootJ, "channels");
         if (channelsJ) channels = json_integer_value(channelsJ);
+
+        json_t *playingJ = json_object_get(rootJ, "playing");
+        if (playingJ) isPlaying = json_boolean_value(playingJ);
 
         json_t *currConstJ = json_object_get(rootJ, "currentConstellation");
         if (currConstJ) currentConstellation = json_integer_value(currConstJ);
@@ -608,13 +621,13 @@ struct CosmosisDisplay : Widget {
     }
 
     void onDragStart(const event::DragStart &e) override {
-        dragX = APP->scene->rack->mousePos.x;
-        dragY = APP->scene->rack->mousePos.y;
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float newDragX = APP->scene->rack->mousePos.x;
-        float newDragY = APP->scene->rack->mousePos.y;
+        float newDragX = APP->scene->rack->getMousePos().x;
+        float newDragY = APP->scene->rack->getMousePos().y;
 
         for (int i = 0; i < MAX_STARS; i++) {
             if (module->stars[i].visible && !module->stars[i].locked) {
@@ -644,80 +657,87 @@ struct CosmosisDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
-        //background
+        // background
         nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
+    }
 
-        // name of constellation
-        std::string text = module->constellationText;
-        nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
-        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-        // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
-        nvgFontSize(args.vg, 12);
-        nvgText(args.vg, 5, 12, text.c_str(), NULL);
+    void drawLayer(const DrawArgs &args, int layer) override {
+        if (module == NULL) return;
 
-        // draw stars
-        for (int i = 0; i < MAX_STARS; i++) {
-            if (module->stars[i].visible) {
-                Vec pos = module->stars[i].getPos();
+        if (layer == 1) {
 
-                if (module->stars[i].blipTrigger) {
-                    // use current seq line color
-                    nvgFillColor(args.vg, nvgTransRGBA(module->blipColor, module->stars[i].haloAlpha));
+            // name of constellation
+            std::string text = module->constellationText;
+            nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
+            nvgFontSize(args.vg, 12);
+            nvgText(args.vg, 5, 12, text.c_str(), NULL);
+
+            // draw stars
+            for (int i = 0; i < MAX_STARS; i++) {
+                if (module->stars[i].visible) {
+                    Vec pos = module->stars[i].getPos();
+
+                    if (module->stars[i].blipTrigger) {
+                        // use current seq line color
+                        nvgFillColor(args.vg, nvgTransRGBA(module->blipColor, module->stars[i].haloAlpha));
+                        nvgBeginPath(args.vg);
+                        nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
+                        nvgFill(args.vg);
+                    }
+
+                    nvgFillColor(args.vg, nvgTransRGBA(module->stars[i].color, 90));
                     nvgBeginPath(args.vg);
-                    nvgCircle(args.vg, pos.x, pos.y, module->stars[i].haloRadius);
+                    nvgCircle(args.vg, pos.x, pos.y, module->stars[i].radius);
+                    nvgFill(args.vg);
+
+                    nvgFillColor(args.vg, module->stars[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
                     nvgFill(args.vg);
                 }
-
-                nvgFillColor(args.vg, nvgTransRGBA(module->stars[i].color, 90));
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->stars[i].radius);
-                nvgFill(args.vg);
-
-                nvgFillColor(args.vg, module->stars[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                nvgFill(args.vg);
             }
+
+            nvgStrokeWidth(args.vg, 2.0);
+
+            // draw Purple line
+            nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], 0);
+            nvgLineTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], box.size.y);
+            nvgStroke(args.vg);
+            // draw Blue line
+            nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::BLUE_SEQ]);
+            nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::BLUE_SEQ]);
+            nvgStroke(args.vg);
+            // draw Aqua line
+            nvgStrokeColor(args.vg, nvgRGB(0, 238, 219));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], 0);
+            nvgLineTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], box.size.y);
+            nvgStroke(args.vg);
+            // draw Red line
+            nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::RED_SEQ]);
+            nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::RED_SEQ]);
+            nvgStroke(args.vg);
         }
-
-        nvgStrokeWidth(args.vg, 2.0);
-
-        // draw Purple line
-        nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], 0);
-        nvgLineTo(args.vg, module->seqPos[Cosmosis::PURPLE_SEQ], box.size.y);
-        nvgStroke(args.vg);
-        // draw Blue line
-        nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::BLUE_SEQ]);
-        nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::BLUE_SEQ]);
-        nvgStroke(args.vg);
-        // draw Aqua line
-        nvgStrokeColor(args.vg, nvgRGB(0, 238, 219));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], 0);
-        nvgLineTo(args.vg, module->seqPos[Cosmosis::AQUA_SEQ], box.size.y);
-        nvgStroke(args.vg);
-        // draw Red line
-        nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, 0, module->seqPos[Cosmosis::RED_SEQ]);
-        nvgLineTo(args.vg, box.size.x, module->seqPos[Cosmosis::RED_SEQ]);
-        nvgStroke(args.vg);
-
+        Widget::drawLayer(args, layer);
     }
 };
 
 struct ModeKnob : BlueInvertKnobLabelCentered {
 	ModeKnob(){}
 	std::string formatCurrentValue() override {
-		if(paramQuantity != NULL){
-			switch(int(paramQuantity->getValue())){
+		if(getParamQuantity() != NULL){
+			switch(int(getParamQuantity()->getValue())){
 				case Cosmosis::PURPLE_SEQ:              return "→";
 				case Cosmosis::BLUE_SEQ:                return "↓";
 				case Cosmosis::AQUA_SEQ:                return "←";
@@ -748,12 +768,12 @@ struct CosmosisWidget : ModuleWidget {
         // addChild(createWidget<JeremyScrew>(Vec(431, 2)));
         // addChild(createWidget<JeremyScrew>(Vec(431, box.size.y - 14)));
 
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3.21, 23.6 - 3.21), module, Cosmosis::PAUSE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(48.3 - 3, 23.6 - 3), module, Cosmosis::PAUSE_LIGHT));
 
-        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(15.9 - 3.21, 276.8 - 3.21), module, Cosmosis::PURPLE_LIGHT));
-        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(26.4 - 3.21, 267.1 - 3.21), module, Cosmosis::BLUE_LIGHT));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(37 - 3.21, 276.8 - 3.21), module, Cosmosis::AQUA_LIGHT));
-        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(26.4 - 3.21, 286.6 - 3.21), module, Cosmosis::RED_LIGHT));
+        addChild(createLight<SmallLight<DisplayPurpleLight>>(Vec(15.9 - 3, 276.8 - 3), module, Cosmosis::PURPLE_LIGHT));
+        addChild(createLight<SmallLight<DisplayBlueLight>>(Vec(26.4 - 3, 267.1 - 3), module, Cosmosis::BLUE_LIGHT));
+        addChild(createLight<SmallLight<DisplayAquaLight>>(Vec(37 - 3, 276.8 - 3), module, Cosmosis::AQUA_LIGHT));
+        addChild(createLight<SmallLight<DisplayRedLight>>(Vec(26.4 - 3, 286.6 - 3), module, Cosmosis::RED_LIGHT));
 
         addParam(createParamCentered<DefaultButton>(Vec(26.4, 65.3), module, Cosmosis::PLAY_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(61.2, 65.3), module, Cosmosis::SPEED_PARAM));

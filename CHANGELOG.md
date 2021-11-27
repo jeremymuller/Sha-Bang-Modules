@@ -1,3 +1,9 @@
+v2.0.0 (11-27-2021)
+- Added new module StochSeq4X, an expander to StochSeq4
+- Updated StochSeq UI
+- Added tooltips to all buttons and knobs
+- Updated glowing lights for Rack2 dark room feature
+
 v1.3.6 (10-02-2021)
 - Put gates back to 1e-3 on StochSeq and StochSeq4
 - Fixed UI bug in sliders that would allow for < 0%

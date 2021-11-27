@@ -12,6 +12,8 @@ struct JeremyBlankPanel : Module {
 
     JeremyBlankPanel() {
         config(0, 0, 0, NUM_LIGHTS);
+        configLight(LEFTEYE, "Big brother is watching you!");
+        configLight(RIGHTEYE, "Big brother is watching you!");
     }
 
     void process(const ProcessArgs &args) override {

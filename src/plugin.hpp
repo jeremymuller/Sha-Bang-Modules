@@ -25,6 +25,7 @@ extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
 extern Model *modelCollider;
+extern Model *modelStochSeq4X;
 
 /************************** INLINE FUNCTIONS **************************/
 
@@ -308,11 +309,45 @@ struct TinyRedButton : SvgSwitch {
     }
 };
 
+struct NanoPurpleButton : SvgSwitch {
+    NanoPurpleButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoPurpleButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoPurpleButtonDown.svg")));
+    }
+};
+
 struct NanoBlueButton : SvgSwitch {
     NanoBlueButton() {
-        momentary = true;
+        // momentary = true;
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonUp.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueButtonDown.svg")));
+    }
+};
+
+struct NanoAquaButton : SvgSwitch {
+    NanoAquaButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoAquaButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoAquaButtonDown.svg")));
+    }
+};
+
+struct NanoRedButton : SvgSwitch {
+    NanoRedButton() {
+        // momentary = true;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoRedButtonUp.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoRedButtonDown.svg")));
+    }
+};
+
+struct NanoBlueSwitch :SvgSwitch {
+    NanoBlueSwitch() {
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_1.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_2.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_3.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_4.svg")));
     }
 };
 
@@ -427,8 +462,8 @@ struct PurpleInvertKnobLabel : PurpleInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -458,8 +493,8 @@ struct PurpleInvertKnobLabelCentered : PurpleInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -488,8 +523,8 @@ struct BlueInvertKnobLabel : BlueInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -519,8 +554,8 @@ struct BlueInvertKnobLabelCentered : BlueInvertKnob {
     }
 
     virtual std::string formatCurrentValue() {
-        if (paramQuantity != NULL) {
-            return std::to_string(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return std::to_string(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -531,8 +566,8 @@ struct PurpleNoteKnob : PurpleInvertKnobLabel {
     PurpleNoteKnob() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -543,8 +578,8 @@ struct PurpleScaleKnob : PurpleInvertKnobLabel {
     PurpleScaleKnob() {}  
     
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -556,8 +591,8 @@ struct PurpleNoteKnobCentered : PurpleInvertKnobLabelCentered {
     PurpleNoteKnobCentered() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -568,8 +603,8 @@ struct PurpleScaleKnobCentered : PurpleInvertKnobLabelCentered {
     PurpleScaleKnobCentered() {}  
     
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -580,8 +615,8 @@ struct BlueNoteKnobCentered : BlueInvertKnobLabelCentered {
     BlueNoteKnobCentered() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -592,8 +627,8 @@ struct BlueNoteKnob : BlueInvertKnobLabel {
     BlueNoteKnob() {}
 
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->noteName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->noteName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -604,8 +639,8 @@ struct BlueScaleKnob : BlueInvertKnobLabel {
     BlueScaleKnob() {}  
     
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            return quantize->scaleName(static_cast<unsigned int>(paramQuantity->getValue()));
+        if (getParamQuantity() != NULL) {
+            return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
         }
         return "";
     }
@@ -616,6 +651,8 @@ struct BlueScaleKnob : BlueInvertKnobLabel {
 struct JeremyPurpleLight : ModuleLightWidget {
     JeremyPurpleLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(128, 0, 219, 0);
         addBaseColor(nvgRGB(128, 0, 219));
     }
 };
@@ -623,13 +660,18 @@ struct JeremyPurpleLight : ModuleLightWidget {
 struct JeremyBlueLight : ModuleLightWidget {
     JeremyBlueLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 0, 255, 0);
         addBaseColor(nvgRGB(0, 0, 255));
+
     }
 };
 
 struct JeremyAquaLight : ModuleLightWidget {
     JeremyAquaLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 238, 255, 0);
         addBaseColor(nvgRGB(0, 238, 255));
     }
 };
@@ -637,6 +679,45 @@ struct JeremyAquaLight : ModuleLightWidget {
 struct JeremyRedLight : ModuleLightWidget {
     JeremyRedLight() {
         firstLightId = 1;
+        // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(255, 0, 0, 0);
+        addBaseColor(nvgRGB(255, 0, 0));
+    }
+};
+
+struct DisplayPurpleLight : ModuleLightWidget {
+    DisplayPurpleLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGB(150, 150, 150);
+        // this->bgColor = nvgRGBA(128, 0, 219, 0);
+        addBaseColor(nvgRGB(128, 0, 219));
+    }
+};
+
+struct DisplayBlueLight : ModuleLightWidget {
+    DisplayBlueLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 0, 255, 0);
+        addBaseColor(nvgRGB(0, 0, 255));
+    }
+};
+
+struct DisplayAquaLight : ModuleLightWidget {
+    DisplayAquaLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(0, 238, 255, 0);
+        addBaseColor(nvgRGB(0, 238, 255));
+    }
+};
+
+struct DisplayRedLight : ModuleLightWidget {
+    DisplayRedLight() {
+        firstLightId = 1;
+        this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
+        // this->bgColor = nvgRGBA(255, 0, 0, 0);
         addBaseColor(nvgRGB(255, 0, 0));
     }
 };

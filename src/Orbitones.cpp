@@ -202,18 +202,34 @@ struct Orbitones : Module {
     Orbitones() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(OFFSET_PARAM, -5.0, 5.0, 0.0, "Offset", " V");
-        configParam(REMOVE_PARTICLE_PARAM, 0.0, 1.0, 0.0, "Remove previous particle");
-        configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
-        configParam(MOVE_ATTRACTORS_PARAM, 0.0, 1.0, 0.0, "Move attractors");
+        configButton(REMOVE_PARTICLE_PARAM, "Remove previous particle");
+        configButton(CLEAR_PARTICLES_PARAM, "Clear particles");
+        configButton(MOVE_ATTRACTORS_PARAM, "Move attractors");
         configParam(GLOBAL_GRAVITY_PARAM, 1.0, 50.0, 30.0, "Global gravity");
-        configParam(ON_PARAMS + PURPLE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle purple attractor");
-        configParam(ON_PARAMS + BLUE_ATTRACTOR, 0.0, 1.0, 0.0, "toggle blue attractor");
-        configParam(ON_PARAMS + AQUA_ATTRACTOR, 0.0, 1.0, 0.0, "toggle aqua attractor");
-        configParam(ON_PARAMS + RED_ATTRACTOR, 0.0, 1.0, 0.0, "toggle red attractor");
+        configButton(ON_PARAMS + PURPLE_ATTRACTOR, "toggle purple attractor");
+        configButton(ON_PARAMS + BLUE_ATTRACTOR, "toggle blue attractor");
+        configButton(ON_PARAMS + AQUA_ATTRACTOR, "toggle aqua attractor");
+        configButton(ON_PARAMS + RED_ATTRACTOR, "toggle red attractor");
         configParam(GRAVITY_PARAMS + PURPLE_ATTRACTOR, -1.0, 2.0, 1.0, "Purple attractor gravity");
         configParam(GRAVITY_PARAMS + BLUE_ATTRACTOR, -1.0, 2.0, 1.0, "Blue attractor gravity");
         configParam(GRAVITY_PARAMS + AQUA_ATTRACTOR, -1.0, 2.0, 1.0, "Aqua attractor gravity");
         configParam(GRAVITY_PARAMS + RED_ATTRACTOR, -1.0, 2.0, 1.0, "Red attractor gravity");
+
+        configInput(MOVE_ATTRACTORS_INPUT, "Move attractors");
+        configInput(GLOBAL_GRAVITY_INPUT, "Global gravity");
+
+        configOutput(AVG_X_OUTPUT, "average X");
+        configOutput(AVG_Y_OUTPUT, "average Y");
+        configOutput(MAX_X_OUTPUT, "max X");
+        configOutput(MAX_Y_OUTPUT, "max Y");
+        configOutput(MIN_X_OUTPUT, "min X");
+        configOutput(MIN_Y_OUTPUT, "min Y");
+        configOutput(X_POLY_OUTPUT, "X");
+        configOutput(Y_POLY_OUTPUT, "Y");
+        configOutput(NEG_X_POLY_OUTPUT, "-X");
+        configOutput(NEG_Y_POLY_OUTPUT, "-Y");
+        configOutput(VEL_X_POLY_OUTPUT, "X velocity");
+        configOutput(VEL_Y_POLY_OUTPUT, "Y velocity");
 
         attractors[0].color = nvgRGBA(128, 0, 219, 255);
         attractors[1].color = nvgRGBA(38, 0, 255, 255);
@@ -622,13 +638,13 @@ struct OrbitonesDisplay : Widget {
     }
 
     void onDragStart(const event::DragStart &e) override {
-        dragX = APP->scene->rack->mousePos.x;
-        dragY = APP->scene->rack->mousePos.y;
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float newDragX = APP->scene->rack->mousePos.x;
-        float newDragY = APP->scene->rack->mousePos.y;
+        float newDragX = APP->scene->rack->getMousePos().x;
+        float newDragY = APP->scene->rack->getMousePos().y;
 
         for (int i = 0; i < Orbitones::NUM_ATTRACTORS; i++) {
             if (!module->attractors[i].locked) {
@@ -690,61 +706,69 @@ struct OrbitonesDisplay : Widget {
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
+    }
 
-        for (int i = 0; i < Orbitones::NUM_ATTRACTORS; i++) {
-            if (module->attractors[i].visible) {
-                // display attractors
-                Vec pos = module->attractors[i].box.getCenter();
-                nvgStrokeColor(args.vg, module->attractors[i].color);
-                nvgStrokeWidth(args.vg, 2);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius);
-                nvgStroke(args.vg);
+    void drawLayer(const DrawArgs &args, int layer) override {
+        if (module == NULL) return;
 
-                nvgFillColor(args.vg, module->attractors[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
-                nvgFill(args.vg);
-            }
-        }
-        for (int i = 0; i < MAX_PARTICLES; i++) {
-            if (module->particles[i].visible) {
-                // trails
-                nvgScissor(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT); // clip trails to display area
-                if (module->drawTrails) {
-                    bool updated = module->particles[i].updateHistory();
-                    if (!updated) break;
-                    for (int j = 1; j < module->particles[i].currentHistorySize; j++) {
-                        Trail trailPos = module->particles[i].history[j];
-                        Trail trailPosPrev = module->particles[i].history[j-1];
-                        nvgBeginPath(args.vg);
-                        nvgMoveTo(args.vg, trailPos.x, trailPos.y);
-                        nvgLineTo(args.vg, trailPosPrev.x, trailPosPrev.y);
-                        int _alpha = module->particles[i].history[j].alpha;
-                        module->particles[i].history[j].alpha -= 7;
-                        if (_alpha < 0) _alpha = 0;
-                        float trailWidth = rescale(_alpha, 255, 0, 2.0, 0.5);
-                        nvgStrokeColor(args.vg, nvgTransRGBA(module->particles[i].trailColor, _alpha));
-                        nvgStrokeWidth(args.vg, trailWidth);
-                        nvgStroke(args.vg);
-                    }
+        if (layer == 1) {
+            for (int i = 0; i < Orbitones::NUM_ATTRACTORS; i++) {
+                if (module->attractors[i].visible) {
+                    // display attractors
+                    Vec pos = module->attractors[i].box.getCenter();
+                    nvgStrokeColor(args.vg, module->attractors[i].color);
+                    nvgStrokeWidth(args.vg, 2);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius);
+                    nvgStroke(args.vg);
+
+                    nvgFillColor(args.vg, module->attractors[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->attractors[i].radius - 3.5);
+                    nvgFill(args.vg);
                 }
+            }
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                if (module->particles[i].visible) {
+                    // trails
+                    nvgScissor(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT); // clip trails to display area
+                    if (module->drawTrails) {
+                        bool updated = module->particles[i].updateHistory();
+                        if (!updated) break;
+                        for (int j = 1; j < module->particles[i].currentHistorySize; j++) {
+                            Trail trailPos = module->particles[i].history[j];
+                            Trail trailPosPrev = module->particles[i].history[j-1];
+                            nvgBeginPath(args.vg);
+                            nvgMoveTo(args.vg, trailPos.x, trailPos.y);
+                            nvgLineTo(args.vg, trailPosPrev.x, trailPosPrev.y);
+                            int _alpha = module->particles[i].history[j].alpha;
+                            module->particles[i].history[j].alpha -= 7;
+                            if (_alpha < 0) _alpha = 0;
+                            float trailWidth = rescale(_alpha, 255, 0, 2.0, 0.5);
+                            nvgStrokeColor(args.vg, nvgTransRGBA(module->particles[i].trailColor, _alpha));
+                            nvgStrokeWidth(args.vg, trailWidth);
+                            nvgStroke(args.vg);
+                        }
+                    }
 
-                // particles
-                Vec pos = module->particles[i].box.getCenter();
-                nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
-                nvgFill(args.vg);
+                    // particles
+                    Vec pos = module->particles[i].box.getCenter();
+                    nvgFillColor(args.vg, nvgTransRGBA(module->particles[i].color, 90));
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, module->particles[i].radius);
+                    nvgFill(args.vg);
 
-                nvgFillColor(args.vg, module->particles[i].color);
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, pos.x, pos.y, 2.5);
-                nvgFill(args.vg);
-                if (module->particleBoundary)
-                    checkEdgesParticle(i);
+                    nvgFillColor(args.vg, module->particles[i].color);
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, 2.5);
+                    nvgFill(args.vg);
+                    if (module->particleBoundary)
+                        checkEdgesParticle(i);
+                }
             }
         }
+        Widget::drawLayer(args, layer);
+
     }
 };
 

@@ -238,22 +238,38 @@ struct Neutrinode : Module, Quantize {
     Neutrinode() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configParam(BPM_PARAM, 15, 120, 30, "Tempo", " bpm");
-        configParam(PLAY_PARAM, 0.0, 1.0, 0.0, "Continuous / 1-shot");
-        configParam(MOVE_PARAM, 0.0, 1.0, 0.0, "Move nodes");
+        configButton(PLAY_PARAM, "Continuous / 1-shot");
+        configButton(MOVE_PARAM, "Move nodes");
         configParam(SPEED_PARAM, -1.0, 1.0, 0.0, "Node speed");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES-1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
-        configParam(PITCH_PARAM, 0.0, 1.0, 1.0, "Pitch mode");
-        configParam(RND_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Randomize particles");
-        configParam(CLEAR_PARTICLES_PARAM, 0.0, 1.0, 0.0, "Clear particles");
-        configParam(ON_PARAM + PURPLE_NODE, 0.0, 1.0, 0.0, "toggle purple node");
-        configParam(ON_PARAM + BLUE_NODE, 0.0, 1.0, 0.0, "toggle blue node");
-        configParam(ON_PARAM + AQUA_NODE, 0.0, 1.0, 0.0, "toggle aqua node");
-        configParam(ON_PARAM + RED_NODE, 0.0, 1.0, 0.0, "toggle red node");
-        configParam(OCTAVE_PARAMS + PURPLE_NODE, -5.0, 5.0, 0.0, "octave purple node");
-        configParam(OCTAVE_PARAMS + BLUE_NODE, -5.0, 5.0, 0.0, "octave blue node");
-        configParam(OCTAVE_PARAMS + AQUA_NODE, -5.0, 5.0, 0.0, "octave aqua node");
-        configParam(OCTAVE_PARAMS + RED_NODE, -5.0, 5.0, 0.0, "octave red node");
+        configSwitch(PITCH_PARAM, 0.0, 1.0, 0.0, "Pitch mode", {"size", "position"});
+        configButton(RND_PARTICLES_PARAM, "Randomize particles");
+        configButton(CLEAR_PARTICLES_PARAM, "Clear particles");
+        configButton(ON_PARAM + PURPLE_NODE, "toggle purple node");
+        configButton(ON_PARAM + BLUE_NODE, "toggle blue node");
+        configButton(ON_PARAM + AQUA_NODE, "toggle aqua node");
+        configButton(ON_PARAM + RED_NODE, "toggle red node");
+        configParam(OCTAVE_PARAMS + PURPLE_NODE, -5.0, 5.0, 0.0, "Purple", " oct");
+        configParam(OCTAVE_PARAMS + BLUE_NODE, -5.0, 5.0, 0.0, "Blue", " oct");
+        configParam(OCTAVE_PARAMS + AQUA_NODE, -5.0, 5.0, 0.0, "Aqua", " oct");
+        configParam(OCTAVE_PARAMS + RED_NODE, -5.0, 5.0, 0.0, "Red", " oct");
+
+        configInput(PLAY_INPUT, "Continuous / 1-shot");
+        configInput(MOVE_INPUT, "Move nodes");
+        configInput(BPM_INPUT, "bpm");
+        configInput(PITCH_CV_INPUT, "Root note");
+
+        configOutput(VOLTS_ALL_OUTPUTS, "Pitch (V/OCT) ALL");
+        configOutput(GATES_ALL_OUTPUTS, "Trigger ALL");
+        configOutput(VOLT_OUTPUTS + PURPLE_NODE, "Purple Pitch (V/OCT)");
+        configOutput(VOLT_OUTPUTS + BLUE_NODE, "Blue Pitch (V/OCT)");
+        configOutput(VOLT_OUTPUTS + AQUA_NODE, "Aqua Pitch (V/OCT)");
+        configOutput(VOLT_OUTPUTS + RED_NODE, "Red Pitch (V/OCT)");
+        configOutput(GATE_OUTPUTS + PURPLE_NODE, "Purple Trigger");
+        configOutput(GATE_OUTPUTS + BLUE_NODE, "Blue Trigger");
+        configOutput(GATE_OUTPUTS + AQUA_NODE, "Aqua Trigger");
+        configOutput(GATE_OUTPUTS + RED_NODE, "Red Trigger");
 
         nodes[0].color = nvgRGBA(128, 0, 219, 255);
         nodes[1].color = nvgRGBA(38, 0, 255, 255);
@@ -809,13 +825,13 @@ struct NeutrinodeDisplay : Widget {
     }
 
     void onDragStart(const event::DragStart &e) override {
-        dragX = APP->scene->rack->mousePos.x;
-        dragY = APP->scene->rack->mousePos.y;
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float newDragX = APP->scene->rack->mousePos.x;
-        float newDragY = APP->scene->rack->mousePos.y;
+        float newDragX = APP->scene->rack->getMousePos().x;
+        float newDragY = APP->scene->rack->getMousePos().y;
 
         for (int i = 0; i < NUM_OF_NODES; i++) {
             if (!module->nodes[i].locked) {
@@ -869,11 +885,21 @@ struct NeutrinodeDisplay : Widget {
     void draw(const DrawArgs &args) override {
 
         if (module != NULL) {
+
             //background
             nvgFillColor(args.vg, nvgRGB(40, 40, 40));
             nvgBeginPath(args.vg);
             nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
             nvgFill(args.vg);
+        }
+
+    }
+
+    void drawLayer(const DrawArgs &args, int layer) override {
+		if (module == NULL) return;
+
+        if (layer == 1) {
+            
             // draw nodes
             for (int i = 0; i < NUM_OF_NODES; i++) {
                 if (module->nodes[i].visible) {
@@ -955,9 +981,8 @@ struct NeutrinodeDisplay : Widget {
                     nvgFill(args.vg);
                 }
             }
-
         }
-
+        Widget::drawLayer(args, layer);
     }
 
 };
@@ -1010,7 +1035,7 @@ struct NeutrinodeWidget : ModuleWidget {
         addParam(createParamCentered<Jeremy_HSwitch>(Vec(111.4, 122.8), module, Neutrinode::PITCH_PARAM));
         addParam(createParamCentered<TinyPurpleButton>(Vec(130.7, 91.4), module, Neutrinode::CLEAR_PARTICLES_PARAM));
 
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3.21, 24.3 - 3.21), module, Neutrinode::PAUSE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3, 24.3 - 3), module, Neutrinode::PAUSE_LIGHT));
 
         // toggles
         addParam(createParamCentered<TinyPurpleButton>(Vec(96.8, 201.8), module, Neutrinode::ON_PARAM + Neutrinode::PURPLE_NODE));

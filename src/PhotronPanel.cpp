@@ -258,30 +258,34 @@ struct PhotronPanelDisplay : Widget {
     //     }
     // }
 
-    void draw(const DrawArgs &args) override {
+    void drawLayer(const DrawArgs &args, int layer) override {
         if (module == NULL) return;
 
-        //background
-        // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-        nvgBeginPath(args.vg);
-        nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-        nvgFill(args.vg);
+        if (layer == 1) {
+            //background
+            // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+            nvgFill(args.vg);
 
-        for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-            for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
-                Vec3 rgb = module->blocks[y][x].rgb;
-                if (module->isColor) {
-                    nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                } else {
-                    NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                    nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+            for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
+                for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+                    Vec3 rgb = module->blocks[y][x].rgb;
+                    if (module->isColor) {
+                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    } else {
+                        NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    }
+                    nvgBeginPath(args.vg);
+                    nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                    nvgFill(args.vg);
                 }
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
-                nvgFill(args.vg);
             }
         }
+        Widget::drawLayer(args, layer);
+
     }
 };
 

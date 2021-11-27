@@ -3,7 +3,7 @@
 #define NUM_OF_OUTPUTS 4
 
 struct RandRoute : Module {
-    	enum ParamIds {
+    enum ParamIds {
         WEIGHTING_PARAM,
 		NUM_PARAMS
 	};
@@ -29,9 +29,19 @@ struct RandRoute : Module {
 
     RandRoute() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "weight");
+        // configParam(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "weight");
+        configSwitch(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "Weight", {"Purple", "Blue", "Aqua", "Red", "Uniform"});
 
-        
+        configInput(TRIGGER_INPUT, "Trigger");
+        configInput(GATE_INPUT, "Main");
+
+        configOutput(GATES_OUTPUT, "Purple");
+        configOutput(GATES_OUTPUT + 1, "Blue");
+        configOutput(GATES_OUTPUT + 2, "Aqua");
+        configOutput(GATES_OUTPUT + 3, "Red");
+
+        configLight(PURPLE_LIGHT, "Output indicator");
+
         setCurrentGate();
     }
 

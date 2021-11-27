@@ -4,6 +4,7 @@
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
 #define BUFFER_SIZE 512 // 512
+#define MARGIN 10
 
 struct Photron : Module {
     enum WaveformIds {
@@ -74,11 +75,22 @@ struct Photron : Module {
         configParam(Y_POS_PARAM, -10.0, 10.0, 0.0, "Y offset");
         configParam(X_SCALE_PARAM, -2.0, 8.0, 0.5, "X scale");
         configParam(Y_SCALE_PARAM, -2.0, 8.0, 0.5, "Y scale");
-        configParam(COLOR_PARAM, 0.0, 1.0, 0.0, "Background");
-        configParam(WAVEFORM_PARAM, 0.0, 1.0, 0.0, "Waveform");
+        configButton(WAVEFORM_PARAM, "Waveform");
+        configButton(COLOR_PARAM, "Background");
 
-        for (int y = 0; y < rows; y++)
-        {
+        configInput(SEPARATE_INPUT, "Separate");
+        configInput(ALIGN_INPUT, "Align");
+        configInput(COHESION_INPUT, "Cohesion");
+        configInput(TARGET_INPUT, "Target color");
+
+        configInput(X_INPUT, "X");
+        configInput(Y_INPUT, "Y");
+
+        configInput(WAVEFORM_INPUT, "Waveform");
+        configInput(COLOR_TRIGGER_INPUT, "Background");
+        configInput(INVERT_INPUT, "Invert background");
+
+        for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
                 Block b(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE);
                 blocks[y][x] = b;
@@ -359,7 +371,7 @@ namespace PhotronNS {
     };
 }
 
-struct PhotronDisplay : Widget {
+struct PhotronDisplay : LightWidget {
     Photron *module;
 
     // void onButton(const event::Button &e) override {
@@ -436,84 +448,139 @@ struct PhotronDisplay : Widget {
         nvgFill(args.vg);
 
         /************ COLOR FLOCKING STUFF ************/
-        for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-            for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
-                Vec3 rgb = module->blocks[y][x].rgb;
-                switch (module->background) {
-                    case Photron::COLOR:
-                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        break;
-                    case Photron::B_AND_W: {
-                        NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        break;
+        if (module->background == Photron::BLACK) {
+            nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
+            nvgFill(args.vg);
+        } else {
+            for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
+                for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+
+                    bool topEdge = y < MARGIN;
+                    bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
+                    bool leftEdge = x < MARGIN;
+                    bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
+
+                    if (topEdge || bottomEdge || leftEdge || rightEdge) {
+                        Vec3 rgb = module->blocks[y][x].rgb;
+                        if (module->background == Photron::COLOR) {
+                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        } else {
+                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        }
+
+                        // if (module->isColor) {
+                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        // } else {
+                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        // }
+
+                        nvgBeginPath(args.vg);
+                        nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                        nvgFill(args.vg);
                     }
-                    case Photron::BLACK:
-                        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
-                        break;
+
+                }
+            }
+        }
+
+
+    }
+
+    void drawLayer(const DrawArgs &args, int layer) override {
+        if (module == NULL) return;
+
+        if (layer == 1) {
+            // //background
+            // // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+            // nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            // nvgBeginPath(args.vg);
+            // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+            // nvgFill(args.vg);
+
+            // /************ COLOR FLOCKING STUFF ************/
+            if (module->background != Photron::BLACK) {
+                for (int y = MARGIN; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN; y++) {
+                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN; x++) {
+                        Vec3 rgb = module->blocks[y][x].rgb;
+                        if (module->background == Photron::COLOR) {
+                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        } else {
+                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+
+                        }
+
+                        // if (module->isColor) {
+                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        // } else {
+                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        // }
+
+                        nvgBeginPath(args.vg);
+                        nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                        nvgFill(args.vg);
+                    }
+                }
+            }
+
+
+            /************ SCOPE STUFF ************/
+            // code modified from: https://github.com/VCVRack/Fundamental/blob/v0.4.0/src/Scope.cpp
+            float gainX = powf(2.0, module->params[Photron::X_SCALE_PARAM].value);
+            float gainY = powf(2.0, module->params[Photron::Y_SCALE_PARAM].value);
+            float offsetX = module->params[Photron::X_POS_PARAM].value;
+            float offsetY = module->params[Photron::Y_POS_PARAM].value;
+
+            float valuesX[BUFFER_SIZE];
+            float valuesY[BUFFER_SIZE];
+            for (int i = 0; i < BUFFER_SIZE; i++) {
+                int j = i;
+                // Lock display to buffer if buffer update deltaTime <= 2^-11
+                if (module->lissajous)
+                    j = (i + module->bufferIndex) % BUFFER_SIZE;
+                valuesX[i] = (module->bufferX[j] + offsetX) * gainX / 10.0;
+                valuesY[i] = (module->bufferY[j] + offsetY) * gainY / 10.0;
+            }
+
+            // Draw waveforms
+            if (module->lissajous) { // module->lissajous
+                // X x Y
+                if (module->inputs[Photron::X_INPUT].active || module->inputs[Photron::Y_INPUT].active) {
+                    Vec3 rgb = module->blocks[0][0].rgb;
+                    nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    // nvgStrokeColor(args.vg, nvgRGBA(0x9f, 0xe4, 0x36, 0xc0));
+                    drawWaveform(args.vg, valuesX, valuesY);
+                }
+            }
+            else {
+                // Y
+                if (module->inputs[Photron::Y_INPUT].active) {
+                    Vec3 rgb = module->blocks[0][0].rgb;
+                    nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    // nvgStrokeColor(args.vg, nvgRGBA(0xe1, 0x02, 0x78, 0xc0));
+                    drawWaveform(args.vg, valuesY, NULL);
                 }
 
-                // if (module->isColor) {
-                //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                // } else {
-                //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                // }
+                // X
+                if (module->inputs[Photron::X_INPUT].active) {
+                    Vec3 rgb = module->blocks[12][12].rgb;
+                    nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    // nvgStrokeColor(args.vg, nvgRGBA(0x28, 0xb0, 0xf3, 0xc0));
+                    drawWaveform(args.vg, valuesX, NULL);
+                }
 
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
-                nvgFill(args.vg);
+                // float valueTrig = (module->params[Photron::TRIG_PARAM].value + offsetX) * gainX / 10.0;
+                // drawTrig(args.vg, valueTrig);
             }
+
         }
+        Widget::drawLayer(args, layer);
 
-        /************ SCOPE STUFF ************/
-        // code modified from: https://github.com/VCVRack/Fundamental/blob/v0.4.0/src/Scope.cpp
-        float gainX = powf(2.0, module->params[Photron::X_SCALE_PARAM].value);
-		float gainY = powf(2.0, module->params[Photron::Y_SCALE_PARAM].value);
-		float offsetX = module->params[Photron::X_POS_PARAM].value;
-		float offsetY = module->params[Photron::Y_POS_PARAM].value;
-
-		float valuesX[BUFFER_SIZE];
-		float valuesY[BUFFER_SIZE];
-		for (int i = 0; i < BUFFER_SIZE; i++) {
-			int j = i;
-			// Lock display to buffer if buffer update deltaTime <= 2^-11
-			if (module->lissajous)
-				j = (i + module->bufferIndex) % BUFFER_SIZE;
-			valuesX[i] = (module->bufferX[j] + offsetX) * gainX / 10.0;
-			valuesY[i] = (module->bufferY[j] + offsetY) * gainY / 10.0;
-		}
-
-		// Draw waveforms
-		if (module->lissajous) { // module->lissajous
-			// X x Y
-			if (module->inputs[Photron::X_INPUT].active || module->inputs[Photron::Y_INPUT].active) {
-                Vec3 rgb = module->blocks[0][0].rgb;
-                nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                // nvgStrokeColor(args.vg, nvgRGBA(0x9f, 0xe4, 0x36, 0xc0));
-				drawWaveform(args.vg, valuesX, valuesY);
-			}
-		}
-		else {
-			// Y
-			if (module->inputs[Photron::Y_INPUT].active) {
-                Vec3 rgb = module->blocks[0][0].rgb;
-                nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                // nvgStrokeColor(args.vg, nvgRGBA(0xe1, 0x02, 0x78, 0xc0));
-                drawWaveform(args.vg, valuesY, NULL);
-            }
-
-			// X
-			if (module->inputs[Photron::X_INPUT].active) {
-                Vec3 rgb = module->blocks[module->rows-1][module->cols-1].rgb;
-                nvgStrokeColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                // nvgStrokeColor(args.vg, nvgRGBA(0x28, 0xb0, 0xf3, 0xc0));
-                drawWaveform(args.vg, valuesX, NULL);
-            }
-
-			// float valueTrig = (module->params[Photron::TRIG_PARAM].value + offsetX) * gainX / 10.0;
-            // drawTrig(args.vg, valueTrig);
-        }
     }
 };
 

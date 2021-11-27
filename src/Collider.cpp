@@ -58,11 +58,21 @@ struct Collider : Module {
 
     Collider() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(SHAKE_PARAM, 0.0, 1.0, 0.0, "Shake");
+        configButton(SHAKE_PARAM, "Shake");
         configParam(PARTICLES_PARAM, 1.0, 150.0, 50.0, "Number of Particles");
         configParam(CENTER_FREQ_PARAM, 100.0, 10000.0, 2000.0, "Frequency", " Hz");
-        configParam(FREQ_RANGE_PARAM, 0.0, 1.0, 0.2, "Frequency Range", "x");
-        configParam(RANDOMIZE_PARAM, 0.0, 1.0, 0.0, "Frequency randomization", "x");
+        configParam(FREQ_RANGE_PARAM, 0.0, 1.0, 0.2, "Frequency Range", " x");
+        configParam(RANDOMIZE_PARAM, 0.0, 1.0, 0.0, "Frequency randomization", " x");
+
+        configInput(SHAKE_INPUT, "Shake");
+        configInput(CENTER_FREQ_INPUT, "Center frequency");
+        configInput(FREQ_RANGE_INPUT, "Frequency range");
+        configInput(VEL_INPUT, "Velocity");
+        configInput(PARTICLES_INPUT, "Number of Particles");
+
+        configOutput(VOLT_OUTPUT, "Pitch (V/OCT)");
+        configOutput(GATE_OUTPUT, "Gate");
+        configOutput(VEL_OUTPUT, "Velocity");
 
         initNotes(centerFreq);
     }

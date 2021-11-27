@@ -216,7 +216,7 @@ struct Talea : Module {
     int ppqn = 0;
     float period = 0.0;
     float gateLength = 0.5;
-    int timeOut = 1; // seconds
+    int timeOut = 2; // seconds
     int extPulseIndex = 0;
     int currentPitch = 0;
     int playIndex = 0;
@@ -238,13 +238,20 @@ struct Talea : Module {
 
     Talea() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
+        configButton(CLOCK_TOGGLE_PARAM, "toggle clock");
         configParam(BPM_PARAM, -2.0, 6.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
-        configParam(OCT_PARAM, 0.0, 1.0, 0.0, "Octaves");
-        configParam(MODE_PARAM, 0.0, Talea::NUM_ARP_MODES - 1, 0.0, "Pattern Mode");
-        configParam(HOLD_PARAM, 0.0, 1.0, 0.0, "Hold Pattern");
+        configParam(OCT_PARAM, 1.0, 5.0, 1.0, "Octaves");
+        configSwitch(MODE_PARAM, 0.0, Talea::NUM_ARP_MODES - 1, 0.0, "Pattern Mode", {"Up", "Down", "Doubled", "As played", "Random"});
+        configSwitch(HOLD_PARAM, 0.0, 1.0, 0.0, "Hold Pattern", {"off", "on"});
         configParam(GATE_LENGTH_PARAM, 0.0, 1.0, 0.5, "Gate length", "%", 0.0, 100.0);
-        configParam(POLYRHYTHM_MODE_PARAM, 0.0, 1.0, 0.0, "Polyrhythm Mode");
+        configSwitch(POLYRHYTHM_MODE_PARAM, 0.0, 1.0, 0.0, "Polyrhythm Mode", {"off", "on"});
+
+        configInput(EXT_CLOCK_INPUT, "External clock");
+        configInput(VOLTS_INPUT, "Pitch (V/OCT)");
+        configInput(GATES_INPUT, "Gate");
+
+        configOutput(VOLTS_OUTPUT, "Pitch (V/OCT)");
+        configOutput(GATES_OUTPUT, "Gate");
 
         for (int i = 0; i < MAX_CHANNELS; i++) {
             phases[i] = 0.0;
@@ -404,21 +411,24 @@ struct Talea : Module {
     void process(const ProcessArgs &args) override {
 
         if (checkParams == 0) {
-            if (octTrig.process(params[OCT_PARAM].getValue())) {
-                octaveCount = octaveCount < 5 ? (octaveCount + 1) : 1;
-            }
+            // if (octTrig.process(params[OCT_PARAM].getValue())) {
+            //     octaveCount = octaveCount < 5 ? (octaveCount + 1) : 1;
+            // }
+            octaveCount = params[OCT_PARAM].getValue();
+            holdPattern = (params[HOLD_PARAM].getValue() == 1);
+            polyrhythmMode = (params[POLYRHYTHM_MODE_PARAM].getValue() == 1);
 
             if (toggleTrig.process(params[CLOCK_TOGGLE_PARAM].getValue())) {
                 clockOn = !clockOn;
             }
 
-            if (holdTrig.process(params[HOLD_PARAM].getValue())) {
-                holdPattern = !holdPattern;
-            }
+            // if (holdTrig.process(params[HOLD_PARAM].getValue())) {
+            //     holdPattern = !holdPattern;
+            // }
 
-            if (polyrhythmModeTrig.process(params[POLYRHYTHM_MODE_PARAM].getValue())) {
-                polyrhythmMode = !polyrhythmMode;
-            }
+            // if (polyrhythmModeTrig.process(params[POLYRHYTHM_MODE_PARAM].getValue())) {
+            //     polyrhythmMode = !polyrhythmMode;
+            // }
 
             gateLength = params[GATE_LENGTH_PARAM].getValue();
             
@@ -485,7 +495,7 @@ struct Talea : Module {
                     period += args.sampleTime;
                     if (period > timeOut) clockOn = false;
                     if (bpmDetect) {
-                        if (extPulseIndex > 1) {
+                        if (extPulseIndex > 0) {
                             clockFreq = (1.0 / period) / (float)ppqn;
                         }
 
@@ -575,8 +585,8 @@ namespace TaleaNS {
 struct TaleaModeKnob : BlueInvertKnobLabelCentered {
     TaleaModeKnob(){}
     std::string formatCurrentValue() override {
-        if (paramQuantity != NULL) {
-            switch(int(paramQuantity->getValue())) {
+        if (getParamQuantity() != NULL) {
+            switch(int(getParamQuantity()->getValue())) {
                 case Talea::UP:         return "↑";
                 case Talea::DOWN:       return "↓";
                 case Talea::DOUBLE:     return "2x";
@@ -650,7 +660,8 @@ struct TaleaWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(16.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(16.5, box.size.y - 14)));
         // light
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(34 - 3.21, 40.3 - 3.21), module, Talea::TOGGLE_LIGHT));
+        // addChild(createLight<SmallLight<DisplayAquaLight> >(Vec(34 - 3, 40.3 - 3), module, Talea::TOGGLE_LIGHT));
+        addChild(createLight<SmallLight<DisplayAquaLight> >(Vec(34 - 3, 54 - 3), module, Talea::TOGGLE_LIGHT));
 
         addParam(createParamCentered<TinyBlueButton>(Vec(34, 54), module, Talea::CLOCK_TOGGLE_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(21.9, 76.7), module, Talea::BPM_PARAM));
@@ -658,17 +669,19 @@ struct TaleaWidget : ModuleWidget {
 
         // octaves
         addParam(createParamCentered<NanoBlueButton>(Vec(11, 124.7), module, Talea::OCT_PARAM));
-        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(11 - 3.21, 124.7 - 3.21), module, Talea::OCT_LIGHT + Talea::PURPLE));
-        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(11 - 3.21, 124.7 - 3.21), module, Talea::OCT_LIGHT + Talea::BLUE));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(11 - 3.21, 124.7 - 3.21), module, Talea::OCT_LIGHT + Talea::AQUA));
-        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(11 - 3.21, 124.7 - 3.21), module, Talea::OCT_LIGHT + Talea::RED));
+        addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(11 - 3, 124.7 - 3), module, Talea::OCT_LIGHT + Talea::PURPLE));
+        addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(11 - 3, 124.7 - 3), module, Talea::OCT_LIGHT + Talea::BLUE));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(11 - 3, 124.7 - 3), module, Talea::OCT_LIGHT + Talea::AQUA));
+        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(11 - 3, 124.7 - 3), module, Talea::OCT_LIGHT + Talea::RED));
 
         // hold
         addParam(createParamCentered<NanoBlueButton>(Vec(34, 97), module, Talea::HOLD_PARAM));
-        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(34 - 3.21, 97 - 3.21), module, Talea::HOLD_LIGHT));
+        // addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(34 - 3, 97 - 3), module, Talea::HOLD_LIGHT));
+        // addChild(createLight<SmallLight<JeremyRedLight>>(Vec(34 - 3, 97 - 3), module, Talea::HOLD_LIGHT));
         // polyrhythm mode
         addParam(createParamCentered<NanoBlueButton>(Vec(11, 137.2), module, Talea::POLYRHYTHM_MODE_PARAM));
-        addChild(createLight<SmallLight<JeremyRedLight>>(Vec(11 - 3.21, 137.2 - 3.21), module, Talea::POLYRHYTHM_MODE_LIGHT));
+        // addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(11 - 3, 137.2 - 3), module, Talea::POLYRHYTHM_MODE_LIGHT));
+        // addChild(createLight<SmallLight<JeremyRedLight>>(Vec(11 - 3, 137.2 - 3), module, Talea::POLYRHYTHM_MODE_LIGHT));
 
         TaleaNS::TaleaModeKnob *modeKnob = dynamic_cast<TaleaNS::TaleaModeKnob *>(createParamCentered<TaleaNS::TaleaModeKnob>(Vec(22.5, 158.7), module, Talea::MODE_PARAM));
         CenterAlignedLabel *const modeLabel = new CenterAlignedLabel;

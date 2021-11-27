@@ -73,14 +73,28 @@ struct PolyrhythmClock : Module {
 
     PolyrhythmClock() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam(CLOCK_TOGGLE_PARAM, 0.0, 1.0, 0.0, "toggle clock");
+        configButton(CLOCK_TOGGLE_PARAM, "Toggle clock");
         configParam(BPM_PARAM, -2.0, 6.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
-        configParam(TUPLET1_RHYTHM_PARAM, 1.0, 24.0, 1.0);
-        configParam(TUPLET1_DUR_PARAM, 1.0, 24.0, 1.0);
-        configParam(TUPLET2_RHYTHM_PARAM, 1.0, 24.0, 1.0);
-        configParam(TUPLET2_DUR_PARAM, 1.0, 24.0, 1.0);
-        configParam(TUPLET3_RHYTHM_PARAM, 1.0, 24.0, 1.0);
-        configParam(TUPLET3_DUR_PARAM, 1.0, 24.0, 1.0);
+        configParam(TUPLET1_RHYTHM_PARAM, 1.0, 24.0, 1.0, "Tuplet 1 rhythm");
+        configParam(TUPLET1_DUR_PARAM, 1.0, 24.0, 1.0, "Tuplet 1 duration");
+        configParam(TUPLET2_RHYTHM_PARAM, 1.0, 24.0, 1.0, "Tuplet 2 rhythm");
+        configParam(TUPLET2_DUR_PARAM, 1.0, 24.0, 1.0, "Tuplet 2 duration");
+        configParam(TUPLET3_RHYTHM_PARAM, 1.0, 24.0, 1.0, "Tuplet 3 rhythm");
+        configParam(TUPLET3_DUR_PARAM, 1.0, 24.0, 1.0, "Tuplet 3 duration");
+
+        configInput(RESET_INPUT, "Reset");
+        configInput(EXT_CLOCK_INPUT, "External clock");
+        configInput(TUPLET1_RHYTHM_INPUT, "Tuplet 1 rhythm");
+        configInput(TUPLET1_DUR_INPUT, "Tuplet 1 duration");
+        configInput(TUPLET2_RHYTHM_INPUT, "Tuplet 2 rhythm");
+        configInput(TUPLET2_DUR_INPUT, "Tuplet 2 duration");
+        configInput(TUPLET3_RHYTHM_INPUT, "Tuplet 3 rhythm");
+        configInput(TUPLET3_DUR_INPUT, "Tuplet 3 duration");
+
+        configOutput(MASTER_PULSE_OUTPUT, "Main pulse");
+        configOutput(TUPLET1_OUTPUT, "Tuplet 1");
+        configOutput(TUPLET2_OUTPUT, "Tuplet 2");
+        configOutput(TUPLET3_OUTPUT, "Tuplet 3");
 
         currentRhythmFraction[0] = params[TUPLET1_RHYTHM_PARAM].getValue() / params[TUPLET1_DUR_PARAM].getValue();
         currentRhythmFraction[1] = params[TUPLET2_RHYTHM_PARAM].getValue() / params[TUPLET2_DUR_PARAM].getValue();
@@ -432,7 +446,7 @@ struct PolyrhythmClockWidget : ModuleWidget {
 
         addParam(createParamCentered<PurpleKnob>(Vec(45, 76.7), module, PolyrhythmClock::BPM_PARAM));
         addParam(createParamCentered<TinyPurpleButton>(Vec(45, 54), module, PolyrhythmClock::CLOCK_TOGGLE_PARAM));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(45 - 3.21, 54 - 3.21), module, PolyrhythmClock::TOGGLE_LIGHT));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(45 - 3, 54 - 3), module, PolyrhythmClock::TOGGLE_LIGHT));
         // inputs
         addInput(createInputCentered<TinyPJ301M>(Vec(19.9, 76.7), module, PolyrhythmClock::RESET_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(70.1, 76.7), module, PolyrhythmClock::EXT_CLOCK_INPUT));
