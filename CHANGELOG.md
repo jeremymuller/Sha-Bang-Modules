@@ -3,6 +3,8 @@ v2.0.0 (11-27-2021)
 - Updated StochSeq UI
 - Added tooltips to all buttons and knobs
 - Updated glowing lights for Rack2 dark room feature
+- Neutrinode BPM goes up to 240
+- added presets folder
 
 v1.3.6 (10-02-2021)
 - Put gates back to 1e-3 on StochSeq and StochSeq4
