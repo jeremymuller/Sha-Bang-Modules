@@ -31,6 +31,7 @@ struct StochSeq4X : Module {
 
     SequencerIds currentSeq = PURPLE_SEQ;
     bool isGate[NUM_SEQS] = {true, true, true, true};
+    bool allStrips = false;
     float outputValues[NUM_SEQS * NUM_OF_CHANNELS];
     // Expander
     float leftMessages[2][NUM_SEQS * NUM_OF_CHANNELS] = {}; // messages from StochSeq4: 2 Gate values
@@ -38,12 +39,12 @@ struct StochSeq4X : Module {
     StochSeq4X() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 
-        configSwitch(TOGGLE_ALL_PARAMS, 0.0, 4.0, 4.0, "Outputs", {"Purple", "Blue", "Aqua", "Red", "All"});
+        configSwitch(TOGGLE_ALL_PARAMS, 0.0, 4.0, 0.0, "Outputs", {"Purple", "Blue", "Aqua", "Red", "All"});
 
-        configSwitch(TOGGLE_NOTGATE_PARAMS + PURPLE_SEQ, 0.0, 1.0, 0.0, "Output mode", {"gates", "not gates"});
-        configSwitch(TOGGLE_NOTGATE_PARAMS + BLUE_SEQ, 0.0, 1.0, 0.0, "Output mode", {"gates", "not gates"});
-        configSwitch(TOGGLE_NOTGATE_PARAMS + AQUA_SEQ, 0.0, 1.0, 0.0, "Output mode", {"gates", "not gates"});
-        configSwitch(TOGGLE_NOTGATE_PARAMS + RED_SEQ, 0.0, 1.0, 0.0, "Output mode", {"gates", "not gates"});
+        configSwitch(TOGGLE_NOTGATE_PARAMS + PURPLE_SEQ, 0.0, 1.0, 0.0, "Column 1", {"gates", "not gates"});
+        configSwitch(TOGGLE_NOTGATE_PARAMS + BLUE_SEQ, 0.0, 1.0, 0.0, "Column 2", {"gates", "not gates"});
+        configSwitch(TOGGLE_NOTGATE_PARAMS + AQUA_SEQ, 0.0, 1.0, 0.0, "Column 3", {"gates", "not gates"});
+        configSwitch(TOGGLE_NOTGATE_PARAMS + RED_SEQ, 0.0, 1.0, 0.0, "Column 4", {"gates", "not gates"});
 
         for (int i = 0; i < NUM_OF_CHANNELS; i++) {
 			configOutput(GATES_OUTPUT + i, "Gate " + std::to_string(i+1));
@@ -61,6 +62,7 @@ struct StochSeq4X : Module {
         // this expander code is modified from https://github.com/MarcBoule/ImpromptuModular/blob/v2/src/FourView.cpp
 
         currentSeq = (SequencerIds)params[TOGGLE_ALL_PARAMS].getValue();
+        allStrips = currentSeq > RED_SEQ;
 
         for (int i = 0; i < NUM_SEQS; i++) {
             isGate[i] = (params[TOGGLE_NOTGATE_PARAMS + i].getValue() == 0);
@@ -77,14 +79,32 @@ struct StochSeq4X : Module {
             }
         }
 
-        int start = currentSeq * NUM_OF_CHANNELS;
-        int end = start + NUM_OF_CHANNELS;
-        for (int i = start, j = 0; i < end; i++, j++) {
-            if (isGate[0])
-                outputs[GATES_OUTPUT + j].setVoltage(outputValues[i]);
-            else
-                outputs[GATES_OUTPUT + j].setVoltage(outputValues[i] > 0.0 ? 0.0 : 10.0);
+        if (allStrips) {
+            for (int i = 0, index = 0; i < NUM_SEQS; i++) {
+                for (int j = 0; j < 8; j++, index++) {
+                    int outputIndex = j + (i * NUM_OF_CHANNELS);
+                    if (isGate[i])
+                        outputs[GATES_OUTPUT + index].setVoltage(outputValues[outputIndex]);
+                    else if (isParent)
+                        outputs[GATES_OUTPUT + index].setVoltage(outputValues[outputIndex] > 0.0 ? 0.0 : 10.0);
+                    else
+                        outputs[GATES_OUTPUT + index].setVoltage(0.0);
+                }
+            }
+        } else {
+            int start = currentSeq * NUM_OF_CHANNELS;
+            int end = start + NUM_OF_CHANNELS;
+            for (int i = start, j = 0; i < end; i++, j++) {
+                int isGateIndex = floor(j / 8);
+                if (isGate[isGateIndex])
+                    outputs[GATES_OUTPUT + j].setVoltage(outputValues[i]);
+                else if (isParent)
+                    outputs[GATES_OUTPUT + j].setVoltage(outputValues[i] > 0.0 ? 0.0 : 10.0);
+                else
+                    outputs[GATES_OUTPUT + j].setVoltage(0.0);
+            }
         }
+
     }
 };
 
@@ -100,6 +120,7 @@ struct StochSeq4XDisplay : Widget {
 		// nvgBeginPath(args.vg);
 		// nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
 		// nvgFill(args.vg);
+
         switch (module->currentSeq) {
             case StochSeq4X::PURPLE_SEQ:
                 nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
@@ -121,6 +142,22 @@ struct StochSeq4XDisplay : Widget {
         float ySpacing = 23.3;
         float xSpacing = 27.0;
         for (int x = 0; x < 4; x++) {
+            if (module->allStrips) {
+                switch (x) {
+                    case 0:
+                        nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
+                        break;
+                    case 1:
+                        nvgStrokeColor(args.vg, nvgRGB(38, 0, 255));
+                        break;
+                    case 2:
+                        nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
+                        break;
+                    case 3:
+                        nvgStrokeColor(args.vg, nvgRGB(255, 0, 0));
+                        break;
+                }
+            }
             for (int y = 0; y < 8; y++) {
                 nvgStrokeWidth(args.vg, 3.0);
                 nvgBeginPath(args.vg);

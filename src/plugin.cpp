@@ -23,7 +23,6 @@ void init(Plugin* p) {
 	p->addModel(modelAbsorptionSpectrum);
 	p->addModel(modelTalea);
 	p->addModel(modelCollider);
-	p->addModel(modelQuantal);
 	p->addModel(modelStochSeq4X);
 
 	// Any other plugin initialization may go here.
