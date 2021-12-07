@@ -14,6 +14,7 @@ struct Quantize {
     float SCALE_MIN_PENTATONIC[6] = {0, 3, 5, 7, 10, 12};
     float SCALE_OCTATONIC[9] = {0, 2, 3, 5, 6, 8, 9, 11, 12};
     float SCALE_WHOLE_TONE[7] = {0, 2, 4, 6, 8, 10, 12};
+    float SCALE_CHROMATIC[13] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     float SCALE_ACOUSTIC[8] = {0, 2, 4, 6, 7, 9, 10, 12};
     float SCALE_BLUES[8] = {0, 2, 3, 5, 6, 7, 10, 12};
     float SCALE_MAJ_MAJ_7[4] = {0, 4, 7, 11};
@@ -65,6 +66,7 @@ struct Quantize {
         MIN_PENTATONIC,
         OCTATONIC,
         WHOLE_TONE,
+        CHROMATIC,
         ACOUSTIC,
         BLUES,
         MAJ_MAJ_7,
@@ -103,6 +105,7 @@ struct Quantize {
             case MIN_PENTATONIC:    chosenScale = SCALE_MIN_PENTATONIC; scaleLength = LENGTHOF(SCALE_MIN_PENTATONIC);   break;
             case OCTATONIC:         chosenScale = SCALE_OCTATONIC;      scaleLength = LENGTHOF(SCALE_OCTATONIC);        break;
             case WHOLE_TONE:        chosenScale = SCALE_WHOLE_TONE;     scaleLength = LENGTHOF(SCALE_WHOLE_TONE);       break;
+            case CHROMATIC:         chosenScale = SCALE_CHROMATIC;      scaleLength = LENGTHOF(SCALE_CHROMATIC);        break;
             case ACOUSTIC:          chosenScale = SCALE_ACOUSTIC;       scaleLength = LENGTHOF(SCALE_ACOUSTIC);         break;
             case BLUES:             chosenScale = SCALE_BLUES;          scaleLength = LENGTHOF(SCALE_BLUES);            break;
             case MAJ_MAJ_7:         chosenScale = SCALE_MAJ_MAJ_7;      scaleLength = LENGTHOF(SCALE_MAJ_MAJ_7);        break;
@@ -176,6 +179,7 @@ struct Quantize {
             case MIN_PENTATONIC:  return "Min Pentatonic";
             case OCTATONIC:       return "Octatonic";
             case WHOLE_TONE:      return "Whole Tone";
+            case CHROMATIC:       return "Chromatic";
             case ACOUSTIC:        return "Acoustic";
             case BLUES:           return "Blues";
             case MAJ_MAJ_7:       return "MM7";
