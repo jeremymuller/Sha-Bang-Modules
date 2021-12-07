@@ -5,6 +5,7 @@
 struct RandRoute : Module {
     enum ParamIds {
         WEIGHTING_PARAM,
+        PERCENTAGE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -25,12 +26,16 @@ struct RandRoute : Module {
 	};
 
     dsp::SchmittTrigger mainTrig;
+    dsp::BooleanTrigger gateTriggers[16];
     int currentGate;
+    float weightProb = 0.5;
+    bool outcomes[NUM_OF_OUTPUTS][16] = {};
+    bool toggle = false;
 
     RandRoute() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        // configParam(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "weight");
         configSwitch(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "Weight", {"Purple", "Blue", "Aqua", "Red", "Uniform"});
+        configParam(PERCENTAGE_PARAM, 0.0, 1.0, 0.5, "Weight probability", "%", 0, 100);
 
         configInput(TRIGGER_INPUT, "Trigger");
         configInput(GATE_INPUT, "Main");
@@ -46,31 +51,79 @@ struct RandRoute : Module {
     }
 
     void setCurrentGate() {
-        if (params[WEIGHTING_PARAM].getValue() < 4) {
-            int weight = (int)params[WEIGHTING_PARAM].getValue();
-            int r = static_cast<int>(random::uniform() * (NUM_OF_OUTPUTS+1));
-            currentGate = (r > 3) ? weight : r; // 40% chance of weighted choice
+        int weight = (int)params[WEIGHTING_PARAM].getValue();
+        weightProb = params[PERCENTAGE_PARAM].getValue();
+        if (weight < 4) {
+            if (random::uniform() < weightProb) {
+                currentGate = weight;
+            } else {
+                int r = static_cast<int>(floor(random::uniform() * 4));
+                while (r == weight) {
+                    r = static_cast<int>(floor(random::uniform() * 4));
+                }
+                currentGate = r;
+            }
         } else {
-            currentGate = static_cast<int>(random::uniform() * NUM_OF_OUTPUTS);
+            currentGate = static_cast<int>(floor(random::uniform() * NUM_OF_OUTPUTS));
         }
     }
 
     void process(const ProcessArgs &args) override {
-        // TODO: fix this routing shizzzz
-        if (mainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
-            setCurrentGate();
-        }
-        for (int i = 0; i < NUM_LIGHTS; i++) {
-            lights[i].setBrightness((i==currentGate) ? 1.0 : 0.0);
-        }
+        int channels = std::max(inputs[GATE_INPUT].getChannels(), 1);
+        if (inputs[TRIGGER_INPUT].isConnected()) {
+            if (mainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
+                setCurrentGate();
+            }
+            for (int i = 0; i < NUM_LIGHTS; i++) {
+                lights[i].setBrightness((i==currentGate) ? 1.0 : 0.0);
+            }
 
-        int channels = inputs[GATE_INPUT].getChannels();
-        for (int c = 0; c < channels; c++) {
-            float in = inputs[GATE_INPUT].getVoltage(c);
-            outputs[GATES_OUTPUT + currentGate].setVoltage(in, c);
+            for (int c = 0; c < channels; c++) {
+                float in = inputs[GATE_INPUT].getVoltage(c);
+                outputs[GATES_OUTPUT + currentGate].setVoltage(in, c);
+                for (int i = 0; i < 4; i++) {
+                    if (i != currentGate) outputs[GATES_OUTPUT + i].setVoltage(0.0, c);
+                }
+            }
+        } else { // multinoulli gates (1 in -> 4 outs)
+            for (int c = 0; c < channels; c++) {
+                bool gate = inputs[GATE_INPUT].getVoltage(c) >= 2.0;
+                if (gateTriggers[c].process(gate)) {
+                    setCurrentGate();
+                }
+
+                for (int i = 0; i < 4; i++) {
+                    bool rollDice = (i == currentGate);
+                    if (!toggle) {
+                        outcomes[i][c] = rollDice;
+                    } else {
+                        if (rollDice) outcomes[i][c] = true;
+                        else outcomes[i][c] = false;
+                    }
+                    bool gateOut = outcomes[i][c] && (toggle ? true : gate);
+
+                    outputs[GATES_OUTPUT + i].setVoltage(gateOut ? 10.0 : 0.0, c);
+
+                    lights[i].setBrightness((i == currentGate) ? 1.0 : 0.0);
+                }
+            }
         }
-        outputs[GATES_OUTPUT].setChannels(channels);
+        outputs[GATES_OUTPUT + 0].setChannels(channels);
+        outputs[GATES_OUTPUT + 1].setChannels(channels);
+        outputs[GATES_OUTPUT + 2].setChannels(channels);
+        outputs[GATES_OUTPUT + 3].setChannels(channels);
     }
+
+    json_t* dataToJson() override {
+		json_t* rootJ = json_object();
+        json_object_set_new(rootJ, "mode", json_boolean(toggle));
+		return rootJ;
+	}
+
+	void dataFromJson(json_t* rootJ) override {
+        json_t *modeJ = json_object_get(rootJ, "mode");
+        if (modeJ) toggle = json_boolean_value(modeJ);
+	}
 };
 
 struct RandRouteWidget : ModuleWidget {
@@ -83,6 +136,7 @@ struct RandRouteWidget : ModuleWidget {
 
         addInput(createInputCentered<PJ301MPort>(Vec(22.5, 79.4), module, RandRoute::TRIGGER_INPUT));
         addParam(createParamCentered<BlueInvertKnob>(Vec(22.5, 156.1), module, RandRoute::WEIGHTING_PARAM));
+        addParam(createParamCentered<NanoBlueKnob>(Vec(34, 139.7), module, RandRoute::PERCENTAGE_PARAM));
 
         for (int i = 0; i < NUM_OF_OUTPUTS; i++) {
             addOutput(createOutputCentered<PJ301MPort>(Vec(22.5, 200.7 + (i * 40.5)), module, RandRoute::GATES_OUTPUT+i));
@@ -95,6 +149,16 @@ struct RandRouteWidget : ModuleWidget {
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(22.5 - 3.21, 340.9 - 3.21), module, RandRoute::AQUA_LIGHT));
         addChild(createLight<SmallLight<JeremyRedLight>>(Vec(22.5 - 3.21, 340.9 - 3.21), module, RandRoute::RED_LIGHT));
     }
+
+	void appendContextMenu(Menu* menu) override {
+		RandRoute* module = dynamic_cast<RandRoute*>(this->module);
+
+		menu->addChild(new MenuSeparator);
+
+		menu->addChild(createIndexPtrSubmenuItem("Mode", 
+            {"Latch", "Toggle"}, 
+            &module->toggle));
+	}
 };
 
 Model *modelRandRoute = createModel<RandRoute, RandRouteWidget>("RandRoute");

@@ -101,7 +101,7 @@ struct PolyrhythmClock : Module {
         currentRhythmFraction[2] = params[TUPLET3_RHYTHM_PARAM].getValue() / params[TUPLET3_DUR_PARAM].getValue();
 
         for (int i = 0; i < 3; i++) {
-            configParam(TUPLETS_RAND_PARAM+i, 0.0, 1.0, 1.0, "probability");
+            configParam(TUPLETS_RAND_PARAM+i, 0.0, 1.0, 1.0, "Probability", "%", 0, 100);
             randoms[i] = random::uniform();
         }
     }

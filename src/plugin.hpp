@@ -436,6 +436,12 @@ struct TinyBlueInvertKnob : RoundKnob {
     }
 };
 
+struct NanoBlueKnob : RoundKnob {
+    NanoBlueKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueKnob.svg")));
+    }
+};
+
 /************************** KNOBS with LABELS **************************/
 // code help from https://github.com/jeremywen/JW-Modules/blob/master/src/JWModules.hpp
 
