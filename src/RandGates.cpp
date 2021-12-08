@@ -25,8 +25,9 @@ struct RandGates : Module {
 		NUM_LIGHTS
 	};
 
-    dsp::SchmittTrigger mainTrig;
-    int currentGate;
+    dsp::SchmittTrigger polyTrig[16];
+    dsp::SchmittTrigger monoTrig;
+    int currentGate[16];
     float weightProb = 0.5;
 
     RandGates() {
@@ -44,24 +45,26 @@ struct RandGates : Module {
 
         configLight(PURPLE_LIGHT, "Output indicator");
 
-        setCurrentGate();
+        for (int i = 0; i < 16; i++) {
+            setCurrentGate(i);
+        }
     }
 
-    void setCurrentGate() {
+    void setCurrentGate(int channel) {
         int weight = (int)params[WEIGHTING_PARAM].getValue();
         weightProb = params[PERCENTAGE_PARAM].getValue();
         if (weight < 4) {
             if (random::uniform() < weightProb) {
-                currentGate = weight;
+                currentGate[channel] = weight;
             } else {
                 int r = static_cast<int>(random::uniform() * 4);
                 while (r == weight) {
                     r = static_cast<int>(random::uniform() * 4);
                 }
-                currentGate = r;
+                currentGate[channel] = r;
             }
         } else {
-            currentGate = static_cast<int>(random::uniform() * NUM_OF_INPUTS);
+            currentGate[channel] = static_cast<int>(random::uniform() * NUM_OF_INPUTS);
         }
 
         /******* OLD *******/
@@ -78,21 +81,33 @@ struct RandGates : Module {
 
         // get number of channels first
         int channels = 1;
-        channels = std::max(inputs[TRIGGER_INPUT].getChannels(), channels);
-        for (int i = 0; i < NUM_OF_INPUTS; i++) {
-            channels = std::max(inputs[GATES_INPUT+i].getChannels(), channels);
+
+        if (inputs[TRIGGER_INPUT].isPolyphonic()) {
+            channels = std::max(inputs[TRIGGER_INPUT].getChannels(), channels);
+            for (int c = 0; c < channels; c++) {
+                if (polyTrig[c].process(inputs[TRIGGER_INPUT].getVoltage(c))) {
+                    setCurrentGate(c);
+                }
+                float in = inputs[GATES_INPUT + currentGate[c]].getVoltage();
+                outputs[GATE_OUTPUT].setVoltage(in, c);
+            }
+        } else {
+            if (monoTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
+                setCurrentGate(0);
+            }
+            for (int i = 0; i < NUM_OF_INPUTS; i++) {
+                channels = std::max(inputs[GATES_INPUT+i].getChannels(), channels);
+            }
+
+            for (int c = 0; c < channels; c++) {
+                float in = inputs[GATES_INPUT + currentGate[0]].getVoltage(c);
+                outputs[GATE_OUTPUT].setVoltage(in, c);
+            }
         }
 
-        for (int c = 0; c < channels; c++) {
-            if (mainTrig.process(inputs[TRIGGER_INPUT].getVoltage(c))) {
-                setCurrentGate();
-            }
-            float in = inputs[GATES_INPUT + currentGate].getVoltage(c);
-            outputs[GATE_OUTPUT].setVoltage(in, c);
-        }
 
         for (int i = 0; i < NUM_LIGHTS; i++) {
-            lights[i].setBrightness((i==currentGate) ? 1.0 : 0.0);
+            lights[i].setBrightness((i==currentGate[0]) ? 1.0 : 0.0);
         }
         outputs[GATE_OUTPUT].setChannels(channels);
         // outputs[GATE_OUTPUT].setVoltage(inputs[GATES_INPUT + currentGate].getVoltage());
