@@ -320,7 +320,7 @@ Watch the tutorial:
 - Weight knob: Gives probability control of the probability to the chosen output. All the way to the right is uniform randomness.
 - Weight probability knob: controls the probability of the chosen output.
 ##### OUTPUT:
-- `OUTS` (purple, blue, aqua, red) randomly chosen to output the input as either a pulse or ±5 volts.
+- `OUTS` (purple, blue, aqua, red) randomly chosen to output the input as either a pulse or ±5 volts. If no cable is connected to `TRG` then the `IN` will act as the trigger and output acts like a multinoulli gate only outputting 10 volts or 0 volts.
 
 ---
 
