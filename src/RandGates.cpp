@@ -5,6 +5,7 @@
 struct RandGates : Module {
     	enum ParamIds {
         WEIGHTING_PARAM,
+        PERCENTAGE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -24,12 +25,15 @@ struct RandGates : Module {
 		NUM_LIGHTS
 	};
 
-    dsp::SchmittTrigger mainTrig;
-    int currentGate;
+    dsp::SchmittTrigger polyTrig[16];
+    dsp::SchmittTrigger monoTrig;
+    int currentGate[16];
+    float weightProb = 0.5;
 
     RandGates() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configSwitch(WEIGHTING_PARAM, 0.0, 4.0, 4.0, "Weight", {"Purple", "Blue", "Aqua", "Red", "Uniform"});
+        configParam(PERCENTAGE_PARAM, 0.0, 1.0, 0.5, "Weight probability", "%", 0, 100);
 
         configInput(TRIGGER_INPUT, "Trigger");
         configInput(GATES_INPUT, "Purple");
@@ -41,34 +45,69 @@ struct RandGates : Module {
 
         configLight(PURPLE_LIGHT, "Output indicator");
 
-        setCurrentGate();
+        for (int i = 0; i < 16; i++) {
+            setCurrentGate(i);
+        }
     }
 
-    void setCurrentGate() {
-        if (params[WEIGHTING_PARAM].getValue() < 4) {
-            int weight = (int)params[WEIGHTING_PARAM].getValue();
-            int r = static_cast<int>(random::uniform() * (NUM_OF_INPUTS+1));
-            currentGate = (r > 3) ? weight : r; // 40% chance of weighted choice
+    void setCurrentGate(int channel) {
+        int weight = (int)params[WEIGHTING_PARAM].getValue();
+        weightProb = params[PERCENTAGE_PARAM].getValue();
+        if (weight < 4) {
+            if (random::uniform() < weightProb) {
+                currentGate[channel] = weight;
+            } else {
+                int r = static_cast<int>(random::uniform() * 4);
+                while (r == weight) {
+                    r = static_cast<int>(random::uniform() * 4);
+                }
+                currentGate[channel] = r;
+            }
         } else {
-            currentGate = static_cast<int>(random::uniform() * NUM_OF_INPUTS);
+            currentGate[channel] = static_cast<int>(random::uniform() * NUM_OF_INPUTS);
         }
+
+        /******* OLD *******/
+        // if (params[WEIGHTING_PARAM].getValue() < 4) {
+        //     int weight = (int)params[WEIGHTING_PARAM].getValue();
+        //     int r = static_cast<int>(random::uniform() * (NUM_OF_INPUTS+1));
+        //     currentGate = (r > 3) ? weight : r; // 40% chance of weighted choice
+        // } else {
+        //     currentGate = static_cast<int>(random::uniform() * NUM_OF_INPUTS);
+        // }
     }
 
     void process(const ProcessArgs &args) override {
-        if (mainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
-            setCurrentGate();
-        }
-        for (int i = 0; i < NUM_LIGHTS; i++) {
-            lights[i].setBrightness((i==currentGate) ? 1.0 : 0.0);
+
+        // get number of channels first
+        int channels = 1;
+
+        if (inputs[TRIGGER_INPUT].isPolyphonic()) {
+            channels = std::max(inputs[TRIGGER_INPUT].getChannels(), channels);
+            for (int c = 0; c < channels; c++) {
+                if (polyTrig[c].process(inputs[TRIGGER_INPUT].getVoltage(c))) {
+                    setCurrentGate(c);
+                }
+                float in = inputs[GATES_INPUT + currentGate[c]].getVoltage();
+                outputs[GATE_OUTPUT].setVoltage(in, c);
+            }
+        } else {
+            if (monoTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
+                setCurrentGate(0);
+            }
+            for (int i = 0; i < NUM_OF_INPUTS; i++) {
+                channels = std::max(inputs[GATES_INPUT+i].getChannels(), channels);
+            }
+
+            for (int c = 0; c < channels; c++) {
+                float in = inputs[GATES_INPUT + currentGate[0]].getVoltage(c);
+                outputs[GATE_OUTPUT].setVoltage(in, c);
+            }
         }
 
-        int channels = 1;
-        for (int i = 0; i < NUM_OF_INPUTS; i++) {
-            channels = std::max(inputs[GATES_INPUT+i].getChannels(), channels);
-        }
-        for (int c = 0; c < channels; c++) {
-            float in = inputs[GATES_INPUT + currentGate].getVoltage(c);
-            outputs[GATE_OUTPUT].setVoltage(in, c);
+
+        for (int i = 0; i < NUM_LIGHTS; i++) {
+            lights[i].setBrightness((i==currentGate[0]) ? 1.0 : 0.0);
         }
         outputs[GATE_OUTPUT].setChannels(channels);
         // outputs[GATE_OUTPUT].setVoltage(inputs[GATES_INPUT + currentGate].getVoltage());
@@ -85,6 +124,7 @@ struct RandGatesWidget : ModuleWidget {
 
         addInput(createInputCentered<PJ301MPort>(Vec(22.5, 79.4), module, RandGates::TRIGGER_INPUT));
         addParam(createParamCentered<BlueInvertKnob>(Vec(22.5, 281.6), module, RandGates::WEIGHTING_PARAM));
+        addParam(createParamCentered<NanoBlueKnob>(Vec(34, 265.2), module, RandGates::PERCENTAGE_PARAM));
 
         for (int i = 0; i < NUM_OF_INPUTS; i++) {
             addInput(createInputCentered<PJ301MPort>(Vec(22.5, 119.8 + (i * 40.5)), module, RandGates::GATES_INPUT+i));

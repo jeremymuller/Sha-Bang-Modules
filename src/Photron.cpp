@@ -78,17 +78,17 @@ struct Photron : Module {
         configButton(WAVEFORM_PARAM, "Waveform");
         configButton(COLOR_PARAM, "Background");
 
-        configInput(SEPARATE_INPUT, "Separate");
-        configInput(ALIGN_INPUT, "Align");
-        configInput(COHESION_INPUT, "Cohesion");
-        configInput(TARGET_INPUT, "Target color");
+        configInput(SEPARATE_INPUT, "Separate CV");
+        configInput(ALIGN_INPUT, "Align CV");
+        configInput(COHESION_INPUT, "Cohesion CV");
+        configInput(TARGET_INPUT, "Target color CV");
 
         configInput(X_INPUT, "X");
         configInput(Y_INPUT, "Y");
 
-        configInput(WAVEFORM_INPUT, "Waveform");
-        configInput(COLOR_TRIGGER_INPUT, "Background");
-        configInput(INVERT_INPUT, "Invert background");
+        configInput(WAVEFORM_INPUT, "Waveform CV");
+        configInput(COLOR_TRIGGER_INPUT, "Background CV");
+        configInput(INVERT_INPUT, "Invert background CV");
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {

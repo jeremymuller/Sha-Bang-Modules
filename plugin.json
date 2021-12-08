@@ -1,7 +1,7 @@
 {
   "slug": "Sha-Bang-Modules",
   "name": "Sha#Bang! Modules",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "GPL-3.0-only",
   "author": "Jeremy Muller",
   "authorEmail": "jeremy@jeremymuller.com",
@@ -22,13 +22,15 @@
           "slug": "Collider",
           "name": "Collider",
           "description": "Physics-based shaker",
-          "tags": ["Granular", "Physical modeling", "Polyphonic"]
+          "tags": ["Granular", "Physical modeling", "Polyphonic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#collider"
       },
       {
           "slug": "Cosmosis",
           "name": "Cosmosis",
           "description": "Continuous sequencer with constellations",
-          "tags": ["Visual", "Sequencer", "Polyphonic"]
+          "tags": ["Visual", "Sequencer", "Polyphonic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#cosmosis"
       },
       {
           "slug": "JeremyBlankPanel",
@@ -39,74 +41,85 @@
           "slug": "Neutrinode",
           "name": "Neutrinode",
           "description": "Node-based generator with four independent nodes to connected particles",
-          "tags": ["Visual", "Sequencer", "Polyphonic"]
+          "tags": ["Visual", "Sequencer", "Polyphonic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#neutrinode"
       },
       {
           "slug": "Orbitones",
           "name": "Orbitones",
           "description": "Physics-based LFO with four independent attractors",
-          "tags": ["Visual", "Low-frequency oscillator", "Polyphonic"]
+          "tags": ["Visual", "Low-frequency oscillator", "Polyphonic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#orbitones"
       },
       {
           "slug": "Photron",
           "name": "Photron",
           "description": "Animation with inputs",
-          "tags": ["Visual"]
+          "tags": ["Visual"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#photron"
       },
       {
           "slug": "PhotronPanel",
           "name": "Photron Panel",
           "description": "Animated panel",
-          "tags": ["Visual"]
-
+          "tags": ["Visual"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#photron-panel"
       },
       {
           "slug": "PolyrhythmClock",
           "name": "Polyrhythm Clock",
           "description": "Clock with 3 layers of embedded rhythms and randomization",
-          "tags": ["Clock generator", "Clock modulator", "Random"]
-      },
-      {
-          "slug": "RandGates",
-          "name": "Random Gate Switch",
-          "description": "Randomly routes one of 4 inputs to the output",
-          "tags": ["Utility", "Switch", "Polyphonic"]
-      },
-      {
-          "slug": "RandRoute",
-          "name": "Random Route Switch",
-          "description": "Randomly routes one input to 4 possible outputs",
-          "tags": ["Utility", "Switch", "Polyphonic"]
+          "tags": ["Clock generator", "Clock modulator", "Random"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#polyrhythm-clock"
       },
       {
           "slug": "QubitCrusher",
           "name": "QubitCrusher",
           "description": "Bit crusher and downsampler with randomization",
-          "tags": ["Digital", "Distortion", "Effect", "Sample and hold"]
+          "tags": ["Digital", "Distortion", "Effect", "Sample and hold"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#qubit-crusher"
+      },
+      {
+          "slug": "RandGates",
+          "name": "Random Gate Switch",
+          "description": "Randomly routes one of 4 inputs to the output",
+          "tags": ["Utility", "Switch", "Polyphonic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#randgates"
+      },
+      {
+          "slug": "RandRoute",
+          "name": "Random Route Switch",
+          "description": "Randomly routes one input to 4 possible outputs",
+          "tags": ["Utility", "Switch", "Polyphonic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#randroute"
       },
       {
           "slug": "StochSeq",
           "name": "Stochastic Sequencer 1",
           "description": "Probabilistic sequencer",
-          "tags": ["Sequencer", "Visual", "Logic"]
+          "tags": ["Sequencer", "Visual", "Logic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#stochseq"
       },
       {
           "slug": "StochSeq4",
           "name": "Stochastic Sequencer 4",
           "description": "Probabilistic sequencer with four independent voices",
-          "tags": ["Sequencer", "Visual", "Logic"]
+          "tags": ["Sequencer", "Visual", "Logic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#stochseq4"
       },
       {
           "slug": "StochSeq4X",
           "name": "Stochastic Sequencer 4 Expander",
           "description": "Expander for the StochSeq4",
-          "tags": ["Expander", "Sequencer"]
+          "tags": ["Expander", "Sequencer"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#stochseq4x"
       },
       {
           "slug": "Talea",
           "name": "Talea",
           "description": "A unique arpeggiator with polyrhythmic capabilities",
-          "tags": ["Arpeggiator"]
+          "tags": ["Arpeggiator"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#talea"
       }
   ]
 }
