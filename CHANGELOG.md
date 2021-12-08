@@ -1,8 +1,10 @@
-v2.0.1 (??-??-????)
+v2.0.1 (12-08-2021)
 - Neutrinode node speeds can be extremely slow now
 - RandRoute has a multi-bernoulli mode now
 - RandRoute & RandGates have a weight probability knob
+- RandGates can accept polyphonic triggers and outputs 1 of 4 inputs for each channel
 - Added Chromatic scale to quantizer
+- Added individual manual URLs to each module
 
 v2.0.0 (11-27-2021)
 - Added new module StochSeq4X, an expander to StochSeq4
