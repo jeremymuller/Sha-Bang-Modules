@@ -300,7 +300,8 @@ Watch the tutorial:
 - `TRG` randomizes the output
 - `INS` (purple, blue, aqua, red) are any type of input, i.e. gates or ±5 volts.
 ##### KNOB:
-- Gives a higher probability weight to the chosen input. All the way to the right is uniform randomness.
+- Weight knob: Gives probability control of the probability to the chosen input. All the way to the right is uniform randomness.
+- Weight probability knob: controls the probability of the chosen input.
 ##### OUTPUT:
 - `OUT` outputs either the randomly chosen input as either a pulse or ±5 volts.
 
@@ -316,7 +317,8 @@ Watch the tutorial:
 - `TRG` randomizes the output
 - `IN` any type of input, i.e. gates or ±5 volts.
 ##### KNOB:
-- Gives a higher probability weight to the chosen input. All the way to the right is uniform randomness.
+- Weight knob: Gives probability control of the probability to the chosen output. All the way to the right is uniform randomness.
+- Weight probability knob: controls the probability of the chosen output.
 ##### OUTPUT:
 - `OUTS` (purple, blue, aqua, red) randomly chosen to output the input as either a pulse or ±5 volts.
 
