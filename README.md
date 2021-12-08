@@ -23,6 +23,11 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [StochSeq4X](#stochseq4x)
 * [Talea](#talea) :tv:
 
+## Video playlists:
+
+* [All tutorials](https://youtube.com/playlist?list=PLqgOVd1WHf5vFl7vLlk3UglMzuUWLnZng)
+* [VCV Rack patches that use Sha#BANG! modules](https://youtube.com/playlist?list=PLqgOVd1WHf5t23rEmbKc0bABRZTvfx69n)
+
 ---
 
 ### Collider
