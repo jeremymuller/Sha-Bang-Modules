@@ -27,7 +27,7 @@ struct RandRoute : Module {
 
     dsp::SchmittTrigger mainTrig;
     dsp::BooleanTrigger gateTriggers[16];
-    int currentGate;
+    int currentGate[16];
     float weightProb = 0.5;
     bool outcomes[NUM_OF_OUTPUTS][16] = {};
     bool toggle = false;
@@ -47,24 +47,26 @@ struct RandRoute : Module {
 
         configLight(PURPLE_LIGHT, "Output indicator");
 
-        setCurrentGate();
+        for (int i = 0; i < 16; i++) {
+            setCurrentGate(i);
+        }
     }
 
-    void setCurrentGate() {
+    void setCurrentGate(int channel) {
         int weight = (int)params[WEIGHTING_PARAM].getValue();
         weightProb = params[PERCENTAGE_PARAM].getValue();
         if (weight < 4) {
             if (random::uniform() < weightProb) {
-                currentGate = weight;
+                currentGate[channel] = weight;
             } else {
                 int r = static_cast<int>(floor(random::uniform() * 4));
                 while (r == weight) {
                     r = static_cast<int>(floor(random::uniform() * 4));
                 }
-                currentGate = r;
+                currentGate[channel] = r;
             }
         } else {
-            currentGate = static_cast<int>(floor(random::uniform() * NUM_OF_OUTPUTS));
+            currentGate[channel] = static_cast<int>(floor(random::uniform() * NUM_OF_OUTPUTS));
         }
     }
 
@@ -72,28 +74,28 @@ struct RandRoute : Module {
         int channels = std::max(inputs[GATE_INPUT].getChannels(), 1);
         if (inputs[TRIGGER_INPUT].isConnected()) {
             if (mainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
-                setCurrentGate();
+                setCurrentGate(0);
             }
             for (int i = 0; i < NUM_LIGHTS; i++) {
-                lights[i].setBrightness((i==currentGate) ? 1.0 : 0.0);
+                lights[i].setBrightness((i==currentGate[0]) ? 1.0 : 0.0);
             }
 
             for (int c = 0; c < channels; c++) {
                 float in = inputs[GATE_INPUT].getVoltage(c);
-                outputs[GATES_OUTPUT + currentGate].setVoltage(in, c);
+                outputs[GATES_OUTPUT + currentGate[c]].setVoltage(in, c);
                 for (int i = 0; i < 4; i++) {
-                    if (i != currentGate) outputs[GATES_OUTPUT + i].setVoltage(0.0, c);
+                    if (i != currentGate[c]) outputs[GATES_OUTPUT + i].setVoltage(0.0, c);
                 }
             }
         } else { // multinoulli gates (1 in -> 4 outs)
             for (int c = 0; c < channels; c++) {
                 bool gate = inputs[GATE_INPUT].getVoltage(c) >= 2.0;
                 if (gateTriggers[c].process(gate)) {
-                    setCurrentGate();
+                    setCurrentGate(c);
                 }
 
                 for (int i = 0; i < 4; i++) {
-                    bool rollDice = (i == currentGate);
+                    bool rollDice = (i == currentGate[c]);
                     if (!toggle) {
                         outcomes[i][c] = rollDice;
                     } else {
@@ -104,7 +106,7 @@ struct RandRoute : Module {
 
                     outputs[GATES_OUTPUT + i].setVoltage(gateOut ? 10.0 : 0.0, c);
 
-                    lights[i].setBrightness((i == currentGate) ? 1.0 : 0.0);
+                    lights[i].setBrightness((i == currentGate[c]) ? 1.0 : 0.0);
                 }
             }
         }
