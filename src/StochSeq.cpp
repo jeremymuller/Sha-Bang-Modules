@@ -630,8 +630,8 @@ struct StochSeqWidget : ModuleWidget {
 
 		StochSeqDisplay *display = new StochSeqDisplay();
 		display->module = module;
-		display->box.pos = Vec(7.4, 86.7);
-		display->box.size = Vec(480, 102.9);
+		display->box.pos = Vec(7.4, 47.7);
+		display->box.size = Vec(480, 141.9);
 		addChild(display);
 
 		addChild(createWidget<JeremyScrew>(Vec(25.9, 2)));
@@ -676,37 +676,37 @@ struct StochSeqWidget : ModuleWidget {
 
 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
-		for (int i = 0; i < NUM_OF_LIGHTS; i++) {
-			float x = 196 * i / NUM_OF_LIGHTS + 5;
+		// for (int i = 0; i < NUM_OF_LIGHTS; i++) {
+		// 	float x = 196 * i / NUM_OF_LIGHTS + 5;
 			
-			float y = ((-std::sin(2.0 * M_PI * i / NUM_OF_LIGHTS) * 0.5 + 0.5) * 50 + 15);
-			// float x = random::uniform() * 260 + 1;
-			// float y = random::uniform() * 50 + 15;
-			// int light = int(random::uniform() * 4);
+		// 	float y = ((-std::sin(2.0 * M_PI * i / NUM_OF_LIGHTS) * 0.5 + 0.5) * 50 + 15);
+		// 	// float x = random::uniform() * 260 + 1;
+		// 	// float y = random::uniform() * 50 + 15;
+		// 	// int light = int(random::uniform() * 4);
 
-			int light = int(i / (NUM_OF_LIGHTS/4.0));
+		// 	int light = int(i / (NUM_OF_LIGHTS/4.0));
 
-			switch(light) {
-				case 0:
-					addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
-					break;
-				case 1:
-					addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
-					break;
-				case 2:
-					addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
-					break;
-				case 3:
-					addChild(createLight<SmallLight<JeremyRedLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
-					break;
-			}
+		// 	switch(light) {
+		// 		case 0:
+		// 			addChild(createLight<SmallLight<JeremyPurpleLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+		// 			break;
+		// 		case 1:
+		// 			addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+		// 			break;
+		// 		case 2:
+		// 			addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+		// 			break;
+		// 		case 3:
+		// 			addChild(createLight<SmallLight<JeremyRedLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+		// 			break;
+		// 	}
 
-			// if (random::uniform() < 0.5)
-				// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
+		// 	// if (random::uniform() < 0.5)
+		// 		// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(x, y), module, StochSeq::LIGHTS + i));
 
-			// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
+		// 	// addChild(createLight<SmallLight<JeremyBlueLight>>(Vec(84, 50), module, StochSeq::BLUE_LIGHT));
 
-		}
+		// }
 
 		addChild(createLight<SmallLight<JeremyPurpleLight> >(Vec(241.1 - 3, 343.2 - 3), module, StochSeq::BANG_LIGHTS + 0));
 		addChild(createLight<SmallLight<JeremyBlueLight> >(Vec(253.7 - 3, 343.2 - 3), module, StochSeq::BANG_LIGHTS + 1));
