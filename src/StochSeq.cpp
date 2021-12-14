@@ -172,7 +172,7 @@ struct StochSeq : Module, Quantize {
 		if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage())) {
 			if (resetMode) {
 				resetMode = false;
-				resetSeqToEnd();
+				resetSeq();
 			}
 			clockStep();
 		}
@@ -245,8 +245,9 @@ struct StochSeq : Module, Quantize {
 		// pitchVoltage = prob * (2 * spread) - spread;
 	}
 
-	void resetSeqToEnd() {
-		gateIndex = seqLength-1;
+	void resetSeq() {
+		// gateIndex = seqLength-1;
+		gateIndex = -1;
 	}
 
 	void invert() {
@@ -605,12 +606,13 @@ struct StochSeqDisplay : Widget {
 		if (layer == 1) {
 
 			// seq position
-			if (module->gateIndex >= 0) {
+			if (module->gateIndex >= -1) {
 				nvgStrokeWidth(args.vg, 2.0);
 				// nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
 				nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
 				nvgBeginPath(args.vg);
-				float x = clamp(module->gateIndex * sliderWidth, 0.0, box.size.x - sliderWidth);
+				int pos = module->resetMode ? 0 : clamp(module->gateIndex, 0, NUM_OF_SLIDERS);
+				float x = clamp(pos * sliderWidth, 0.0, box.size.x - sliderWidth);
 				nvgRect(args.vg, x, 1, sliderWidth, box.size.y - 1);
 				nvgStroke(args.vg);
 			}
