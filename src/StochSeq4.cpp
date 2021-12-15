@@ -105,6 +105,7 @@ struct StochSeq4 : Module, Quantize {
     dsp::SchmittTrigger resetTrig;
 
     dsp::PulseGenerator resetPulse;
+    bool mclkOverride = true;
     int gateMode = GATE_MODE;
     int voltMode = VOLT_INDEPENDENT_MODE;
     bool resetMode = false;
@@ -206,6 +207,7 @@ struct StochSeq4 : Module, Quantize {
         }
         json_object_set_new(rootJ, "currentPatterns", currentPatternsJ);
         json_object_set_new(rootJ, "seqsProbs", seqsProbsJ);
+        json_object_set_new(rootJ, "mclkOverride", json_boolean(mclkOverride));
         json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
         json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
         json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
@@ -216,6 +218,9 @@ struct StochSeq4 : Module, Quantize {
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *mclkOverrideJ = json_object_get(rootJ, "mclkOverride");
+        if (mclkOverrideJ) mclkOverride = json_boolean_value(mclkOverrideJ);
+
         json_t *percentagesJ = json_object_get(rootJ, "percentages");
         if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
 
@@ -282,18 +287,20 @@ struct StochSeq4 : Module, Quantize {
             clockStep();
         }
 
-        if (resetMode) {
-            resetMode = false;
-            resetSeq(); // TODO, this is redundant
-        }
+        if (!mclkOverride || !inputs[MASTER_CLOCK_INPUT].isConnected()) {
+            if (resetMode) {
+                resetMode = false;
+                resetSeq(); // TODO, this is redundant
+            }
 
-        for (int i = 0; i < NUM_SEQS; i++) {
-            if (clockTriggers[i].process(inputs[CLOCKS_INPUT+i].getVoltage())) {
-                // if (resetMode) {
-                //     resetMode = false;
-                //     resetSeq(); // TODO, this is redundant
-                // }
-                clockStep(i);
+            for (int i = 0; i < NUM_SEQS; i++) {
+                if (clockTriggers[i].process(inputs[CLOCKS_INPUT+i].getVoltage())) {
+                    // if (resetMode) {
+                    //     resetMode = false;
+                    //     resetSeq(); // TODO, this is redundant
+                    // }
+                    clockStep(i);
+                }
             }
         }
 
@@ -919,6 +926,11 @@ struct StochSeq4Widget : ModuleWidget {
 
 	void appendContextMenu(Menu *menu) override {
 		StochSeq4 *module = dynamic_cast<StochSeq4*>(this->module);
+        
+        menu->addChild(new MenuSeparator);
+
+		menu->addChild(createBoolPtrMenuItem("MCLK override", "", &module->mclkOverride));
+        
         menu->addChild(new MenuEntry);
         
         StochSeq4NS::GateModeItem *gateModeItem = new StochSeq4NS::GateModeItem;
