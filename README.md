@@ -387,6 +387,7 @@ Watch the tutorial:
 [![StochSeq4_video](docs/StochSeq4-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq 4 tutorial")
 
 ##### RIGHT-CLICK MENU:
+- `MCLK` override: if `MCLK` has a connected cable then it will disable all individual clocks.
 - Show or hide slider percentages.
 - Enable keyboard shortcuts.
 ##### KEYBOARD SHORTCUTS:
@@ -413,6 +414,7 @@ Watch the tutorial:
   - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
 - Two knobs control the root note and the scale just like [StochSeq](#stochseq).
 ##### BUTTONS:
+- Resets sequences to beginning of timeline.
 - `RND` randomizes all probabilities.
 - `INV` inverts all probabilities.
 - `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
