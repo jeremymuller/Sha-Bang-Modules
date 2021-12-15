@@ -29,8 +29,10 @@ struct Sequencer {
     }
 
     void clockStep(int l, float spread) {
+        // increment index
         seqLength = l;
-        gateIndex = (gateIndex + 1) % seqLength;
+        gateIndex  = (gateIndex + 1) % seqLength;
+
         // gate
         float prob = gateProbabilities[gateIndex];
         if (random::uniform() < prob) {
@@ -67,6 +69,7 @@ struct StochSeq4 : Module, Quantize {
 	enum ParamIds {
         ROOT_NOTE_PARAM,
         SCALE_PARAM,
+        RESET_PARAM,
 		PATTERN_PARAM = NUM_SEQS,
 		RANDOM_PARAM = PATTERN_PARAM + NUM_SEQS,
 		INVERT_PARAM = RANDOM_PARAM + NUM_SEQS,
@@ -100,6 +103,9 @@ struct StochSeq4 : Module, Quantize {
     dsp::SchmittTrigger clockTrig;
     dsp::SchmittTrigger clockTriggers[NUM_SEQS];
     dsp::SchmittTrigger resetTrig;
+
+    dsp::PulseGenerator resetPulse;
+    bool mclkOverride = true;
     int gateMode = GATE_MODE;
     int voltMode = VOLT_INDEPENDENT_MODE;
     bool resetMode = false;
@@ -112,6 +118,7 @@ struct StochSeq4 : Module, Quantize {
 
     StochSeq4() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+        configButton(RESET_PARAM, "Reset");
         configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
         configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
         configParam(LENGTH_PARAM + PURPLE_SEQ, 1.0, 32.0, 32.0, "Purple seq length");
@@ -200,6 +207,7 @@ struct StochSeq4 : Module, Quantize {
         }
         json_object_set_new(rootJ, "currentPatterns", currentPatternsJ);
         json_object_set_new(rootJ, "seqsProbs", seqsProbsJ);
+        json_object_set_new(rootJ, "mclkOverride", json_boolean(mclkOverride));
         json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
         json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
         json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
@@ -210,6 +218,9 @@ struct StochSeq4 : Module, Quantize {
     }
 
     void dataFromJson(json_t *rootJ) override {
+        json_t *mclkOverrideJ = json_object_get(rootJ, "mclkOverride");
+        if (mclkOverrideJ) mclkOverride = json_boolean_value(mclkOverrideJ);
+
         json_t *percentagesJ = json_object_get(rootJ, "percentages");
         if (percentagesJ) showPercentages = json_boolean_value(percentagesJ);
 
@@ -248,9 +259,10 @@ struct StochSeq4 : Module, Quantize {
     }
 
     void process(const ProcessArgs& args) override {
-        if (resetTrig.process(inputs[RESET_INPUT].getVoltage())) {
+        if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
             resetMode = true;
         }
+
         for (int i = 0; i < NUM_SEQS; i++) {
             if ((int)params[PATTERN_PARAM+i].getValue() != seqs[i].currentPattern) {
                 int patt = (int)params[PATTERN_PARAM+i].getValue();
@@ -270,23 +282,28 @@ struct StochSeq4 : Module, Quantize {
         if (clockTrig.process(inputs[MASTER_CLOCK_INPUT].getVoltage())) {
             if (resetMode) {
                 resetMode = false;
-                resetSeqToEnd();
+                resetSeq();
             }
             clockStep();
-        } else {
+        }
+
+        if (!mclkOverride || !inputs[MASTER_CLOCK_INPUT].isConnected()) {
+            if (resetMode) {
+                resetMode = false;
+                resetSeq(); // TODO, this is redundant
+            }
+
             for (int i = 0; i < NUM_SEQS; i++) {
                 if (clockTriggers[i].process(inputs[CLOCKS_INPUT+i].getVoltage())) {
-                    if (resetMode) {
-                        resetMode = false;
-                        resetSeqToEnd();
-                    }
+                    // if (resetMode) {
+                    //     resetMode = false;
+                    //     resetSeq(); // TODO, this is redundant
+                    // }
                     clockStep(i);
-                    // int l = (int)params[LENGTH_PARAM + i].getValue();
-                    // float spread = params[SPREAD_PARAM + i].getValue();
-                    // seqs[i].clockStep(l, spread);
                 }
             }
         }
+
         int rootNote = params[ROOT_NOTE_PARAM].getValue();
         int scale = params[SCALE_PARAM].getValue();
         bool orGate = false;
@@ -300,8 +317,8 @@ struct StochSeq4 : Module, Quantize {
                 pulse = seqs[i].gateOn;
                 notPulse = seqs[i].notGateOn;
             } else {
-                pulse = seqs[i].gatePulse.process(1.0 / args.sampleRate);
-                notPulse = seqs[i].notGatePulse.process(1.0 / args.sampleRate);
+                pulse = seqs[i].gatePulse.process(args.sampleTime);
+                notPulse = seqs[i].notGatePulse.process(args.sampleTime);
             }
             if (pulse) {
                 orGate = true;
@@ -341,7 +358,7 @@ struct StochSeq4 : Module, Quantize {
         for (int i = 0; i < NUM_SEQS; i++) {
             int l = (int)params[LENGTH_PARAM+i].getValue();
             float spread = params[SPREAD_PARAM+i].getValue();
-            seqs[i].clockStep(l, spread);
+            seqs[i].clockStep(l, spread);    
         }
     }
 
@@ -352,9 +369,10 @@ struct StochSeq4 : Module, Quantize {
         seqs[i].clockStep(l, spread);
     }
 
-    void resetSeqToEnd() {
+    void resetSeq() {
         for (int i = 0; i < NUM_SEQS; i++) {
-            seqs[i].gateIndex = seqs[i].seqLength - 1;
+            // seqs[i].gateIndex = seqs[i].seqLength - 1;
+            seqs[i].gateIndex = -1;
         }
     }
 
@@ -728,7 +746,7 @@ struct StochSeq4Display : Widget {
         if (layer == 1) {
 
             // seq position
-            if (module->seqs[seqId].gateIndex >= 0) {
+            if (module->seqs[seqId].gateIndex >= -1) {
                 nvgStrokeWidth(args.vg, 2.0);
                 // nvgStrokeColor(args.vg, nvgRGB(128, 0, 219));
                 switch (seqId) {
@@ -747,7 +765,8 @@ struct StochSeq4Display : Widget {
                 }
                 // nvgStrokeColor(args.vg, nvgRGB(0, 238, 255));
                 nvgBeginPath(args.vg);
-                float x = clamp(module->seqs[seqId].gateIndex * sliderWidth, 0.0, box.size.x - sliderWidth);
+                int pos = module->resetMode ? 0 : clamp(module->seqs[seqId].gateIndex, 0, NUM_OF_SLIDERS);
+                float x = clamp(pos * sliderWidth, 0.0, box.size.x - sliderWidth);
                 nvgRect(args.vg, x, 1, sliderWidth, box.size.y - 1);
                 nvgStroke(args.vg);
             }
@@ -819,6 +838,9 @@ struct StochSeq4Widget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(660.3, 2)));
         addChild(createWidget<JeremyScrew>(Vec(660.3, box.size.y - 14)));
 
+        // reset button
+        addParam(createParamCentered<TinyBlueButton>(Vec(184, 63.8), module, StochSeq4::RESET_PARAM));
+
         // clock inputs
         addInput(createInputCentered<TinyPJ301M>(Vec(26.3, 104.8), module, StochSeq4::CLOCKS_INPUT + StochSeq4::PURPLE_SEQ));
         addInput(createInputCentered<TinyPJ301M>(Vec(26.3, 162.3), module, StochSeq4::CLOCKS_INPUT + StochSeq4::BLUE_SEQ));
@@ -872,8 +894,8 @@ struct StochSeq4Widget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
-        addInput(createInputCentered<PJ301MPort>(Vec(151.7, 63.8), module, StochSeq4::MASTER_CLOCK_INPUT));
-        addInput(createInputCentered<PJ301MPort>(Vec(184, 63.8), module, StochSeq4::RESET_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(119.4, 63.8), module, StochSeq4::MASTER_CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(Vec(151.7, 63.8), module, StochSeq4::RESET_INPUT));
         for (int i = 0; i < 4; i++) {
             addInput(createInputCentered<TinyPJ301M>(Vec(119.4, 124.8 + (i * 57.3)), module, StochSeq4::RANDOM_INPUT + i));
             addInput(createInputCentered<TinyPJ301M>(Vec(151.7, 124.8 + (i * 57.3)), module, StochSeq4::INVERT_INPUT + i));
@@ -904,6 +926,11 @@ struct StochSeq4Widget : ModuleWidget {
 
 	void appendContextMenu(Menu *menu) override {
 		StochSeq4 *module = dynamic_cast<StochSeq4*>(this->module);
+        
+        menu->addChild(new MenuSeparator);
+
+		menu->addChild(createBoolPtrMenuItem("MCLK override", "", &module->mclkOverride));
+        
         menu->addChild(new MenuEntry);
         
         StochSeq4NS::GateModeItem *gateModeItem = new StochSeq4NS::GateModeItem;

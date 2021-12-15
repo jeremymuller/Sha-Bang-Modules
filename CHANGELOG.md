@@ -1,3 +1,9 @@
+v2.0.2 (12-14-2021)
+- Added MCLK override in StochSeq4
+- Fixed clock resets in StochSeq and StochSeq4
+- Fixed bug in RandRoute multinoulli mode when it's polyphonic
+- Updated StochSeq interface
+
 v2.0.1 (12-08-2021)
 - Neutrinode node speeds can be extremely slow now
 - RandRoute has a multi-bernoulli mode now
