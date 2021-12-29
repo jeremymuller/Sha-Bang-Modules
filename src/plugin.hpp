@@ -3,7 +3,6 @@
 #include "Quantize.cpp"
 #include "Constellations.cpp"
 
-
 using namespace rack;
 
 // Declare the Plugin, defined in plugin.cpp
@@ -26,6 +25,7 @@ extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
 extern Model *modelCollider;
 extern Model *modelStochSeq4X;
+extern Model *modelStochSeqGrid;
 
 /************************** INLINE FUNCTIONS **************************/
 
@@ -33,8 +33,7 @@ inline float modNeg(float num, int mod) {
     return num - floorf(num / mod) * mod;
 }
 
-inline float dist(Vec a, Vec b)
-{ // returns distance between two points
+inline float dist(Vec a, Vec b) { // returns distance between two points
     return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
 }
 
@@ -69,6 +68,22 @@ inline float randRange(float min, float max) { // returns random float within mi
 
 inline int randRange(int max) {
     return static_cast<int>(random::uniform() * max);
+}
+
+inline NVGcolor getPurple() {
+    return nvgRGB(128, 0, 219);
+}
+
+inline NVGcolor getBlue() {
+    return nvgRGB(38, 0, 255);
+}
+
+inline NVGcolor getAqua() {
+    return nvgRGB(0, 238, 255);
+}
+
+inline NVGcolor getRed() {
+    return nvgRGB(255, 0, 0);
 }
 
 /************************** LABEL **************************/
@@ -429,6 +444,12 @@ struct TinyRedKnob : RoundKnob {
     }
 };
 
+struct TinyWhiteKnob : RoundKnob {
+    TinyWhiteKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyWhiteKnob.svg")));
+    }
+};
+
 struct TinyBlueInvertKnob : RoundKnob {
     TinyBlueInvertKnob() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyBlueInvertKnob.svg")));
@@ -436,9 +457,33 @@ struct TinyBlueInvertKnob : RoundKnob {
     }
 };
 
+struct NanoPurpleKnob : RoundKnob {
+    NanoPurpleKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoPurpleKnob.svg")));
+    }
+};
+
 struct NanoBlueKnob : RoundKnob {
     NanoBlueKnob() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueKnob.svg")));
+    }
+};
+
+struct NanoAquaKnob : RoundKnob {
+    NanoAquaKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoAquaKnob.svg")));
+    }
+};
+
+struct NanoRedKnob : RoundKnob {
+    NanoRedKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoRedKnob.svg")));
+    }
+};
+
+struct NanoWhiteKnob : RoundKnob {
+    NanoWhiteKnob() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoWhiteKnob.svg")));
     }
 };
 

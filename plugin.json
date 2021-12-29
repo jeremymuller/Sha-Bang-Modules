@@ -115,6 +115,13 @@
           "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#stochseq4x"
       },
       {
+          "slug": "StochSeqGrid",
+          "name": "Stochastic Sequencer Grid",
+          "description": "Probabilistic grid sequencer with subdivisions",
+          "tags": ["Sequencer", "Visual", "Logic"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#stochseqgrid"
+      },
+      {
           "slug": "Talea",
           "name": "Talea",
           "description": "A unique arpeggiator with polyrhythmic capabilities",

@@ -358,17 +358,6 @@ namespace PhotronNS {
             return menu;
         }
     };
-
-    struct LissajousModeItem : MenuItem {
-        Photron *module;
-        void onAction(const event::Action &e) override {
-            module->lissajous = !module->lissajous;
-        }
-        void step() override {
-            rightText = module->lissajous ? "✓" : "";
-            MenuItem::step();
-        }
-    };
 }
 
 struct PhotronDisplay : LightWidget {
@@ -625,10 +614,7 @@ struct PhotronWidget : ModuleWidget {
         hzModeItem->module = module;
         menu->addChild(hzModeItem);
 
-        PhotronNS::LissajousModeItem *lissajousItem = new PhotronNS::LissajousModeItem;
-        lissajousItem->text = "Lissajous mode";
-        lissajousItem->module = module;
-        menu->addChild(lissajousItem);
+        menu->addChild(createBoolPtrMenuItem("Lissajous mode", "", &module->lissajous));
     }
 };
 
