@@ -4,6 +4,7 @@
 #define NUM_OF_CELLS 16
 #define CELL_SIZE 67.5
 #define MARGIN 1
+#define MAX_SUBDIVISIONS 16
 
 struct StochSeqGrid : Module {
     enum SequencerIds {
@@ -66,7 +67,7 @@ struct StochSeqGrid : Module {
     float *gateProbabilities = new float[NUM_OF_CELLS];
     float *rhythmProbabilities = new float[NUM_OF_CELLS];
     int *subdivisions = new int[NUM_OF_CELLS];
-    bool beats[NUM_OF_CELLS][12] = {};
+    bool beats[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
     bool isCtrlClick = false;
     bool resetMode = false;
 
@@ -95,7 +96,7 @@ struct StochSeqGrid : Module {
             // gateProbabilities[i] = (float)i / NUM_OF_CELLS;
             rhythmProbabilities[i] = params[SUBDIVISION_PARAM].getValue();
             subdivisions[i] = 1;
-            for (int j = 0; j < 12; j++) {
+            for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
                 beats[i][j] = true;
             }
         }
@@ -196,6 +197,13 @@ struct StochSeqGrid : Module {
     void resetSeq() {
         currentCellX = -1;
         currentCellY = -1;
+    }
+
+    void resetRhythms(int _index) {
+        int subRhythms = subdivisions[_index];
+        for (int i = 0; i < subRhythms; i++) {
+            beats[_index][i] = true;
+        }
     }
 
     int getCurrentSubdivision() {
@@ -311,13 +319,21 @@ struct BGGrid : Widget {
 
 struct SubdivisionDisplay : Widget {
     Vec positions[16] = {};
+    bool isBeatOn = false;
     float circleRad;
-    float initX;
-    float initY;
+    float initX = 0;
+    float initY = 0;
+    float dragX = 0;
+    float dragY = 0;
     int index;
     StochSeqGrid *module;
 
     SubdivisionDisplay() {}
+
+    void onDoubleClick(const DoubleClickEvent &e) override {
+        e.consume(this);
+        module->resetRhythms(index);
+    }
 
     void onButton(const event::Button &e) override {
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -326,25 +342,68 @@ struct SubdivisionDisplay : Widget {
                 e.consume(this);
                 initX = e.pos.x;
                 initY = e.pos.y;
-                toggleRhythms(initX, initY);
+                isBeatOn = !isSubdivisionOn(initX, initY);
+                toggleRhythms(initX, initY, isBeatOn);
             } else {
                 module->isCtrlClick = false;
                 e.consume(this);
-                module->subdivisions[index]++;
-                if (module->subdivisions[index] > 12) module->subdivisions[index] = 1;
+                incrementSubdivisions();
+                // module->subdivisions[index]++;
+                // if (module->subdivisions[index] > MAX_SUBDIVISIONS) module->subdivisions[index] = 1;
             }
         }
     }
 
-    void toggleRhythms(float currentX, float currentY) {
+    void onDragStart(const event::DragStart &e) override {
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
+    }
+
+    void onDragMove(const event::DragMove &e) override {
+        float dx = e.mouseDelta.x;
+        float newDragX = APP->scene->rack->getMousePos().x;
+        float newDragY = APP->scene->rack->getMousePos().y;
+        if (module->isCtrlClick) {
+            toggleRhythms(initX + (newDragX - dragX), initY + (newDragY - dragY), isBeatOn);
+        } else {
+            incrementSubdivisions(dx);
+        }
+    }
+
+    void incrementSubdivisions() {
+        int sd = module->subdivisions[index] + 1;
+        module->subdivisions[index] = clamp(sd, 1, MAX_SUBDIVISIONS);
+        // module->subdivisions[index]++;
+        // if (module->subdivisions[index] > MAX_SUBDIVISIONS) module->subdivisions[index] = 1;
+    }
+
+    void incrementSubdivisions(float dx) {
+        int sd = static_cast<int>(round(module->subdivisions[index] + dx * 0.25));
+        module->subdivisions[index] = clamp(sd, 1, MAX_SUBDIVISIONS);
+    }
+
+    void toggleRhythms(float currentX, float currentY, bool on) {
         Vec mouse = Vec(currentX, currentY);
         int subRhythms = module->subdivisions[index];
         for (int i = 0; i < subRhythms; i++) {
             float d = dist(mouse, positions[i]);
             if (d < circleRad) {
-                module->beats[index][i] ^= true;
+                module->beats[index][i] = on;
             }
         }
+    }
+
+    bool isSubdivisionOn(float x, float y) {
+        // int cell = (int)(x / box.size.x) + (int)(y / box.size.y) * 4;
+        Vec mouse = Vec(x, y);
+        int subRhythms = module->subdivisions[index];
+        for (int i = 0; i < subRhythms; i++) {
+            float d = dist(mouse, positions[i]);
+            if (d < circleRad) {
+                return module->beats[index][i];
+            }
+        }
+        return false;
     }
 
     void draw(const DrawArgs &args) override {
@@ -359,7 +418,7 @@ struct SubdivisionDisplay : Widget {
         Vec center = Vec(box.size.x / 2, box.size.y / 2);
         float radius = 22.0;
         int subRhythms = module->subdivisions[index];
-        circleRad = rescale(subRhythms, 2.0, 12.0, 16.0/2, 11.0/2);
+        circleRad = rescale(subRhythms, 2.0, MAX_SUBDIVISIONS, 16.0/2, 8.0/2);
         nvgBeginPath(args.vg);
         nvgCircle(args.vg, center.x, center.y, radius);
         nvgStroke(args.vg);
