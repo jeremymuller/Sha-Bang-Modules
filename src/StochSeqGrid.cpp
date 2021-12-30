@@ -200,8 +200,7 @@ struct StochSeqGrid : Module {
     }
 
     void resetRhythms(int _index) {
-        int subRhythms = subdivisions[_index];
-        for (int i = 0; i < subRhythms; i++) {
+        for (int i = 0; i < MAX_SUBDIVISIONS; i++) {
             beats[_index][i] = true;
         }
     }
@@ -330,11 +329,6 @@ struct SubdivisionDisplay : Widget {
 
     SubdivisionDisplay() {}
 
-    void onDoubleClick(const DoubleClickEvent &e) override {
-        e.consume(this);
-        module->resetRhythms(index);
-    }
-
     void onButton(const event::Button &e) override {
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
             if ((e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
@@ -344,12 +338,14 @@ struct SubdivisionDisplay : Widget {
                 initY = e.pos.y;
                 isBeatOn = !isSubdivisionOn(initX, initY);
                 toggleRhythms(initX, initY, isBeatOn);
+            } else if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
+                module->isCtrlClick = false;
+                e.consume(this);
+                module->resetRhythms(index);
             } else {
                 module->isCtrlClick = false;
                 e.consume(this);
                 incrementSubdivisions();
-                // module->subdivisions[index]++;
-                // if (module->subdivisions[index] > MAX_SUBDIVISIONS) module->subdivisions[index] = 1;
             }
         }
     }
@@ -360,25 +356,23 @@ struct SubdivisionDisplay : Widget {
     }
 
     void onDragMove(const event::DragMove &e) override {
-        float dx = e.mouseDelta.x;
+        float dy = e.mouseDelta.y;
         float newDragX = APP->scene->rack->getMousePos().x;
         float newDragY = APP->scene->rack->getMousePos().y;
         if (module->isCtrlClick) {
             toggleRhythms(initX + (newDragX - dragX), initY + (newDragY - dragY), isBeatOn);
         } else {
-            incrementSubdivisions(dx);
+            incrementSubdivisions(-dy);
         }
     }
 
     void incrementSubdivisions() {
-        int sd = module->subdivisions[index] + 1;
-        module->subdivisions[index] = clamp(sd, 1, MAX_SUBDIVISIONS);
-        // module->subdivisions[index]++;
-        // if (module->subdivisions[index] > MAX_SUBDIVISIONS) module->subdivisions[index] = 1;
+        // int sd = module->subdivisions[index] + 1;
+        module->subdivisions[index] = clamp(++module->subdivisions[index], 1, MAX_SUBDIVISIONS);
     }
 
-    void incrementSubdivisions(float dx) {
-        int sd = static_cast<int>(round(module->subdivisions[index] + dx * 0.25));
+    void incrementSubdivisions(float dy) {
+        int sd = static_cast<int>(round(module->subdivisions[index] + dy * 0.25));
         module->subdivisions[index] = clamp(sd, 1, MAX_SUBDIVISIONS);
     }
 
