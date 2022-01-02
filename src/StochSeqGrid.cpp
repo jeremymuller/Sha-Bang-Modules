@@ -220,10 +220,10 @@ struct StochSeqGrid : Module {
         configParam(DUR_PARAMS + AQUA_SEQ, 1, 24, 1, "Aqua duration");
         configParam(DUR_PARAMS + RED_SEQ, 1, 24, 1, "Red duration");
 
-        configButton(ON_PARAMS + PURPLE_SEQ, "Purple toggle");
-        configButton(ON_PARAMS + BLUE_SEQ, "Blue toggle");
-        configButton(ON_PARAMS + AQUA_SEQ, "Aqua toggle");
-        configButton(ON_PARAMS + RED_SEQ, "Red toggle");
+        configSwitch(ON_PARAMS + PURPLE_SEQ, 0, 1, 1, "Purple", {"off", "on"});
+        configSwitch(ON_PARAMS + BLUE_SEQ, 0, 1, 1, "Blue", {"off", "on"});
+        configSwitch(ON_PARAMS + AQUA_SEQ, 0, 1, 1, "Aqua", {"off", "on"});
+        configSwitch(ON_PARAMS + RED_SEQ, 0, 1, 1, "Red", {"off", "on"});
 
         configInput(EXT_CLOCK_INPUT, "External clock");
         configInput(RESET_INPUT, "Reset");
@@ -415,6 +415,8 @@ struct StochSeqGrid : Module {
 
         for (int i = 0; i < NUM_SEQ; i++) {
             seqs[i].isOn = params[ON_PARAMS + i].getValue();
+            seqs[i].rhythm = params[RHYTHM_PARAMS + i].getValue();
+            seqs[i].duration = params[DUR_PARAMS + i].getValue();
         }
 
         bool clockGate = false;
@@ -424,8 +426,6 @@ struct StochSeqGrid : Module {
 
             for (int i = 0; i < NUM_SEQ; i++) {
                 seqs[i].length = params[LENGTH_PARAMS + i].getValue();
-                seqs[i].rhythm = params[RHYTHM_PARAMS + i].getValue();
-                seqs[i].duration = params[DUR_PARAMS + i].getValue();
 
                 if (seqs[i].isOn) {
                     float rhythmFraction = seqs[i].rhythm / seqs[i].duration;
@@ -729,13 +729,13 @@ struct CellsDisplay : Widget {
     }
 };
 
-struct RatioDisplay : Widget {
+struct RatioDisplayLabel : Widget {
     std::string text;
     int id;
 	int fontSize;
     StochSeqGrid *module;
 
-	RatioDisplay(int _fontSize = 13) {
+	RatioDisplayLabel(int _fontSize = 13) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
 	}
@@ -788,12 +788,14 @@ struct StochSeqGridWidget : ModuleWidget {
             }
         }
 
-        RatioDisplay *ratioLabel = new RatioDisplay();
-        ratioLabel->module = module;
-        ratioLabel->box.pos = Vec(27.2, 165.6);
-        ratioLabel->box.size.x = 30; // 10
-        ratioLabel->id = 0;
-        // addChild(ratioLabel);
+        for (int i = 0; i < NUM_SEQ; i++) {
+            RatioDisplayLabel *ratioLabel = new RatioDisplayLabel();
+            ratioLabel->module = module;
+            ratioLabel->box.pos = Vec(26.2, 156.8 + i * 50);
+            ratioLabel->box.size.x = 30; // 10
+            ratioLabel->id = PURPLE_SEQ + i;
+            addChild(ratioLabel);
+        }
 
         addChild(createWidget<JeremyScrew>(Vec(33, 2)));
         addChild(createWidget<JeremyScrew>(Vec(33, box.size.y - 14)));
@@ -857,9 +859,9 @@ struct StochSeqGridWidget : ModuleWidget {
 
         menu->addChild(new MenuSeparator);
 
-        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"Gates", "Triggers"}, &module->gateMode));
+        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"gates", "triggers"}, &module->gateMode));
 
-        menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"∆x", "∆y"}, &module->useMouseDeltaY));
+        menu->addChild(createIndexPtrSubmenuItem("Mouse drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
     }
 };
