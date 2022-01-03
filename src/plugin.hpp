@@ -394,6 +394,7 @@ struct RedKnob : RoundKnob {
 
 struct PurpleInvertKnob : RoundKnob {
     PurpleInvertKnob() {
+        // shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleInvertKnob.svg")));
         snap = true;
     }
@@ -401,6 +402,7 @@ struct PurpleInvertKnob : RoundKnob {
 
 struct BlueInvertKnob : RoundKnob {
     BlueInvertKnob() {
+        // shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BlueInvertKnob.svg")));
         snap = true;
     }
@@ -408,6 +410,7 @@ struct BlueInvertKnob : RoundKnob {
 
 struct AquaInvertKnob : RoundKnob {
     AquaInvertKnob() {
+        // shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AquaInvertKnob.svg")));
         snap = true;
     }
@@ -415,6 +418,7 @@ struct AquaInvertKnob : RoundKnob {
 
 struct RedInvertKnob : RoundKnob {
     RedInvertKnob() {
+        // shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/RedInvertKnob.svg")));
         snap = true;
     }

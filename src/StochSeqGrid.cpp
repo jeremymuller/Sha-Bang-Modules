@@ -16,6 +16,7 @@ enum CellSequencerIds {
 
 struct SeqCell {
     Vec startPos;
+    Vec resetPos;
     int currentCellX, currentCellY;
     int currentIndex = -1;
     int length = 16;
@@ -41,24 +42,28 @@ struct SeqCell {
                 currentCellX = -1;
                 currentCellY = 0;
                 startPos = Vec(0, 0);
+                resetPos = Vec(-1, 0);
                 color = getPurple();
                 break;
             case BLUE_SEQ:
                 currentCellX = 3;
                 currentCellY = -1;
                 startPos = Vec(3, 0);
+                resetPos = Vec(3, -1);
                 color = getBlue();
                 break;
             case AQUA_SEQ:
                 currentCellX = 0;
                 currentCellY = 4;
                 startPos = Vec(0, 3);
+                resetPos = Vec(0, 4);
                 color = getAqua();
                 break;
             case RED_SEQ:
                 currentCellX = 4;
                 currentCellY = 3;
                 startPos = Vec(3, 3);
+                resetPos = Vec(4, 3);
                 color = getRed();
                 break;
             default:
@@ -112,8 +117,8 @@ struct SeqCell {
 
     void reset() {
         // TODO
-        currentCellX = startPos.x;
-        currentCellY = startPos.y;
+        currentCellX = resetPos.x;
+        currentCellY = resetPos.y;
         phase = 0.0;
         subPhase = 0.0;
     }
@@ -162,8 +167,8 @@ struct StochSeqGrid : Module {
     };
     enum OutputIds {
         GATES_OUTPUT,
-        VOLT_OUTPUT = GATES_OUTPUT + NUM_SEQ,
-        NUM_OUTPUTS
+        VOLTS_OUTPUT = GATES_OUTPUT + NUM_SEQ,
+        NUM_OUTPUTS = VOLTS_OUTPUT + NUM_SEQ
     };
     enum LightIds {
         BANG_LIGHTS,
@@ -197,8 +202,6 @@ struct StochSeqGrid : Module {
     bool isCtrlClick = false;
     bool resetMode = false;
     bool useMouseDeltaY = false;
-    float rhythms[NUM_SEQ];
-    float durations[NUM_SEQ];
 
     StochSeqGrid() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -229,17 +232,18 @@ struct StochSeqGrid : Module {
         configInput(RESET_INPUT, "Reset");
         configInput(INVERT_INPUT, "Invert pattern");
 
+        configOutput(VOLTS_OUTPUT + PURPLE_SEQ, "Purple V/OCT");
+        configOutput(VOLTS_OUTPUT + BLUE_SEQ, "Blue V/OCT");
+        configOutput(VOLTS_OUTPUT + AQUA_SEQ, "Aqua V/OCT");
+        configOutput(VOLTS_OUTPUT + RED_SEQ, "Red V/OCT");
+
         configOutput(GATES_OUTPUT + PURPLE_SEQ, "Purple Gates");
         configOutput(GATES_OUTPUT + BLUE_SEQ, "Blue Gates");
         configOutput(GATES_OUTPUT + AQUA_SEQ, "Aqua Gates");
         configOutput(GATES_OUTPUT + RED_SEQ, "Red Gates");
-        
-        configOutput(VOLT_OUTPUT, "Pitch (V/OCT)");
 
         for (int i = 0; i < NUM_SEQ; i++) {
             currentPaths[i] = DEFAULT_PATH;
-            rhythms[i] = 1;
-            durations[i] = 1;
         }
 
         seqs[0] = SeqCell(PURPLE_SEQ);
@@ -273,11 +277,19 @@ struct StochSeqGrid : Module {
         json_t *rootJ = json_object();
 
         json_t *subdivisionsJ = json_array();
+        json_t *beatsJ = json_array();
+
         for (int i = 0; i < NUM_OF_CELLS; i++) {
             json_t *subJ = json_integer(subdivisions[i]);
             json_array_append_new(subdivisionsJ, subJ);
+
+            for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
+                json_t *beatJ = json_boolean(beats[i][j]);
+                json_array_append_new(beatsJ, beatJ);
+            }
         }
 
+        json_object_set_new(rootJ, "beats", beatsJ);
         json_object_set_new(rootJ, "subdivisions", subdivisionsJ);
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
@@ -294,6 +306,18 @@ struct StochSeqGrid : Module {
 					subdivisions[i] = json_integer_value(subJ);
 			}
 		}
+
+        // TODO: doesn't work right
+        json_t *beatsJ = json_object_get(rootJ, "beats");
+        if (beatsJ) {
+            for (int i = 0; i < NUM_OF_CELLS; i++) {
+                for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
+                    json_t *beatJ = json_array_get(beatsJ, i + j * MAX_SUBDIVISIONS);
+                    if (beatJ) 
+                        beats[i][j] = json_boolean_value(beatJ);
+                }
+            }
+        }
 
         json_t *gateModeJ = json_object_get(rootJ, "gateMode");
         if (gateModeJ)
@@ -544,6 +568,11 @@ struct StochSeqGrid : Module {
                     gateOn = false;
                 }
             }
+        } else {
+            for (int i = 0; i < NUM_SEQ; i++) {
+                seqs[i].phase = 0.0;
+                seqs[i].subPhase = 0.0;
+            }
         }
 
         // bool gateVolt = false;
@@ -561,8 +590,32 @@ struct StochSeqGrid : Module {
     }
 };
 
-struct BGGrid : Widget {
+struct CellOverlay : Widget {
+    StochSeqGrid *module;
+
     void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+                int index = x + y * 4;
+                float alpha = rescale(module->getParam(StochSeqGrid::CELL_PROB_PARAM + index).getValue(), 0.0, 1.0, 175, 0);
+                nvgStrokeColor(args.vg, nvgRGB(60, 60, 73));
+                nvgFillColor(args.vg, nvgRGBA(0, 0, 0, alpha));
+                nvgBeginPath(args.vg);
+                float xPos = x * CELL_SIZE;
+                float yPos = y * CELL_SIZE;
+                nvgRect(args.vg, xPos, yPos, CELL_SIZE, CELL_SIZE);
+                nvgFill(args.vg);
+            }
+        }
+    }
+};
+
+struct BGGrid : Widget {
+
+    void draw(const DrawArgs &args) override {
+
         for (int y = 0; y < 4; y++) {
             for (int x = 0; x < 4; x++) {
                 nvgStrokeColor(args.vg, nvgRGB(60, 60, 73));
@@ -710,22 +763,43 @@ struct CellsDisplay : Widget {
 
     CellsDisplay() {}
 
-    void draw(const DrawArgs &args) override {
+    // void draw(const DrawArgs &args) override {
+    //     if (module == NULL) return;
+
+    //     for (int i = 0; i < NUM_SEQ; i++) {            
+    //         if (module->seqs[i].isOn) {
+    //             int xPos = clamp(module->seqs[i].currentCellX, 0, 3);
+    //             int yPos = clamp(module->seqs[i].currentCellY, 0, 3);
+    //             nvgStrokeColor(args.vg, module->seqs[i].color);
+    //             nvgFillColor(args.vg, nvgTransRGBA(module->seqs[i].color, 50));
+    //             nvgBeginPath(args.vg);
+    //             nvgRect(args.vg, xPos * CELL_SIZE, yPos * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    //             nvgFill(args.vg);
+    //             nvgStrokeWidth(args.vg, 2.0);
+    //             nvgStroke(args.vg);
+    //         }
+    //     }
+    // }
+
+    void drawLayer(const DrawArgs &args, int layer) override {
         if (module == NULL) return;
 
-        for (int i = 0; i < NUM_SEQ; i++) {
-            if (module->seqs[i].isOn) {
-                int xPos = clamp(module->seqs[i].currentCellX, 0, 3);
-                int yPos = clamp(module->seqs[i].currentCellY, 0, 3);
-                nvgStrokeColor(args.vg, module->seqs[i].color);
-                nvgFillColor(args.vg, nvgTransRGBA(module->seqs[i].color, 50));
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, xPos * CELL_SIZE, yPos * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                nvgFill(args.vg);
-                nvgStrokeWidth(args.vg, 2.0);
-                nvgStroke(args.vg);
-            }
+        if (layer == 1) {
+            for (int i = 0; i < NUM_SEQ; i++) {            
+                    if (module->seqs[i].isOn) {
+                        int xPos = clamp(module->seqs[i].currentCellX, 0, 3);
+                        int yPos = clamp(module->seqs[i].currentCellY, 0, 3);
+                        nvgStrokeColor(args.vg, module->seqs[i].color);
+                        nvgFillColor(args.vg, nvgTransRGBA(module->seqs[i].color, 35));
+                        nvgBeginPath(args.vg);
+                        nvgRect(args.vg, xPos * CELL_SIZE, yPos * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                        nvgFill(args.vg);
+                        nvgStrokeWidth(args.vg, 2.0);
+                        nvgStroke(args.vg);
+                    }
+                }
         }
+        Widget::drawLayer(args, layer);
     }
 };
 
@@ -788,6 +862,12 @@ struct StochSeqGridWidget : ModuleWidget {
             }
         }
 
+        CellOverlay *cellOverlay = new CellOverlay();
+        cellOverlay->module = module;
+        cellOverlay->box.pos = Vec(82.5, 54.8);
+        cellOverlay->box.size = Vec(270, 270);
+        addChild(cellOverlay);
+
         for (int i = 0; i < NUM_SEQ; i++) {
             RatioDisplayLabel *ratioLabel = new RatioDisplayLabel();
             ratioLabel->module = module;
@@ -847,11 +927,16 @@ struct StochSeqGridWidget : ModuleWidget {
         addParam(createParamCentered<RedInvertKnob>(Vec(54.2, 330.3), module, StochSeqGrid::DUR_PARAMS + RED_SEQ));
         addParam(createParamCentered<NanoRedButton>(Vec(41.3, 344.8), module, StochSeqGrid::ON_PARAMS + RED_SEQ));
 
-        addOutput(createOutputCentered<PJ301MPurple>(Vec(216.6, 352.8), module, StochSeqGrid::GATES_OUTPUT + PURPLE_SEQ));
-        addOutput(createOutputCentered<PJ301MBlue>(Vec(243.6, 352.8), module, StochSeqGrid::GATES_OUTPUT + BLUE_SEQ));
-        addOutput(createOutputCentered<PJ301MAqua>(Vec(270.6, 352.8), module, StochSeqGrid::GATES_OUTPUT + AQUA_SEQ));
-        addOutput(createOutputCentered<PJ301MRed>(Vec(297.6, 352.8), module, StochSeqGrid::GATES_OUTPUT + RED_SEQ));
-        // addOutput(createOutputCentered<PJ301MPort>(Vec(275.4, 354.8), module, StochSeqGrid::VOLT_OUTPUT));
+        // v/oct outputs
+        addOutput(createOutputCentered<PJ301MPurple>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
+        addOutput(createOutputCentered<PJ301MBlue>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
+        addOutput(createOutputCentered<PJ301MAqua>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
+        addOutput(createOutputCentered<PJ301MRed>(Vec(179, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + RED_SEQ));
+        // gates outputs
+        addOutput(createOutputCentered<PJ301MPurple>(Vec(228.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + PURPLE_SEQ));
+        addOutput(createOutputCentered<PJ301MBlue>(Vec(255.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + BLUE_SEQ));
+        addOutput(createOutputCentered<PJ301MAqua>(Vec(282.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + AQUA_SEQ));
+        addOutput(createOutputCentered<PJ301MRed>(Vec(309.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + RED_SEQ));
     }
 
     void appendContextMenu(Menu *menu) override {
