@@ -32,6 +32,7 @@ struct SeqCell {
     bool gateOn = false;
     CellSequencerIds id;
     dsp::PulseGenerator gatePulse;
+    dsp::PulseGenerator visualPulse;
 
     SeqCell() {}
 
@@ -185,10 +186,8 @@ struct StochSeqGrid : Module {
     int currentCellX = -1;
     int currentCellY = -1;
     bool clockOn = false;
-    float currentBPM = 120.0;
     float clockFreq = 2.0; // Hz
-    float phase = 0.0;
-    float subPhase = 0.0;
+    float globalPhase = 0.0;
     bool playCellRhythms = false;
     bool gateOn = false;
     int cellRhythmIndex = 0;
@@ -199,9 +198,11 @@ struct StochSeqGrid : Module {
     float *rhythmProbabilities = new float[NUM_OF_CELLS];
     int *subdivisions = new int[NUM_OF_CELLS];
     bool beats[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
+    bool beatPulse[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
     bool isCtrlClick = false;
     bool resetMode = false;
     bool useMouseDeltaY = false;
+    bool displayCircles = false;
 
     StochSeqGrid() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -261,6 +262,7 @@ struct StochSeqGrid : Module {
             subdivisions[i] = 1;
             for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
                 beats[i][j] = true;
+                beatPulse[i][j] = false;
             }
         }
 
@@ -443,7 +445,6 @@ struct StochSeqGrid : Module {
             seqs[i].duration = params[DUR_PARAMS + i].getValue();
         }
 
-        bool clockGate = false;
         if (clockOn) {
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
@@ -477,12 +478,14 @@ struct StochSeqGrid : Module {
                                 if (beats[_index][seqs[i].cellRhythmIndex]) {
                                     seqs[i].gatePulse.trigger(1e-3);
                                     seqs[i].gateOn = true;
+                                    seqs[i].visualPulse.trigger(1e-3);
                                 } else {
                                     seqs[i].gateOn = false;
                                 }
                             } else {
                                 seqs[i].gatePulse.trigger(1e-3);
                                 seqs[i].gateOn = true;
+                                seqs[i].visualPulse.trigger(1e-3);
                             }
                         } else {
                             seqs[i].gateOn = false;
@@ -497,12 +500,15 @@ struct StochSeqGrid : Module {
                         if (seqs[i].playCellRhythms && beats[seqs[i].getCurrentCellIndex()][seqs[i].cellRhythmIndex]) {
                             seqs[i].gatePulse.trigger(1e-3);
                             seqs[i].gateOn = true;
+                            seqs[i].visualPulse.trigger(1e-3);
                         } else {
                             seqs[i].gateOn = false;
                         }
                     }
+                    
                 }
 
+                beatPulse[seqs[i].getCurrentCellIndex()][seqs[i].cellRhythmIndex] = seqs[i].clockGate && seqs[i].gateOn;
 
                 bool gateVolt = false;
                 if (gateMode == GATE_MODE) {
@@ -514,61 +520,14 @@ struct StochSeqGrid : Module {
                 outputs[GATES_OUTPUT + i].setVoltage(gateVolt ? 10.0 : 0.0);
             }
 
-
-            currentBPM = clockFreq * 60;
-
-            phase += clockFreq * args.sampleTime;
-            subPhase += clockFreq * getCurrentSubdivision() * args.sampleTime;
-
-
-            clockGate = (subPhase < 0.5);
-
-            if (phase >= 1.0) {
-                phase = 0.0;
-                subPhase = 0.0;
-                playCellRhythms = false;
-                if (resetMode) {
-                    resetMode = false;
-                    resetSeq();
-                }
-                clockStep();
-
-                // _index = clamp(currentCellX, 0, 3) + clamp(currentCellY, 0, 3) * 4;
-                int _index = getCurrentCellIndex();
-
-                float gateProb = params[CELL_PROB_PARAM + _index].getValue();
-                float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
-                if (random::uniform() < gateProb) {
-                    if (random::uniform() < rhythmProb) {
-                        playCellRhythms = true;
-                        if (beats[_index][cellRhythmIndex]) {
-                            gatePulse.trigger(1e-3);
-                            gateOn = true;
-                        } else {
-                            gateOn = false;
-                        }
-                    } else {
-                        gatePulse.trigger(1e-3);
-                        gateOn = true;
-                    }
-                } else {
-                    gateOn = false;
-                }
+            // keep track of global phase for synchronization
+            globalPhase += clockFreq * args.sampleTime;
+            if (globalPhase >= 1.0) {
+                globalPhase = 0.0;
             }
 
-            if (subPhase >= 1.0) {
-                subPhase = 0.0;
-                cellRhythmIndex++;
-                // clockGate = (phase < 0.5);
-
-                if (playCellRhythms && beats[getCurrentCellIndex()][cellRhythmIndex]) {
-                    gatePulse.trigger(1e-3);
-                    gateOn = true;
-                } else {
-                    gateOn = false;
-                }
-            }
         } else {
+            globalPhase = 0.0;
             for (int i = 0; i < NUM_SEQ; i++) {
                 seqs[i].phase = 0.0;
                 seqs[i].subPhase = 0.0;
@@ -720,31 +679,59 @@ struct SubdivisionDisplay : Widget {
             // TODO: draw stuff for preview 
             return;
         }
-
-        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-        nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
-        nvgStrokeWidth(args.vg, 1.0);
-        Vec center = Vec(box.size.x / 2, box.size.y / 2);
+        
         float radius = 22.0;
+        Vec center = Vec(box.size.x / 2, box.size.y / 2);
         int subRhythms = module->subdivisions[index];
-        circleRad = rescale(subRhythms, 2.0, MAX_SUBDIVISIONS, 16.0/2, 8.0/2);
-        nvgBeginPath(args.vg);
-        nvgCircle(args.vg, center.x, center.y, radius);
-        nvgStroke(args.vg);
+
+        // if only one beat
         if (subRhythms < 2) {
             nvgBeginPath(args.vg);
             nvgCircle(args.vg, center.x, center.y, 35.0/2);
             nvgFill(args.vg);
+
+                // visual pulse stuff
+            if (module->beatPulse[index][0])  {
+                nvgBeginPath(args.vg);
+                nvgCircle(args.vg, center.x, center.y, radius);
+                nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                nvgStroke(args.vg);
+            }
         } else {
+            circleRad = rescale(subRhythms, 2.0, MAX_SUBDIVISIONS, 16.0 / 2, 8.0 / 2);
+
+            if (module->displayCircles) {
+                nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+                nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                nvgStrokeWidth(args.vg, 1.0);
+                nvgBeginPath(args.vg);
+                nvgCircle(args.vg, center.x, center.y, radius);
+                nvgStroke(args.vg);
+            }
+
             for (int i = 0; i < subRhythms; i++) {
+                bool beatOn = module->beats[index][i];
+
                 float angle = rescale((float)i, 0.0, subRhythms, -M_PI/2, M_PI*2.0 - M_PI/2);
                 float x = cos(angle) * radius;
                 float y = sin(angle) * radius;
                 Vec pos = Vec(x, y).plus(center);
                 positions[i] = pos;
+
+                // connected lines
+                if (beatOn && !module->displayCircles) {
+                    float alpha = rescale(module->getParam(StochSeqGrid::SUBDIVISION_PARAM + index).getValue(), 0.0, 1.0, 25, 200);
+                    nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, alpha));
+                    nvgStrokeWidth(args.vg, i == 0 ? 2.0 : 1.0);
+                    nvgBeginPath(args.vg);
+                    nvgMoveTo(args.vg, center.x, center.y);
+                    nvgLineTo(args.vg, pos.x, pos.y);
+                    nvgStroke(args.vg);
+                }
+
                 nvgBeginPath(args.vg);
                 nvgCircle(args.vg, pos.x, pos.y, circleRad);
-                if (module->beats[index][i]) {
+                if (beatOn) {
                     nvgFillColor(args.vg, nvgRGB(255, 255, 255));
                 } else {
                     nvgFillColor(args.vg, nvgRGB(51, 51, 51));
@@ -753,6 +740,14 @@ struct SubdivisionDisplay : Widget {
                     nvgStroke(args.vg);
                 }
                 nvgFill(args.vg);
+
+                // visual pulse stuff
+                if (module->beatPulse[index][i] && beatOn)  {
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, circleRad * 1.2);
+                    nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                    nvgFill(args.vg);
+                }
             }
         }
     }
@@ -945,9 +940,11 @@ struct StochSeqGridWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
 
         menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"gates", "triggers"}, &module->gateMode));
-
         menu->addChild(createIndexPtrSubmenuItem("Mouse drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
+        menu->addChild(new MenuEntry);
+
+        menu->addChild(createIndexPtrSubmenuItem("Display", {"blooms", "circles"}, &module->displayCircles));
     }
 };
 
