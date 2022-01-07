@@ -32,9 +32,13 @@ struct SeqCell {
     bool gateOn = false;
     CellSequencerIds id;
     dsp::PulseGenerator gatePulse;
-    dsp::PulseGenerator visualPulse;
+    bool beatPulse[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
 
-    SeqCell() {}
+    SeqCell() {
+        for (int i = 0; i < NUM_OF_CELLS; i++)
+            for (int j = 0; j < MAX_SUBDIVISIONS; j++)
+                beatPulse[i][j] = false;
+    }
 
     SeqCell(CellSequencerIds _id) {
         id = _id;
@@ -116,10 +120,15 @@ struct SeqCell {
         }
     }
 
+    void setBeatPulse() {
+        beatPulse[getCurrentCellIndex()][cellRhythmIndex] = gateOn && clockGate;
+    }
+
     void reset() {
         // TODO
         currentCellX = resetPos.x;
         currentCellY = resetPos.y;
+        currentIndex = -1;
         phase = 0.0;
         subPhase = 0.0;
     }
@@ -265,7 +274,6 @@ struct StochSeqGrid : Module {
                 beatPulse[i][j] = false;
             }
         }
-
     }
 
     ~StochSeqGrid() {
@@ -334,15 +342,6 @@ struct StochSeqGrid : Module {
         genPatterns(100); // randomize probabilities
     }
 
-    bool isCellMultiActive(int cellX, int cellY) {
-        int index = cellX + cellY * 4;
-        for (int i = 0; i < NUM_SEQ; i++) {
-            if (index == seqs[i].getCurrentCellIndex())
-                return true;
-        }
-        return false;
-    }
-
     Vec getXYfromIndex(int _index) {
         int x = _index % 4;
         int y = _index / 4;
@@ -401,9 +400,10 @@ struct StochSeqGrid : Module {
         cellRhythmIndex = 0;
     }
 
-    void resetSeq() {
-        currentCellX = -1;
-        currentCellY = -1;
+    void resetSeqs() {
+        for (int i = 0; i < NUM_SEQ; i++) {
+            seqs[i].reset();
+        }
     }
 
     void resetRhythms(int _index) {
@@ -449,6 +449,11 @@ struct StochSeqGrid : Module {
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
 
+            if (resetMode) {
+                resetMode = false;
+                resetSeqs();
+            }
+
             for (int i = 0; i < NUM_SEQ; i++) {
                 seqs[i].length = params[LENGTH_PARAMS + i].getValue();
 
@@ -460,11 +465,15 @@ struct StochSeqGrid : Module {
                     seqs[i].clockGate = (seqs[i].subPhase < 0.5);
 
                     if (seqs[i].phase >= 1.0) {
-                        seqs[i].phase = 0.0;
-                        seqs[i].subPhase = 0.0;
+                        seqs[i].phase -= 1.0;
+                        seqs[i].subPhase -= 1.0;
                         seqs[i].playCellRhythms = false;
 
                         // TODO: reset here?
+                        // if (resetMode) {
+                        //     resetMode = false;
+                        //     resetSeqs();
+                        // }
 
                         seqs[i].clockStep();
 
@@ -473,19 +482,20 @@ struct StochSeqGrid : Module {
                         float gateProb = params[CELL_PROB_PARAM + _index].getValue();
                         float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
                         if (random::uniform() < gateProb) {
-                            if (random::uniform() < rhythmProb) {
+                            if (subdivisions[_index] == 1) { // if 1 subdivision then don't check rhythm probability
+                                seqs[i].gatePulse.trigger(1e-3);
+                                seqs[i].gateOn = true;
+                            } else if (random::uniform() < rhythmProb) {
                                 seqs[i].playCellRhythms = true;
                                 if (beats[_index][seqs[i].cellRhythmIndex]) {
                                     seqs[i].gatePulse.trigger(1e-3);
                                     seqs[i].gateOn = true;
-                                    seqs[i].visualPulse.trigger(1e-3);
                                 } else {
                                     seqs[i].gateOn = false;
                                 }
                             } else {
                                 seqs[i].gatePulse.trigger(1e-3);
                                 seqs[i].gateOn = true;
-                                seqs[i].visualPulse.trigger(1e-3);
                             }
                         } else {
                             seqs[i].gateOn = false;
@@ -493,22 +503,32 @@ struct StochSeqGrid : Module {
                     }
 
                     if (seqs[i].subPhase >= 1.0) {
-                        seqs[i].subPhase = 0.0;
-                        seqs[i].cellRhythmIndex++;
+                        seqs[i].subPhase -= 1.0;
+
+                        if (subdivisions[seqs[i].getCurrentCellIndex()] > 1) seqs[i].cellRhythmIndex++;
                         // clockGate = (phase < 0.5);
 
                         if (seqs[i].playCellRhythms && beats[seqs[i].getCurrentCellIndex()][seqs[i].cellRhythmIndex]) {
                             seqs[i].gatePulse.trigger(1e-3);
                             seqs[i].gateOn = true;
-                            seqs[i].visualPulse.trigger(1e-3);
                         } else {
                             seqs[i].gateOn = false;
                         }
                     }
-                    
+
+                } else {
+                    if (seqs[i].phase >= 1.0) {
+                        seqs[i].phase = 0.0;
+                        seqs[i].subPhase = 0.0;
+                        seqs[i].playCellRhythms = false;
+
+                        seqs[i].clockStep();
+                    }
                 }
 
-                beatPulse[seqs[i].getCurrentCellIndex()][seqs[i].cellRhythmIndex] = seqs[i].clockGate && seqs[i].gateOn;
+                seqs[i].setBeatPulse();
+
+                // seqs[i].beatPulse[seqs[i].getCurrentCellIndex()][seqs[i].cellRhythmIndex] = seqs[i].gateOn && seqs[i].clockGate;
 
                 bool gateVolt = false;
                 if (gateMode == GATE_MODE) {
@@ -685,17 +705,19 @@ struct SubdivisionDisplay : Widget {
         int subRhythms = module->subdivisions[index];
 
         // if only one beat
-        if (subRhythms < 2) {
+        if (subRhythms == 1) {
             nvgBeginPath(args.vg);
             nvgCircle(args.vg, center.x, center.y, 35.0/2);
             nvgFill(args.vg);
 
+            for (int i = 0; i < NUM_SEQ; i++) {
                 // visual pulse stuff
-            if (module->beatPulse[index][0])  {
-                nvgBeginPath(args.vg);
-                nvgCircle(args.vg, center.x, center.y, radius);
-                nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
-                nvgStroke(args.vg);
+                if (module->seqs[i].beatPulse[index][0])  {
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, center.x, center.y, radius);
+                    nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                    nvgStroke(args.vg);
+                }
             }
         } else {
             circleRad = rescale(subRhythms, 2.0, MAX_SUBDIVISIONS, 16.0 / 2, 8.0 / 2);
@@ -741,12 +763,15 @@ struct SubdivisionDisplay : Widget {
                 }
                 nvgFill(args.vg);
 
-                // visual pulse stuff
-                if (module->beatPulse[index][i] && beatOn)  {
-                    nvgBeginPath(args.vg);
-                    nvgCircle(args.vg, pos.x, pos.y, circleRad * 1.2);
-                    nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 200));
-                    nvgFill(args.vg);
+                for (int j = 0; j < NUM_SEQ; j++) {
+                    // visual pulse stuff
+                    if (module->seqs[j].beatPulse[index][i] && beatOn)  {
+                        nvgBeginPath(args.vg);
+                        nvgCircle(args.vg, pos.x, pos.y, circleRad * 1.2);
+                        nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                        nvgFill(args.vg);
+                    }
+
                 }
             }
         }
@@ -884,21 +909,15 @@ struct StochSeqGridWidget : ModuleWidget {
             for (int x = 0; x < 4; x++) {
                 int index = x + y * 4;
                 addParam(createParamCentered<TinyWhiteKnob>(Vec(116.3 + (x * CELL_SIZE), 88.5 + (y * CELL_SIZE)), module, StochSeqGrid::SUBDIVISION_PARAM + index));
-                if (index < 4) {
-                    addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
-                } else if (index < 8) {
-                    addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
-                } else if (index < 12) {
-                    addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
-                } else {
-                    addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
-                }
+                // addParam(createParamCentered<NanoWhiteKnob>(Vec(116.3 + (x * CELL_SIZE), 88.5 + (y * CELL_SIZE)), module, StochSeqGrid::SUBDIVISION_PARAM + index));
+                addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
             }
         }
 
         addParam(createParamCentered<TinyBlueButton>(Vec(28.3, 93), module, StochSeqGrid::CLOCK_TOGGLE_PARAM));
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.3 - 3, 93 - 3), module, StochSeqGrid::TOGGLE_LIGHT));
         addParam(createParamCentered<BlueKnob>(Vec(52.4, 93), module, StochSeqGrid::BPM_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(11.1, 116.1), module, StochSeqGrid::RESET_PARAM));
 
         addParam(createParamCentered<PurpleInvertKnob>(Vec(97.1, 32.8), module, StochSeqGrid::LENGTH_PARAMS + PURPLE_SEQ));
         addParam(createParamCentered<BlueInvertKnob>(Vec(133.4, 32.8), module, StochSeqGrid::LENGTH_PARAMS + BLUE_SEQ));
