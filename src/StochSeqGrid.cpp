@@ -13,6 +13,12 @@ enum CellSequencerIds {
     RED_SEQ,
     NUM_SEQ
 };
+enum PathIds {
+    DEFAULT_PATH,
+    RANDOM_PATH,
+    RANDOM_WALK_PATH,
+    NUM_PATHS
+};
 
 struct SeqCell {
     Vec startPos;
@@ -31,8 +37,10 @@ struct SeqCell {
     bool clockGate = false;
     bool gateOn = false;
     CellSequencerIds id;
-    dsp::PulseGenerator gatePulse;
     bool beatPulse[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
+    PathIds currentPath = DEFAULT_PATH;
+
+    dsp::PulseGenerator gatePulse;
 
     SeqCell() {
         for (int i = 0; i < NUM_OF_CELLS; i++)
@@ -76,7 +84,7 @@ struct SeqCell {
         }
     }
 
-    void clockStep() {
+    void doDefaultPath() {
         switch(id) {
             case PURPLE_SEQ:
                 currentCellX++;
@@ -120,6 +128,53 @@ struct SeqCell {
         }
     }
 
+    void doRandomPath() {
+        int rIndex = randRange(length) + (startPos.x + startPos.y * 4);
+        Vec pos = getXYfromIndex(rIndex);
+        currentCellX = pos.x;
+        currentCellY = pos.y;
+        cellRhythmIndex = 0;
+        currentIndex = (currentIndex + 1) % length;
+    }
+
+    void doRandomWalkPath() {
+        int direction = randRange(5);
+        switch (direction) {
+            case 1:
+                currentCellY -= 1;
+                break;
+            case 2:
+                currentCellX += 1;
+                break;
+            case 3:
+                currentCellY += 1;
+                break;
+            case 4:
+                currentCellX -= 1;
+                break;
+            default:
+                break;
+        }
+
+        if (currentCellX < 0) currentCellX = 1;
+        else if (currentCellX > 3) currentCellX = 2;
+        if (currentCellY < 0) currentCellY = 1;
+        else if (currentCellY > 3) currentCellY = 2;
+
+        cellRhythmIndex = 0;
+        currentIndex = (currentIndex + 1) % length;
+    }
+
+    void clockStep() {
+        if (currentPath == DEFAULT_PATH) {
+            doDefaultPath();
+        } else if (currentPath == RANDOM_PATH) {
+            doRandomPath();
+        } else {
+            doRandomWalkPath();
+        }
+    }
+
     void setBeatPulse() {
         beatPulse[getCurrentCellIndex()][cellRhythmIndex] = gateOn && clockGate;
     }
@@ -129,6 +184,7 @@ struct SeqCell {
         currentCellX = resetPos.x;
         currentCellY = resetPos.y;
         currentIndex = -1;
+        cellRhythmIndex = 0;
         phase = 0.0;
         subPhase = 0.0;
     }
@@ -136,19 +192,13 @@ struct SeqCell {
     int getCurrentCellIndex() {
         return clamp(currentCellX, 0, 3) + clamp(currentCellY, 0, 3) * 4;
     }
+
+    Vec getXYfromIndex(int _index) {
+        return Vec(_index % 4, (int)(_index / 4));
+    }
 };
 
 struct StochSeqGrid : Module {
-    enum PathIds {
-        DEFAULT_PATH,
-        ONE_ROW_PATH,
-        OUTSIDE_PATH,
-        INSIDE_PATH,
-        VERTICAL_PATH,
-        RANDOM_PATH,
-        RANDOM_WALK_PATH,
-        NUM_PATHS
-    };
     enum ModeIds {
         GATE_MODE,
         TRIG_MODE,
@@ -158,7 +208,8 @@ struct StochSeqGrid : Module {
         CLOCK_TOGGLE_PARAM,
         BPM_PARAM,
         LENGTH_PARAMS,
-        RHYTHM_PARAMS = LENGTH_PARAMS + NUM_SEQ,
+        PATHS_PARAM = LENGTH_PARAMS + NUM_SEQ,
+        RHYTHM_PARAMS = PATHS_PARAM + NUM_SEQ,
         DUR_PARAMS = RHYTHM_PARAMS + NUM_SEQ,
         CELL_PROB_PARAM = DUR_PARAMS + NUM_SEQ,
         SUBDIVISION_PARAM = CELL_PROB_PARAM + NUM_OF_CELLS,
@@ -200,7 +251,6 @@ struct StochSeqGrid : Module {
     bool playCellRhythms = false;
     bool gateOn = false;
     int cellRhythmIndex = 0;
-    PathIds currentPaths[NUM_PATHS];
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
     float *gateProbabilities = new float[NUM_OF_CELLS];
@@ -217,6 +267,7 @@ struct StochSeqGrid : Module {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configButton(CLOCK_TOGGLE_PARAM, "Run");
         configParam(BPM_PARAM, -2.0, 4.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
+        configSwitch(PATHS_PARAM, 0, 2, 0, "Path", {"default", "random", "random walk"});
         configButton(RESET_PARAM, "Reset");
         configButton(INVERT_PARAM, "Invert pattern");
         configParam(LENGTH_PARAMS + PURPLE_SEQ, 1, 16, 4, "Purple seq length");
@@ -251,10 +302,6 @@ struct StochSeqGrid : Module {
         configOutput(GATES_OUTPUT + BLUE_SEQ, "Blue Gates");
         configOutput(GATES_OUTPUT + AQUA_SEQ, "Aqua Gates");
         configOutput(GATES_OUTPUT + RED_SEQ, "Red Gates");
-
-        for (int i = 0; i < NUM_SEQ; i++) {
-            currentPaths[i] = DEFAULT_PATH;
-        }
 
         seqs[0] = SeqCell(PURPLE_SEQ);
         seqs[1] = SeqCell(BLUE_SEQ);
@@ -389,17 +436,6 @@ struct StochSeqGrid : Module {
         }
     }
 
-    void clockStep() {
-
-        currentCellX++;
-        if (currentCellX >= 4) {
-            currentCellX = 0;
-            currentCellY = (currentCellY + 1) % 4;
-        }
-
-        cellRhythmIndex = 0;
-    }
-
     void resetSeqs() {
         for (int i = 0; i < NUM_SEQ; i++) {
             seqs[i].reset();
@@ -439,10 +475,12 @@ struct StochSeqGrid : Module {
             invert();
         }
 
+
         for (int i = 0; i < NUM_SEQ; i++) {
             seqs[i].isOn = params[ON_PARAMS + i].getValue();
             seqs[i].rhythm = params[RHYTHM_PARAMS + i].getValue();
             seqs[i].duration = params[DUR_PARAMS + i].getValue();
+            seqs[i].currentPath = (PathIds)params[PATHS_PARAM + i].getValue();
         }
 
         if (clockOn) {
@@ -744,7 +782,7 @@ struct SubdivisionDisplay : Widget {
                 if (beatOn && !module->displayCircles) {
                     float alpha = rescale(module->getParam(StochSeqGrid::SUBDIVISION_PARAM + index).getValue(), 0.0, 1.0, 25, 200);
                     nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, alpha));
-                    nvgStrokeWidth(args.vg, i == 0 ? 2.0 : 1.0);
+                    nvgStrokeWidth(args.vg, i == 0 ? 2.5 : 1.0);
                     nvgBeginPath(args.vg);
                     nvgMoveTo(args.vg, center.x, center.y);
                     nvgLineTo(args.vg, pos.x, pos.y);
@@ -917,6 +955,7 @@ struct StochSeqGridWidget : ModuleWidget {
         addParam(createParamCentered<TinyBlueButton>(Vec(28.3, 93), module, StochSeqGrid::CLOCK_TOGGLE_PARAM));
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.3 - 3, 93 - 3), module, StochSeqGrid::TOGGLE_LIGHT));
         addParam(createParamCentered<BlueKnob>(Vec(52.4, 93), module, StochSeqGrid::BPM_PARAM));
+        addParam(createParamCentered<NanoBlueSwitch>(Vec(237.9, 32.8), module, StochSeqGrid::PATHS_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(11.1, 116.1), module, StochSeqGrid::RESET_PARAM));
 
         addParam(createParamCentered<PurpleInvertKnob>(Vec(97.1, 32.8), module, StochSeqGrid::LENGTH_PARAMS + PURPLE_SEQ));
@@ -942,15 +981,15 @@ struct StochSeqGridWidget : ModuleWidget {
         addParam(createParamCentered<NanoRedButton>(Vec(41.3, 344.8), module, StochSeqGrid::ON_PARAMS + RED_SEQ));
 
         // v/oct outputs
-        addOutput(createOutputCentered<PJ301MPurple>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
-        addOutput(createOutputCentered<PJ301MBlue>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
-        addOutput(createOutputCentered<PJ301MAqua>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
-        addOutput(createOutputCentered<PJ301MRed>(Vec(179, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + RED_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(179, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + RED_SEQ));
         // gates outputs
-        addOutput(createOutputCentered<PJ301MPurple>(Vec(228.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + PURPLE_SEQ));
-        addOutput(createOutputCentered<PJ301MBlue>(Vec(255.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + BLUE_SEQ));
-        addOutput(createOutputCentered<PJ301MAqua>(Vec(282.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + AQUA_SEQ));
-        addOutput(createOutputCentered<PJ301MRed>(Vec(309.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + RED_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(228.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + PURPLE_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(255.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + BLUE_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(282.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + AQUA_SEQ));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(309.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + RED_SEQ));
     }
 
     void appendContextMenu(Menu *menu) override {
