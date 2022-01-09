@@ -39,6 +39,7 @@ struct SeqCell {
     CellSequencerIds id;
     bool beatPulse[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
     PathIds currentPath = DEFAULT_PATH;
+    int pathArray[NUM_OF_CELLS] = {};
 
     dsp::PulseGenerator gatePulse;
 
@@ -50,6 +51,22 @@ struct SeqCell {
 
     SeqCell(CellSequencerIds _id) {
         id = _id;
+
+        // set their arrays here because switch() won't let me do it there
+        if (id == PURPLE_SEQ) {
+            int tempArray[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+            std::copy(tempArray, tempArray + NUM_OF_CELLS, pathArray);
+        } else if (id == BLUE_SEQ) {
+            int tempArray[] = {3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12};
+            std::copy(tempArray, tempArray + NUM_OF_CELLS, pathArray);
+        } else if (id == AQUA_SEQ) {
+            int tempArray[] = {12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3};
+            std::copy(tempArray, tempArray + NUM_OF_CELLS, pathArray);
+        } else if (id == RED_SEQ) {
+            int tempArray[] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+            std::copy(tempArray, tempArray + NUM_OF_CELLS, pathArray);
+        }
+
         switch (id) {
             case PURPLE_SEQ:
                 currentCellX = -1;
@@ -129,7 +146,8 @@ struct SeqCell {
     }
 
     void doRandomPath() {
-        int rIndex = randRange(length) + (startPos.x + startPos.y * 4);
+        // TODO: fix for blue, aqua, red
+        int rIndex = pathArray[randRange(length)];
         Vec pos = getXYfromIndex(rIndex);
         currentCellX = pos.x;
         currentCellY = pos.y;
@@ -991,14 +1009,14 @@ struct StochSeqGridWidget : ModuleWidget {
 
         // v/oct outputs
         addOutput(createOutputCentered<PJ301MPurple>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(179, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + RED_SEQ));
+        addOutput(createOutputCentered<PJ301MBlue>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
+        addOutput(createOutputCentered<PJ301MAqua>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
+        addOutput(createOutputCentered<PJ301MRed>(Vec(179, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + RED_SEQ));
         // gates outputs
-        addOutput(createOutputCentered<PJ301MPort>(Vec(228.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + PURPLE_SEQ));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(255.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + BLUE_SEQ));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(282.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + AQUA_SEQ));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(309.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + RED_SEQ));
+        addOutput(createOutputCentered<PJ301MPurple>(Vec(228.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + PURPLE_SEQ));
+        addOutput(createOutputCentered<PJ301MBlue>(Vec(255.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + BLUE_SEQ));
+        addOutput(createOutputCentered<PJ301MAqua>(Vec(282.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + AQUA_SEQ));
+        addOutput(createOutputCentered<PJ301MRed>(Vec(309.9, 347.6), module, StochSeqGrid::GATES_OUTPUT + RED_SEQ));
     }
 
     void appendContextMenu(Menu *menu) override {
