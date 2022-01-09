@@ -31,6 +31,7 @@ struct SeqCell {
     float subPhase = 0.0;
     float rhythm = 1.0;
     float duration = 1.0;
+    float volts = 0.0;
     int cellRhythmIndex = 0;
     bool isOn = true;
     bool playCellRhythms = false;
@@ -270,6 +271,8 @@ struct StochSeqGrid : Module {
     bool playCellRhythms = false;
     bool gateOn = false;
     int cellRhythmIndex = 0;
+    int voltMode = 0;
+    float minMaxVolts[2] = {0.0, 1.0};
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
     float *gateProbabilities = new float[NUM_OF_CELLS];
@@ -484,6 +487,27 @@ struct StochSeqGrid : Module {
         return clamp(currentCellX, 0, 3) + clamp(currentCellY, 0, 3) * 4;
     }
 
+    void setMinMaxVolts() {
+        switch (voltMode) {
+            case 0:
+                minMaxVolts[0] = 0.0;
+                minMaxVolts[1] = 1.0;
+                break;
+            case 1:
+                minMaxVolts[0] = 0.0;
+                minMaxVolts[1] = 2.0;
+                break;
+            case 2:
+                minMaxVolts[0] = -5.0;
+                minMaxVolts[1] = 5.0;
+                break;
+            case 3:
+                minMaxVolts[0] = 0.0;
+                minMaxVolts[1] = 10.0;
+                break;
+        }
+    }
+
     void process(const ProcessArgs &args) override {
         if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
             resetMode = true;
@@ -506,6 +530,7 @@ struct StochSeqGrid : Module {
         }
 
         if (clockOn) {
+            setMinMaxVolts();
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
 
@@ -539,9 +564,12 @@ struct StochSeqGrid : Module {
 
                         int _index = seqs[i].getCurrentCellIndex();
 
+
                         float gateProb = params[CELL_PROB_PARAM + _index].getValue();
                         float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
                         if (random::uniform() < gateProb) {
+                            seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
+
                             if (subdivisions[_index] == 1) { // if 1 subdivision then don't check rhythm probability
                                 seqs[i].gatePulse.trigger(1e-3);
                                 seqs[i].gateOn = true;
@@ -598,6 +626,7 @@ struct StochSeqGrid : Module {
                 }
 
                 outputs[GATES_OUTPUT + i].setVoltage(gateVolt ? 10.0 : 0.0);
+                outputs[VOLTS_OUTPUT + i].setVoltage(seqs[i].volts);
             }
 
             // keep track of global phase for synchronization
@@ -1025,6 +1054,7 @@ struct StochSeqGridWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
 
         menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"gates", "triggers"}, &module->gateMode));
+        menu->addChild(createIndexPtrSubmenuItem("Volt range", {"0V 1V", "0V 2V", "-5V +5V", "0V 10V"}, &module->voltMode));
         menu->addChild(createIndexPtrSubmenuItem("Mouse drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
         menu->addChild(new MenuEntry);
