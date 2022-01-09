@@ -217,6 +217,42 @@ struct Jeremy_HSwitch : SvgSwitch {
     }
 };
 
+struct Purple_VSwitch : SvgSwitch {
+    Purple_VSwitch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Purple_VSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Purple_VSwitch_1.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Purple_VSwitch_2.svg")));
+    }
+};
+
+struct Blue_VSwitch : SvgSwitch {
+    Blue_VSwitch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Blue_VSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Blue_VSwitch_1.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Blue_VSwitch_2.svg")));
+    }
+};
+
+struct Aqua_VSwitch : SvgSwitch {
+    Aqua_VSwitch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Aqua_VSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Aqua_VSwitch_1.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Aqua_VSwitch_2.svg")));
+    }
+};
+
+struct Red_VSwitch : SvgSwitch {
+    Red_VSwitch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Red_VSwitch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Red_VSwitch_1.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Red_VSwitch_2.svg")));
+    }
+};
+
 struct Jeremy_HSwitchBlue : SvgSwitch {
     Jeremy_HSwitchBlue() {
         shadow->opacity = 0;

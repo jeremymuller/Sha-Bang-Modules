@@ -138,8 +138,8 @@ struct SeqCell {
     }
 
     void doRandomWalkPath() {
-        int direction = randRange(5);
-        switch (direction) {
+        int dir = randRange(5);
+        switch (dir) {
             case 1:
                 currentCellY -= 1;
                 break;
@@ -156,6 +156,7 @@ struct SeqCell {
                 break;
         }
 
+        // bounce of edges
         if (currentCellX < 0) currentCellX = 1;
         else if (currentCellX > 3) currentCellX = 2;
         if (currentCellY < 0) currentCellY = 1;
@@ -267,13 +268,16 @@ struct StochSeqGrid : Module {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configButton(CLOCK_TOGGLE_PARAM, "Run");
         configParam(BPM_PARAM, -2.0, 4.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
-        configSwitch(PATHS_PARAM, 0, 2, 0, "Path", {"default", "random", "random walk"});
         configButton(RESET_PARAM, "Reset");
         configButton(INVERT_PARAM, "Invert pattern");
         configParam(LENGTH_PARAMS + PURPLE_SEQ, 1, 16, 4, "Purple seq length");
         configParam(LENGTH_PARAMS + BLUE_SEQ, 1, 16, 4, "Blue seq length");
         configParam(LENGTH_PARAMS + AQUA_SEQ, 1, 16, 4, "Aqua seq length");
         configParam(LENGTH_PARAMS + RED_SEQ, 1, 16, 4, "Red seq length");
+        configSwitch(PATHS_PARAM + PURPLE_SEQ, 0, 2, 0, "Purple path", {"default", "random", "random walk"});
+        configSwitch(PATHS_PARAM + BLUE_SEQ, 0, 2, 0, "Blue path", {"default", "random", "random walk"});
+        configSwitch(PATHS_PARAM + AQUA_SEQ, 0, 2, 0, "Aqua path", {"default", "random", "random walk"});
+        configSwitch(PATHS_PARAM + RED_SEQ, 0, 2, 0, "Red path", {"default", "random", "random walk"});
 
         configParam(RHYTHM_PARAMS + PURPLE_SEQ, 1, 24, 1, "Purple rhythm");
         configParam(RHYTHM_PARAMS + BLUE_SEQ, 1, 24, 1, "Blue rhythm");
@@ -504,7 +508,7 @@ struct StochSeqGrid : Module {
 
                     if (seqs[i].phase >= 1.0) {
                         seqs[i].phase -= 1.0;
-                        seqs[i].subPhase -= 1.0;
+                        seqs[i].subPhase = 0.0;
                         seqs[i].playCellRhythms = false;
 
                         // TODO: reset here?
@@ -955,13 +959,18 @@ struct StochSeqGridWidget : ModuleWidget {
         addParam(createParamCentered<TinyBlueButton>(Vec(28.3, 93), module, StochSeqGrid::CLOCK_TOGGLE_PARAM));
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.3 - 3, 93 - 3), module, StochSeqGrid::TOGGLE_LIGHT));
         addParam(createParamCentered<BlueKnob>(Vec(52.4, 93), module, StochSeqGrid::BPM_PARAM));
-        addParam(createParamCentered<NanoBlueSwitch>(Vec(237.9, 32.8), module, StochSeqGrid::PATHS_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(11.1, 116.1), module, StochSeqGrid::RESET_PARAM));
 
-        addParam(createParamCentered<PurpleInvertKnob>(Vec(97.1, 32.8), module, StochSeqGrid::LENGTH_PARAMS + PURPLE_SEQ));
-        addParam(createParamCentered<BlueInvertKnob>(Vec(133.4, 32.8), module, StochSeqGrid::LENGTH_PARAMS + BLUE_SEQ));
-        addParam(createParamCentered<AquaInvertKnob>(Vec(169.7, 32.8), module, StochSeqGrid::LENGTH_PARAMS + AQUA_SEQ));
-        addParam(createParamCentered<RedInvertKnob>(Vec(206.1, 32.8), module, StochSeqGrid::LENGTH_PARAMS + RED_SEQ));
+        // lengths
+        addParam(createParamCentered<PurpleInvertKnob>(Vec(97.1, 29.8), module, StochSeqGrid::LENGTH_PARAMS + PURPLE_SEQ));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(140.1, 29.8), module, StochSeqGrid::LENGTH_PARAMS + BLUE_SEQ));
+        addParam(createParamCentered<AquaInvertKnob>(Vec(183.1, 29.8), module, StochSeqGrid::LENGTH_PARAMS + AQUA_SEQ));
+        addParam(createParamCentered<RedInvertKnob>(Vec(226.1, 29.8), module, StochSeqGrid::LENGTH_PARAMS + RED_SEQ));
+        // paths
+        addParam(createParamCentered<Purple_VSwitch>(Vec(118.6, 29.8), module, StochSeqGrid::PATHS_PARAM + PURPLE_SEQ));
+        addParam(createParamCentered<Blue_VSwitch>(Vec(161.6, 29.8), module, StochSeqGrid::PATHS_PARAM + BLUE_SEQ));
+        addParam(createParamCentered<Aqua_VSwitch>(Vec(204.6, 29.8), module, StochSeqGrid::PATHS_PARAM + AQUA_SEQ));
+        addParam(createParamCentered<Red_VSwitch>(Vec(247.6, 29.8), module, StochSeqGrid::PATHS_PARAM + RED_SEQ));
 
         // purple
         addParam(createParamCentered<PurpleInvertKnob>(Vec(28.3, 180.3), module, StochSeqGrid::RHYTHM_PARAMS + PURPLE_SEQ));
@@ -981,7 +990,7 @@ struct StochSeqGridWidget : ModuleWidget {
         addParam(createParamCentered<NanoRedButton>(Vec(41.3, 344.8), module, StochSeqGrid::ON_PARAMS + RED_SEQ));
 
         // v/oct outputs
-        addOutput(createOutputCentered<PJ301MPort>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
+        addOutput(createOutputCentered<PJ301MPurple>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
         addOutput(createOutputCentered<PJ301MPort>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
         addOutput(createOutputCentered<PJ301MPort>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
         addOutput(createOutputCentered<PJ301MPort>(Vec(179, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + RED_SEQ));
