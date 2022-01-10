@@ -235,12 +235,11 @@ struct StochSeqGrid : Module {
         SUBDIVISION_PARAM = CELL_PROB_PARAM + NUM_OF_CELLS,
         RESET_PARAM = SUBDIVISION_PARAM + NUM_OF_CELLS,
         ON_PARAMS,
-        INVERT_PARAM = ON_PARAMS + NUM_SEQ,
+        PATTERN_PARAM = ON_PARAMS + NUM_SEQ,
         NUM_PARAMS
     };
     enum InputIds {
         RANDOM_INPUT,
-        INVERT_INPUT,
         DIMINUTION_INPUT,
         EXT_CLOCK_INPUT,
         RESET_INPUT,
@@ -259,7 +258,6 @@ struct StochSeqGrid : Module {
 
     dsp::SchmittTrigger toggleTrig;
     dsp::SchmittTrigger resetTrig;
-    dsp::SchmittTrigger invertTrig;
     dsp::PulseGenerator gatePulse;
 
     int gateMode = GATE_MODE;
@@ -273,6 +271,7 @@ struct StochSeqGrid : Module {
     int cellRhythmIndex = 0;
     int voltMode = 0;
     float minMaxVolts[2] = {0.0, 1.0};
+    float currentPattern = 0.0;
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
     float *gateProbabilities = new float[NUM_OF_CELLS];
@@ -290,7 +289,7 @@ struct StochSeqGrid : Module {
         configButton(CLOCK_TOGGLE_PARAM, "Run");
         configParam(BPM_PARAM, -2.0, 4.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
         configButton(RESET_PARAM, "Reset");
-        configButton(INVERT_PARAM, "Invert pattern");
+        configSwitch(PATTERN_PARAM, 0, 2, 0, "Pattern", {"duplets", "triplets", "quintuplets"});
         configParam(LENGTH_PARAMS + PURPLE_SEQ, 1, 16, 4, "Purple seq length");
         configParam(LENGTH_PARAMS + BLUE_SEQ, 1, 16, 4, "Blue seq length");
         configParam(LENGTH_PARAMS + AQUA_SEQ, 1, 16, 4, "Aqua seq length");
@@ -316,7 +315,6 @@ struct StochSeqGrid : Module {
 
         configInput(EXT_CLOCK_INPUT, "External clock");
         configInput(RESET_INPUT, "Reset");
-        configInput(INVERT_INPUT, "Invert pattern");
 
         configOutput(VOLTS_OUTPUT + PURPLE_SEQ, "Purple V/OCT");
         configOutput(VOLTS_OUTPUT + BLUE_SEQ, "Blue V/OCT");
@@ -420,21 +418,34 @@ struct StochSeqGrid : Module {
         return Vec(x, y);
     }
 
-    void genPatterns(int c) {
+    void genPatterns(float patt) {
+        int c = (int)patt;
         switch (c) {
-            case 0:
+            case 0: // duples
                 for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    gateProbabilities[i] = 0.0;
+                    subdivisions[i] = (int)pow(2, randRange(3));
                 }
                 break;
-            case 1:
+            case 1: // triples
                 for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    gateProbabilities[i] = 0.5;
+                    int r = randRange(3);
+                    if (r == 0)
+                        subdivisions[i] = 1;
+                    else if (r == 1)
+                        subdivisions[i] = 3;
+                    else
+                        subdivisions[i] = 6;
                 }
                 break;
             case 2:
                 for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    gateProbabilities[i] = 1.0;
+                    int r = randRange(3);
+                    if (r == 0)
+                        subdivisions[i] = 1;
+                    else if (r == 1)
+                        subdivisions[i] = 5;
+                    else
+                        subdivisions[i] = 10;
                 }
                 break;
             case 3:
@@ -444,20 +455,9 @@ struct StochSeqGrid : Module {
                 break;
             default:
                 for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    gateProbabilities[i] = random::uniform();
-                    rhythmProbabilities[i] = random::uniform();
-                    subdivisions[i] = 1;
+                    subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
                 }
                 break;
-        }
-    }
-
-    void invert() {
-        for (int i = 0; i < NUM_OF_CELLS; i++) {
-            float currentProb = gateProbabilities[i];
-            float currentRhythmProb = rhythmProbabilities[i];
-            gateProbabilities[i] = 1.0 - currentProb;
-            rhythmProbabilities[i] = 1.0 - currentRhythmProb;
         }
     }
 
@@ -517,10 +517,11 @@ struct StochSeqGrid : Module {
             clockOn ^= true;
         }
 
-        if (invertTrig.process(params[INVERT_PARAM].getValue() + inputs[INVERT_INPUT].getVoltage())) {
-            invert();
-        }
-
+		if (params[PATTERN_PARAM].getValue() != currentPattern) {
+			currentPattern = params[PATTERN_PARAM].getValue();
+			genPatterns(currentPattern);
+		}
+        
 
         for (int i = 0; i < NUM_SEQ; i++) {
             seqs[i].isOn = params[ON_PARAMS + i].getValue();
@@ -700,6 +701,7 @@ struct BGGrid : Widget {
 struct SubdivisionDisplay : Widget {
     Vec positions[16] = {};
     bool isBeatOn = false;
+    bool clickedOnBeat = false;
     float circleRad;
     float initX = 0;
     float initY = 0;
@@ -718,11 +720,18 @@ struct SubdivisionDisplay : Widget {
                 initX = e.pos.x;
                 initY = e.pos.y;
                 isBeatOn = !isSubdivisionOn(initX, initY);
+                clickedOnBeat = false;
                 toggleRhythms(initX, initY, isBeatOn);
+                if (!clickedOnBeat)
+                    module->resetRhythms(index);
             } else if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
                 module->isCtrlClick = false;
                 e.consume(this);
-                module->resetRhythms(index);
+                // module->resetRhythms(index);
+                int rhythms = module->subdivisions[index];
+                rhythms *= 2;
+                if (rhythms <= MAX_SUBDIVISIONS)
+                    module->subdivisions[index] = rhythms;
             } else {
                 module->isCtrlClick = false;
                 e.consume(this);
@@ -767,6 +776,7 @@ struct SubdivisionDisplay : Widget {
             float d = dist(mouse, positions[i]);
             if (d < circleRad) {
                 module->beats[index][i] = on;
+                clickedOnBeat = true;
             }
         }
     }
@@ -1007,6 +1017,7 @@ struct StochSeqGridWidget : ModuleWidget {
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.3 - 3, 93 - 3), module, StochSeqGrid::TOGGLE_LIGHT));
         addParam(createParamCentered<BlueKnob>(Vec(52.4, 93), module, StochSeqGrid::BPM_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(11.1, 116.1), module, StochSeqGrid::RESET_PARAM));
+        addParam(createParamCentered<BlueKnob>(Vec(282.9, 29.8), module, StochSeqGrid::PATTERN_PARAM));
 
         // lengths
         addParam(createParamCentered<PurpleInvertKnob>(Vec(97.1, 29.8), module, StochSeqGrid::LENGTH_PARAMS + PURPLE_SEQ));
