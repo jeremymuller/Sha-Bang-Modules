@@ -219,6 +219,15 @@ struct SeqCell {
 };
 
 struct StochSeqGrid : Module {
+    enum BPMModes {
+        BPM_CV,
+        BPM_P2,
+        BPM_P4,
+        BPM_P8,
+        BPM_P12,
+        BPM_P24,
+        NUM_BPM_MODES
+    };
     enum ModeIds {
         GATE_MODE,
         TRIG_MODE,
@@ -258,8 +267,14 @@ struct StochSeqGrid : Module {
 
     dsp::SchmittTrigger toggleTrig;
     dsp::SchmittTrigger resetTrig;
+    dsp::SchmittTrigger bpmInputTrig;
     dsp::PulseGenerator gatePulse;
 
+    int bpmInputMode = BPM_CV;
+    int ppqn = 0;
+    float period = 0.0;
+    int timeOut = 1; // seconds
+    int extPulseIndex = 0;
     int gateMode = GATE_MODE;
     int currentCellX = -1;
     int currentCellY = -1;
@@ -540,7 +555,6 @@ struct StochSeqGrid : Module {
 			// genPatterns(currentPattern);
 		}
         
-
         for (int i = 0; i < NUM_SEQ; i++) {
             seqs[i].isOn = params[ON_PARAMS + i].getValue();
             seqs[i].rhythm = params[RHYTHM_PARAMS + i].getValue();
@@ -548,25 +562,57 @@ struct StochSeqGrid : Module {
             seqs[i].currentPath = (PathIds)params[PATHS_PARAM + i].getValue();
         }
 
-        if (clockOn) {
-            // TODO: external clock
-            // if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
-            //     period += args.sampleTime;
-            //     if (period > timeOut) clockOn = false;
-            //     if (bpmDetect) {
-            //         if (extPulseIndex > 1) {
-            //             clockFreq = (1.0 / period) / (float)ppqn;
-            //         }
-
-            //         extPulseIndex++;
-            //         if (extPulseIndex >= ppqn) extPulseIndex = 0;
-            //         period = 0.0;
-            //     }
-            // }
-
-            setMinMaxVolts();
+        bool bpmDetect = false;
+        if (inputs[EXT_CLOCK_INPUT].isConnected()) {
+            if (bpmInputMode == BPM_CV) {
+                clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
+            } else {
+                bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
+                if (bpmDetect)
+                    clockOn = true;
+                switch(bpmInputMode) {
+                    case BPM_P2: 
+                        ppqn = 2; 
+                        break;
+                    case BPM_P4: 
+                        ppqn = 4;
+                        break;
+                    case BPM_P8:
+                        ppqn = 8;
+                        break;
+                    case BPM_P12:
+                        ppqn = 12;
+                        break;
+                    case BPM_P24:
+                        ppqn = 24;
+                        break;
+                }
+            }
+        } else {
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
+        }
+
+        if (clockOn) {
+            if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
+                period += args.sampleTime;
+                if (period > timeOut) clockOn = false;
+                if (bpmDetect) {
+                    if (extPulseIndex > 1) {
+                        clockFreq = (1.0 / period) / (float)ppqn;
+                    }
+
+                    extPulseIndex++;
+                    if (extPulseIndex >= ppqn) extPulseIndex = 0;
+                    period = 0.0;
+                }
+            }
+
+            setMinMaxVolts();
+
+            
+            // float bpmParam = params[BPM_PARAM].getValue();
+            // clockFreq = std::pow(2.0, bpmParam);
 
             if (resetMode) {
                 resetMode = false;
@@ -1097,9 +1143,13 @@ struct StochSeqGridWidget : ModuleWidget {
 
         menu->addChild(new MenuSeparator);
 
-        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"gates", "triggers"}, &module->gateMode));
-        menu->addChild(createIndexPtrSubmenuItem("Volt range", {"0V 1V", "0V 2V", "-5V +5V", "0V 10V"}, &module->voltMode));
-        menu->addChild(createIndexPtrSubmenuItem("Mouse drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
+        menu->addChild(createIndexPtrSubmenuItem("Gate mMde", {"gates", "triggers"}, &module->gateMode));
+        menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"0V 1V", "0V 2V", "-5V +5V", "0V 10V"}, &module->voltMode));
+        menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
+
+        menu->addChild(new MenuEntry);
+        
+        menu->addChild(createIndexPtrSubmenuItem("External Clock Mode", {"CV (0V = 120 bpm)", "2 PPQN", "4 PPQN", "8 PPQN", "12 PPQN", "24 PPQN"}, &module->bpmInputMode));
 
         menu->addChild(new MenuEntry);
 
