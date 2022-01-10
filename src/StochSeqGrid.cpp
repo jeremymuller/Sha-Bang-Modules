@@ -201,9 +201,12 @@ struct SeqCell {
 
     void reset() {
         // TODO
-        currentCellX = resetPos.x;
-        currentCellY = resetPos.y;
-        currentIndex = -1;
+        // currentCellX = resetPos.x;
+        // currentCellY = resetPos.y;
+        // currentIndex = -1;
+        currentCellX = startPos.x;
+        currentCellY = startPos.y;
+        currentIndex = 0;
         cellRhythmIndex = 0;
         phase = 0.0;
         subPhase = 0.0;
@@ -286,7 +289,7 @@ struct StochSeqGrid : Module {
     int cellRhythmIndex = 0;
     int voltMode = 0;
     float minMaxVolts[2] = {0.0, 1.0};
-    float currentPattern = 0.0;
+    int currentPattern = 0;
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
     float *gateProbabilities = new float[NUM_OF_CELLS];
@@ -372,21 +375,26 @@ struct StochSeqGrid : Module {
         json_t *rootJ = json_object();
 
         json_t *subdivisionsJ = json_array();
-        json_t *beatsJ = json_array();
+        json_t *cellBeatsJ = json_array();
 
         for (int i = 0; i < NUM_OF_CELLS; i++) {
             json_t *subJ = json_integer(subdivisions[i]);
             json_array_append_new(subdivisionsJ, subJ);
 
+            json_t *beatsJ = json_array();
             for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
                 json_t *beatJ = json_boolean(beats[i][j]);
                 json_array_append_new(beatsJ, beatJ);
             }
+            json_array_append_new(cellBeatsJ, beatsJ);
         }
 
-        json_object_set_new(rootJ, "beats", beatsJ);
+        json_object_set_new(rootJ, "beats", cellBeatsJ);
         json_object_set_new(rootJ, "subdivisions", subdivisionsJ);
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
+        json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
+        json_object_set_new(rootJ, "currentPattern", json_integer(currentPattern));
+        json_object_set_new(rootJ, "bpmInputMode", json_integer(bpmInputMode));
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
 
         return rootJ;
@@ -402,12 +410,13 @@ struct StochSeqGrid : Module {
 			}
 		}
 
-        // TODO: doesn't work right
-        json_t *beatsJ = json_object_get(rootJ, "beats");
-        if (beatsJ) {
+        json_t *cellBeatsJ = json_object_get(rootJ, "beats");
+        if (cellBeatsJ) {
             for (int i = 0; i < NUM_OF_CELLS; i++) {
+                json_t *beatsJ = json_array_get(cellBeatsJ, i);
+
                 for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
-                    json_t *beatJ = json_array_get(beatsJ, i + j * MAX_SUBDIVISIONS);
+                    json_t *beatJ = json_array_get(beatsJ, j);
                     if (beatJ) 
                         beats[i][j] = json_boolean_value(beatJ);
                 }
@@ -417,6 +426,18 @@ struct StochSeqGrid : Module {
         json_t *gateModeJ = json_object_get(rootJ, "gateMode");
         if (gateModeJ)
             gateMode = json_integer_value(gateModeJ);
+
+        json_t *voltModeJ = json_object_get(rootJ, "voltMode");
+        if (voltModeJ)
+            voltMode = json_integer_value(voltModeJ);
+
+        json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
+        if (currentPatternJ)
+            currentPattern = json_integer_value(currentPatternJ);
+
+        json_t *bpmInputModeJ = json_object_get(rootJ, "bpmInputMode");
+        if (bpmInputModeJ)
+            bpmInputMode = json_integer_value(bpmInputModeJ);
 
         json_t *runJ = json_object_get(rootJ, "run");
         if (runJ) 
@@ -547,10 +568,10 @@ struct StochSeqGrid : Module {
         }
 
 		if (params[PATTERN_PARAM].getValue() != currentPattern) {
-			currentPattern = params[PATTERN_PARAM].getValue();
-            int patt = (int)params[PATTERN_PARAM].getValue();
+			currentPattern = (int)params[PATTERN_PARAM].getValue();
+            // int patt = (int)params[PATTERN_PARAM].getValue();
             for (int i = 0; i < NUM_OF_CELLS; i++) {
-                subdivisions[i] = patt;
+                subdivisions[i] = currentPattern;
             }
 			// genPatterns(currentPattern);
 		}
