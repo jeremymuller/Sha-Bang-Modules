@@ -289,7 +289,7 @@ struct StochSeqGrid : Module {
         configButton(CLOCK_TOGGLE_PARAM, "Run");
         configParam(BPM_PARAM, -2.0, 4.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
         configButton(RESET_PARAM, "Reset");
-        configSwitch(PATTERN_PARAM, 0, 2, 0, "Pattern", {"duplets", "triplets", "quintuplets"});
+        configParam(PATTERN_PARAM, 1.0, 16.0, 1.0, "Subdivisions");
         configParam(LENGTH_PARAMS + PURPLE_SEQ, 1, 16, 4, "Purple seq length");
         configParam(LENGTH_PARAMS + BLUE_SEQ, 1, 16, 4, "Blue seq length");
         configParam(LENGTH_PARAMS + AQUA_SEQ, 1, 16, 4, "Aqua seq length");
@@ -419,46 +419,60 @@ struct StochSeqGrid : Module {
     }
 
     void genPatterns(float patt) {
-        int c = (int)patt;
-        switch (c) {
-            case 0: // duples
-                for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    subdivisions[i] = (int)pow(2, randRange(3));
-                }
-                break;
-            case 1: // triples
-                for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    int r = randRange(3);
-                    if (r == 0)
-                        subdivisions[i] = 1;
-                    else if (r == 1)
-                        subdivisions[i] = 3;
-                    else
-                        subdivisions[i] = 6;
-                }
-                break;
-            case 2:
-                for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    int r = randRange(3);
-                    if (r == 0)
-                        subdivisions[i] = 1;
-                    else if (r == 1)
-                        subdivisions[i] = 5;
-                    else
-                        subdivisions[i] = 10;
-                }
-                break;
-            case 3:
-                for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    gateProbabilities[i] = (i % 4 == 0) ? 1.0 : 0.0;
-                }
-                break;
-            default:
-                for (int i = 0; i < NUM_OF_CELLS; i++) {
-                    subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
-                }
-                break;
+        if (patt <= 16) {
+            float prob = fmod(patt, 1);
+            int c = (int)patt;
+            for (int i = 0; i < NUM_OF_CELLS; i++) {
+                int sub = random::uniform() < prob ? c + 1 : c;
+                sub = clamp(sub, 1, 16);
+                subdivisions[i] = sub;
+            }
+        } else {
+            for (int i = 0; i < NUM_OF_CELLS; i++) {
+                subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
+            }
         }
+
+
+        // switch (c) {
+        //     case 0: // duples
+        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //             subdivisions[i] = (int)pow(2, randRange(3));
+        //         }
+        //         break;
+        //     case 1: // triples
+        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //             int r = randRange(3);
+        //             if (r == 0)
+        //                 subdivisions[i] = 1;
+        //             else if (r == 1)
+        //                 subdivisions[i] = 3;
+        //             else
+        //                 subdivisions[i] = 6;
+        //         }
+        //         break;
+        //     case 2:
+        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //             int r = randRange(3);
+        //             if (r == 0)
+        //                 subdivisions[i] = 1;
+        //             else if (r == 1)
+        //                 subdivisions[i] = 5;
+        //             else
+        //                 subdivisions[i] = 10;
+        //         }
+        //         break;
+        //     case 3:
+        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //             gateProbabilities[i] = (i % 4 == 0) ? 1.0 : 0.0;
+        //         }
+        //         break;
+        //     default:
+        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //             subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
+        //         }
+        //         break;
+        // }
     }
 
     void resetSeqs() {
@@ -519,7 +533,11 @@ struct StochSeqGrid : Module {
 
 		if (params[PATTERN_PARAM].getValue() != currentPattern) {
 			currentPattern = params[PATTERN_PARAM].getValue();
-			genPatterns(currentPattern);
+            int patt = (int)params[PATTERN_PARAM].getValue();
+            for (int i = 0; i < NUM_OF_CELLS; i++) {
+                subdivisions[i] = patt;
+            }
+			// genPatterns(currentPattern);
 		}
         
 
@@ -531,6 +549,21 @@ struct StochSeqGrid : Module {
         }
 
         if (clockOn) {
+            // TODO: external clock
+            // if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
+            //     period += args.sampleTime;
+            //     if (period > timeOut) clockOn = false;
+            //     if (bpmDetect) {
+            //         if (extPulseIndex > 1) {
+            //             clockFreq = (1.0 / period) / (float)ppqn;
+            //         }
+
+            //         extPulseIndex++;
+            //         if (extPulseIndex >= ppqn) extPulseIndex = 0;
+            //         period = 0.0;
+            //     }
+            // }
+
             setMinMaxVolts();
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
@@ -1013,11 +1046,11 @@ struct StochSeqGridWidget : ModuleWidget {
             }
         }
 
-        addParam(createParamCentered<TinyBlueButton>(Vec(28.3, 93), module, StochSeqGrid::CLOCK_TOGGLE_PARAM));
-        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.3 - 3, 93 - 3), module, StochSeqGrid::TOGGLE_LIGHT));
-        addParam(createParamCentered<BlueKnob>(Vec(52.4, 93), module, StochSeqGrid::BPM_PARAM));
-        addParam(createParamCentered<TinyBlueButton>(Vec(11.1, 116.1), module, StochSeqGrid::RESET_PARAM));
-        addParam(createParamCentered<BlueKnob>(Vec(282.9, 29.8), module, StochSeqGrid::PATTERN_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(28.3, 79), module, StochSeqGrid::CLOCK_TOGGLE_PARAM));
+        addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(28.3 - 3, 79 - 3), module, StochSeqGrid::TOGGLE_LIGHT));
+        addParam(createParamCentered<BlueKnob>(Vec(52.4, 79), module, StochSeqGrid::BPM_PARAM));
+        addParam(createParamCentered<TinyBlueButton>(Vec(28.3, 97.3), module, StochSeqGrid::RESET_PARAM));
+        addParam(createParamCentered<BlueInvertKnob>(Vec(282.9, 29.8), module, StochSeqGrid::PATTERN_PARAM));
 
         // lengths
         addParam(createParamCentered<PurpleInvertKnob>(Vec(97.1, 29.8), module, StochSeqGrid::LENGTH_PARAMS + PURPLE_SEQ));
