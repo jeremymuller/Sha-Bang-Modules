@@ -307,7 +307,12 @@ struct StochSeqGrid : Module {
         configButton(CLOCK_TOGGLE_PARAM, "Run");
         configParam(BPM_PARAM, -2.0, 4.0, 1.0, "Tempo", " bpm", 2.0, 60.0);
         configButton(RESET_PARAM, "Reset");
-        configParam(PATTERN_PARAM, 1.0, 16.0, 1.0, "Subdivisions");
+        configSwitch(PATTERN_PARAM, 1, 16, 1, "Subdivisions", {
+            "quarter notes", "8th notes", "triplets", "quintuples",
+            "inside triplets", "outside triplets", "inside 16ths", "outside 16ths",
+            "left→right", "top→bottom", "corner→out", "out→corner",
+            "gradual random", "8th notes", "triplets", "uniform random",
+        });
         configParam(LENGTH_PARAMS + PURPLE_SEQ, 1, 16, 4, "Purple seq length");
         configParam(LENGTH_PARAMS + BLUE_SEQ, 1, 16, 4, "Blue seq length");
         configParam(LENGTH_PARAMS + AQUA_SEQ, 1, 16, 4, "Aqua seq length");
@@ -454,61 +459,116 @@ struct StochSeqGrid : Module {
         return Vec(x, y);
     }
 
-    void genPatterns(float patt) {
-        if (patt <= 16) {
-            float prob = fmod(patt, 1);
-            int c = (int)patt;
-            for (int i = 0; i < NUM_OF_CELLS; i++) {
-                int sub = random::uniform() < prob ? c + 1 : c;
-                sub = clamp(sub, 1, 16);
-                subdivisions[i] = sub;
-            }
-        } else {
-            for (int i = 0; i < NUM_OF_CELLS; i++) {
-                subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
-            }
-        }
-
-
-        // switch (c) {
-        //     case 0: // duples
-        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
-        //             subdivisions[i] = (int)pow(2, randRange(3));
-        //         }
-        //         break;
-        //     case 1: // triples
-        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
-        //             int r = randRange(3);
-        //             if (r == 0)
-        //                 subdivisions[i] = 1;
-        //             else if (r == 1)
-        //                 subdivisions[i] = 3;
-        //             else
-        //                 subdivisions[i] = 6;
-        //         }
-        //         break;
-        //     case 2:
-        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
-        //             int r = randRange(3);
-        //             if (r == 0)
-        //                 subdivisions[i] = 1;
-        //             else if (r == 1)
-        //                 subdivisions[i] = 5;
-        //             else
-        //                 subdivisions[i] = 10;
-        //         }
-        //         break;
-        //     case 3:
-        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
-        //             gateProbabilities[i] = (i % 4 == 0) ? 1.0 : 0.0;
-        //         }
-        //         break;
-        //     default:
-        //         for (int i = 0; i < NUM_OF_CELLS; i++) {
-        //             subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
-        //         }
-        //         break;
+    void genPatterns(int patt) {
+        // if (patt <= 16) {
+        //     float prob = fmod(patt, 1);
+        //     int c = (int)patt;
+        //     for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //         int sub = random::uniform() < prob ? c + 1 : c;
+        //         sub = clamp(sub, 1, 16);
+        //         subdivisions[i] = sub;
+        //     }
+        // } else {
+        //     for (int i = 0; i < NUM_OF_CELLS; i++) {
+        //         subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS);
+        //     }
         // }
+
+
+        switch (patt) {
+            case 1: 
+            case 2:
+            case 3:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    subdivisions[i] = currentPattern;
+                }
+                break;
+            case 4:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    subdivisions[i] = 5;
+                }
+                break;
+            case 5:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    if (i == 5 || i == 6 || i == 9 || i == 10) 
+                        subdivisions[i] = 3;
+                    else
+                        subdivisions[i] = 1;
+                }
+                break;
+            case 6:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    if (i == 5 || i == 6 || i == 9 || i == 10) 
+                        subdivisions[i] = 1;
+                    else
+                        subdivisions[i] = 3;
+                }
+                break;
+            case 7:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    if (i == 5 || i == 6 || i == 9 || i == 10) 
+                        subdivisions[i] = 4;
+                    else
+                        subdivisions[i] = 1;
+                }
+                break;
+            case 8:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    if (i == 5 || i == 6 || i == 9 || i == 10) 
+                        subdivisions[i] = 1;
+                    else
+                        subdivisions[i] = 4;
+                }
+                break;
+            case 9:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    // subdivisions[i] = (i % 4) + 1;
+                    int s = i % 4;
+                    subdivisions[i] = s < 3 ? s + 1 : s + 2;
+                }
+                break;
+            case 10:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    // subdivisions[i] = static_cast<int>(i / 4) + 1;
+                    int s = static_cast<int>(i / 4);
+                    subdivisions[i] = s < 3 ? s + 1 : s + 2;
+                }
+                break;
+            case 11:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    if (i == 0)
+                        subdivisions[i] = 1;
+                    else if (i == 1 || i == 4 || i == 5)
+                        subdivisions[i] = 2;
+                    else if (i == 2 || i == 6 || i == 8 || i == 9 || i == 10)
+                        subdivisions[i] = 3;
+                    else
+                        subdivisions[i] = 5;
+                }
+                break;
+            case 12:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    if (i == 0)
+                        subdivisions[i] = 5;
+                    else if (i == 1 || i == 4 || i == 5)
+                        subdivisions[i] = 3;
+                    else if (i == 2 || i == 6 || i == 8 || i == 9 || i == 10)
+                        subdivisions[i] = 2;
+                    else
+                        subdivisions[i] = 1;
+                }
+                break;
+            case 13:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    subdivisions[i] = static_cast<int>(random::uniform() * (i + 1)) + 1;
+                }
+                break;
+            default:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    subdivisions[i] = static_cast<int>(random::uniform() * NUM_OF_CELLS) + 1;
+                }
+                break;
+        }
     }
 
     void resetSeqs() {
@@ -570,10 +630,11 @@ struct StochSeqGrid : Module {
 		if (params[PATTERN_PARAM].getValue() != currentPattern) {
 			currentPattern = (int)params[PATTERN_PARAM].getValue();
             // int patt = (int)params[PATTERN_PARAM].getValue();
-            for (int i = 0; i < NUM_OF_CELLS; i++) {
-                subdivisions[i] = currentPattern;
-            }
-			// genPatterns(currentPattern);
+
+            // for (int i = 0; i < NUM_OF_CELLS; i++) {
+            //     subdivisions[i] = currentPattern;
+            // }
+			genPatterns(currentPattern);
 		}
         
         for (int i = 0; i < NUM_SEQ; i++) {
@@ -654,12 +715,6 @@ struct StochSeqGrid : Module {
                         seqs[i].phase -= 1.0;
                         seqs[i].subPhase = 0.0;
                         seqs[i].playCellRhythms = false;
-
-                        // TODO: reset here?
-                        // if (resetMode) {
-                        //     resetMode = false;
-                        //     resetSeqs();
-                        // }
 
                         seqs[i].clockStep();
 
