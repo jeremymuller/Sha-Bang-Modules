@@ -290,6 +290,7 @@ struct StochSeqGrid : Module {
     int voltMode = 0;
     float minMaxVolts[2] = {0.0, 1.0};
     int currentPattern = 0;
+    int hoverRhythm = 1;
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
     float *gateProbabilities = new float[NUM_OF_CELLS];
@@ -814,6 +815,25 @@ struct StochSeqGrid : Module {
     }
 };
 
+struct RhythmNumberDisplay : Widget {
+    std::string text;
+    int fontSize;
+    StochSeqGrid *module;
+    RhythmNumberDisplay(int _fontSize = 20) {
+        fontSize = _fontSize;
+        box.size.y = BND_WIDGET_HEIGHT;
+    }
+    void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+
+        text = std::to_string(module->hoverRhythm);
+        nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
+        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+        nvgFontSize(args.vg, fontSize);
+        nvgText(args.vg, 0, 0, text.c_str(), NULL);
+    }
+};
+
 struct CellOverlay : Widget {
     StochSeqGrid *module;
 
@@ -866,6 +886,11 @@ struct SubdivisionDisplay : Widget {
     StochSeqGrid *module;
 
     SubdivisionDisplay() {}
+
+    void onHover(const HoverEvent &e) override {
+        int rhythms = module->subdivisions[index];
+        module->hoverRhythm = rhythms;
+    }
 
     void onButton(const event::Button &e) override {
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1109,6 +1134,11 @@ struct StochSeqGridWidget : ModuleWidget {
     StochSeqGridWidget(StochSeqGrid *module) {
         setModule(module);
         setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/StochSeqGrid.svg")));
+
+        RhythmNumberDisplay *rhythmDisplay = new RhythmNumberDisplay();
+        rhythmDisplay->module = module;
+        rhythmDisplay->box.pos = Vec(321, 20.6);
+        addChild(rhythmDisplay);
 
         BGGrid *gridDisplay = new BGGrid();
         gridDisplay->box.pos = Vec(82.5, 54.8);
