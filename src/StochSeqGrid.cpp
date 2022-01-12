@@ -291,6 +291,7 @@ struct StochSeqGrid : Module {
     float minMaxVolts[2] = {0.0, 1.0};
     int currentPattern = 0;
     int hoverRhythm = 1;
+    int hoverCell = 0;
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
     float *gateProbabilities = new float[NUM_OF_CELLS];
@@ -312,7 +313,7 @@ struct StochSeqGrid : Module {
             "quarter notes", "8th notes", "triplets", "quintuples",
             "inside triplets", "outside triplets", "inside 16ths", "outside 16ths",
             "left→right", "top→bottom", "corner→out", "out→corner",
-            "gradual random", "8th notes", "triplets", "uniform random",
+            "random duple", "random triple", "gradual random", "uniform random",
         });
         configParam(LENGTH_PARAMS + PURPLE_SEQ, 1, 16, 4, "Purple seq length");
         configParam(LENGTH_PARAMS + BLUE_SEQ, 1, 16, 4, "Blue seq length");
@@ -560,6 +561,30 @@ struct StochSeqGrid : Module {
                 }
                 break;
             case 13:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    int r = static_cast<int>(random::uniform() * 4);
+                    if (r == 0)
+                        subdivisions[i] = 1;
+                    else if (r == 1)
+                        subdivisions[i] = 2;
+                    else if (r == 2)
+                        subdivisions[i] = 4;
+                    else
+                        subdivisions[i] = 8;
+                }
+                break;
+            case 14:
+                for (int i = 0; i < NUM_OF_CELLS; i++) {
+                    int r = static_cast<int>(random::uniform() * 3);
+                    if (r == 0)
+                        subdivisions[i] = 1;
+                    else if (r == 1)
+                        subdivisions[i] = 3;
+                    else
+                        subdivisions[i] = 6;
+                }
+                break;
+            case 15:
                 for (int i = 0; i < NUM_OF_CELLS; i++) {
                     subdivisions[i] = static_cast<int>(random::uniform() * (i + 1)) + 1;
                 }
@@ -815,11 +840,34 @@ struct StochSeqGrid : Module {
     }
 };
 
+struct HighlightDisplay : Widget {
+    StochSeqGrid *module;
+
+    HighlightDisplay() {}
+
+    void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+
+        // NVGcolor nvgLerpRGBA(NVGcolor c0, NVGcolor c1, float u);
+        float ux = (module->hoverCell % 4) / 3.0;
+        float uy = static_cast<int>(module->hoverCell / 4) / 3.0;
+        NVGcolor horizontal1 = nvgLerpRGBA(getPurple(), getBlue(), ux);
+        NVGcolor horizontal2 = nvgLerpRGBA(getAqua(), getRed(), ux);
+        NVGcolor vertical = nvgLerpRGBA(horizontal1, horizontal2, uy);
+
+        nvgStrokeColor(args.vg, vertical);
+        nvgStrokeWidth(args.vg, 3.0);
+        nvgBeginPath(args.vg);
+        nvgRect(args.vg, 0.0, 0.0, box.size.x, box.size.y);
+        nvgStroke(args.vg);
+    }
+};
+
 struct RhythmNumberDisplay : Widget {
     std::string text;
     int fontSize;
     StochSeqGrid *module;
-    RhythmNumberDisplay(int _fontSize = 20) {
+    RhythmNumberDisplay(int _fontSize = 18) {
         fontSize = _fontSize;
         box.size.y = BND_WIDGET_HEIGHT;
     }
@@ -828,7 +876,8 @@ struct RhythmNumberDisplay : Widget {
 
         text = std::to_string(module->hoverRhythm);
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+        // nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, 0, 0, text.c_str(), NULL);
     }
@@ -890,6 +939,7 @@ struct SubdivisionDisplay : Widget {
     void onHover(const HoverEvent &e) override {
         int rhythms = module->subdivisions[index];
         module->hoverRhythm = rhythms;
+        module->hoverCell = index;
     }
 
     void onButton(const event::Button &e) override {
@@ -1089,7 +1139,7 @@ struct CellsDisplay : Widget {
                         int xPos = clamp(module->seqs[i].currentCellX, 0, 3);
                         int yPos = clamp(module->seqs[i].currentCellY, 0, 3);
                         nvgStrokeColor(args.vg, module->seqs[i].color);
-                        nvgFillColor(args.vg, nvgTransRGBA(module->seqs[i].color, 35));
+                        nvgFillColor(args.vg, nvgTransRGBA(module->seqs[i].color, 32)); // 35
                         nvgBeginPath(args.vg);
                         nvgRect(args.vg, xPos * CELL_SIZE, yPos * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                         nvgFill(args.vg);
@@ -1139,6 +1189,12 @@ struct StochSeqGridWidget : ModuleWidget {
         rhythmDisplay->module = module;
         rhythmDisplay->box.pos = Vec(321, 20.6);
         addChild(rhythmDisplay);
+
+        HighlightDisplay *highlight = new HighlightDisplay();
+        highlight->module = module;
+        highlight->box.pos = Vec(309, 17.6);
+        highlight->box.size = Vec(24, 24);
+        addChild(highlight);
 
         BGGrid *gridDisplay = new BGGrid();
         gridDisplay->box.pos = Vec(82.5, 54.8);
