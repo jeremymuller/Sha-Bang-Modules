@@ -147,7 +147,6 @@ struct SeqCell {
     }
 
     void doRandomPath() {
-        // TODO: fix for blue, aqua, red
         int rIndex = pathArray[randRange(length)];
         Vec pos = getXYfromIndex(rIndex);
         currentCellX = pos.x;
@@ -729,12 +728,11 @@ struct StochSeqGrid : Module {
 
             for (int i = 0; i < NUM_SEQ; i++) {
                 seqs[i].length = params[LENGTH_PARAMS + i].getValue();
+                float rhythmFraction = seqs[i].rhythm / seqs[i].duration;
+                seqs[i].phase += clockFreq * rhythmFraction * args.sampleTime;
+                seqs[i].subPhase += clockFreq * rhythmFraction * getSubdivision(seqs[i].currentCellX, seqs[i].currentCellY) * args.sampleTime;
 
                 if (seqs[i].isOn) {
-                    float rhythmFraction = seqs[i].rhythm / seqs[i].duration;
-                    seqs[i].phase += clockFreq * rhythmFraction * args.sampleTime;
-                    seqs[i].subPhase += clockFreq * rhythmFraction * getSubdivision(seqs[i].currentCellX, seqs[i].currentCellY) * args.sampleTime;
-
                     seqs[i].clockGate = (seqs[i].subPhase < 0.5);
 
                     if (seqs[i].phase >= 1.0) {
@@ -791,6 +789,7 @@ struct StochSeqGrid : Module {
                         seqs[i].phase = 0.0;
                         seqs[i].subPhase = 0.0;
                         seqs[i].playCellRhythms = false;
+                        seqs[i].gateOn = false;
 
                         seqs[i].clockStep();
                     }
@@ -848,18 +847,27 @@ struct HighlightDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
-        // NVGcolor nvgLerpRGBA(NVGcolor c0, NVGcolor c1, float u);
-        float ux = (module->hoverCell % 4) / 3.0;
-        float uy = static_cast<int>(module->hoverCell / 4) / 3.0;
-        NVGcolor horizontal1 = nvgLerpRGBA(getPurple(), getBlue(), ux);
-        NVGcolor horizontal2 = nvgLerpRGBA(getAqua(), getRed(), ux);
-        NVGcolor vertical = nvgLerpRGBA(horizontal1, horizontal2, uy);
+        Vec pos = module->getXYfromIndex(module->hoverCell);
 
-        nvgStrokeColor(args.vg, vertical);
-        nvgStrokeWidth(args.vg, 3.0);
+        nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 100));
+        // nvgFillColor(args.vg, getAqua());
+
         nvgBeginPath(args.vg);
-        nvgRect(args.vg, 0.0, 0.0, box.size.x, box.size.y);
-        nvgStroke(args.vg);
+        nvgRect(args.vg, pos.x * 6, pos.y * 6, 6, 6);
+        nvgFill(args.vg);
+
+        // NVGcolor nvgLerpRGBA(NVGcolor c0, NVGcolor c1, float u);
+        // float ux = (module->hoverCell % 4) / 3.0;
+        // float uy = static_cast<int>(module->hoverCell / 4) / 3.0;
+        // NVGcolor horizontal1 = nvgLerpRGBA(getPurple(), getBlue(), ux);
+        // NVGcolor horizontal2 = nvgLerpRGBA(getAqua(), getRed(), ux);
+        // NVGcolor vertical = nvgLerpRGBA(horizontal1, horizontal2, uy);
+
+        // nvgStrokeColor(args.vg, vertical);
+        // nvgStrokeWidth(args.vg, 3.0);
+        // nvgBeginPath(args.vg);
+        // nvgRect(args.vg, 0.0, 0.0, box.size.x, box.size.y);
+        // nvgStroke(args.vg);
     }
 };
 
@@ -876,8 +884,8 @@ struct RhythmNumberDisplay : Widget {
 
         text = std::to_string(module->hoverRhythm);
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
-        // nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+        nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+        // nvgFillColor(args.vg, getAqua());
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, 0, 0, text.c_str(), NULL);
     }
@@ -1185,16 +1193,16 @@ struct StochSeqGridWidget : ModuleWidget {
         setModule(module);
         setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/StochSeqGrid.svg")));
 
-        RhythmNumberDisplay *rhythmDisplay = new RhythmNumberDisplay();
-        rhythmDisplay->module = module;
-        rhythmDisplay->box.pos = Vec(321, 20.6);
-        addChild(rhythmDisplay);
-
         HighlightDisplay *highlight = new HighlightDisplay();
         highlight->module = module;
         highlight->box.pos = Vec(309, 17.6);
         highlight->box.size = Vec(24, 24);
         addChild(highlight);
+
+        RhythmNumberDisplay *rhythmDisplay = new RhythmNumberDisplay();
+        rhythmDisplay->module = module;
+        rhythmDisplay->box.pos = Vec(321, 20.6);
+        addChild(rhythmDisplay);
 
         BGGrid *gridDisplay = new BGGrid();
         gridDisplay->box.pos = Vec(82.5, 54.8);
