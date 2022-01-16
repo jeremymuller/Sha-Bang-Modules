@@ -561,16 +561,15 @@ struct PhotronDisplay : LightWidget {
                     }
                 }
 
+                // // draw green circles for debugging
                 // for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
-                //     module->circles[i].update();
-                //     // Vec circle = module->circles[i].getPos();
-                //     // float cRadius = module->circles[i].getRadius();
+                //     Vec circle = module->circles[i].getPos();
+                //     float cRadius = module->circles[i].getRadius();
 
-                //     // nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
-                //     // nvgBeginPath(args.vg);
-                //     // nvgCircle(args.vg, circle.x, circle.y, cRadius);
-                //     // nvgStroke(args.vg);
-
+                //     nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
+                //     nvgBeginPath(args.vg);
+                //     nvgCircle(args.vg, circle.x, circle.y, cRadius);
+                //     nvgStroke(args.vg);
                 // }
 
             }

@@ -28,7 +28,7 @@ struct Sequencer {
         }
     }
 
-    void clockStep(int l, float spread) {
+    void clockStep(int l, float voltScaled, int voltRange) {
         // increment index
         seqLength = l;
         gateIndex  = (gateIndex + 1) % seqLength;
@@ -46,8 +46,10 @@ struct Sequencer {
         }
 
         // pitch
-        volts = prob * (2 * spread) - spread;
-        invVolts = (1.0 - prob) * (2 * spread) - spread;
+        float voltShift = voltRange == 0? -5.0 : 0.0;
+        prob *= 10.0; // scale up to 10V
+        volts = (prob + voltShift) * voltScaled;
+        invVolts = ((10.0 - prob) + voltShift) * voltScaled;
     }
 };
 
@@ -108,6 +110,7 @@ struct StochSeq4 : Module, Quantize {
     bool mclkOverride = true;
     int gateMode = GATE_MODE;
     int voltMode = VOLT_INDEPENDENT_MODE;
+    int voltRange = 1;
     bool resetMode = false;
     bool showPercentages = true;
     bool enableKBShortcuts = true;
@@ -143,10 +146,10 @@ struct StochSeq4 : Module, Quantize {
         configButton(DIMINUTION_PARAM + AQUA_SEQ, "Diminish aqua pattern");
         configButton(DIMINUTION_PARAM + RED_SEQ, "Diminish red pattern");
 
-        configParam(SPREAD_PARAM + PURPLE_SEQ, -4.0, 4.0, 1.0, "Purple spread");
-        configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 1.0, "Blue spread");
-        configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 1.0, "Aqua spread");
-        configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 1.0, "Red spread");
+        configParam(SPREAD_PARAM + PURPLE_SEQ, 0.0, 1.0, 0.1, "Purple volt scale", " %", 0, 100);
+        configParam(SPREAD_PARAM + BLUE_SEQ, 0.0, 1.0, 0.1, "Blue volt scale", " %", 0, 100);
+        configParam(SPREAD_PARAM + AQUA_SEQ, 0.0, 1.0, 0.1, "Aqua volt scale", " %", 0, 100);
+        configParam(SPREAD_PARAM + RED_SEQ, 0.0, 1.0, 0.1, "Red volt scale", " %", 0, 100);
 
         configInput(MASTER_CLOCK_INPUT, "Master clock");
         configInput(RESET_INPUT, "Reset");
@@ -213,6 +216,7 @@ struct StochSeq4 : Module, Quantize {
         json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
         json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
+        json_object_set_new(rootJ, "voltRange", json_integer(voltRange));
 
         return rootJ;
     }
@@ -235,6 +239,9 @@ struct StochSeq4 : Module, Quantize {
 
         json_t *voltModeJ = json_object_get(rootJ, "voltMode");
         if (voltModeJ) voltMode = json_integer_value(voltModeJ);
+
+        json_t *voltRangeJ = json_object_get(rootJ, "voltRange");
+		if (voltRangeJ) voltRange = json_integer_value(voltRangeJ);
 
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
@@ -358,7 +365,7 @@ struct StochSeq4 : Module, Quantize {
         for (int i = 0; i < NUM_SEQS; i++) {
             int l = (int)params[LENGTH_PARAM+i].getValue();
             float spread = params[SPREAD_PARAM+i].getValue();
-            seqs[i].clockStep(l, spread);    
+            seqs[i].clockStep(l, spread, voltRange);    
         }
     }
 
@@ -366,7 +373,7 @@ struct StochSeq4 : Module, Quantize {
         // individual clock steps
         int l = (int)params[LENGTH_PARAM + i].getValue();
         float spread = params[SPREAD_PARAM + i].getValue();
-        seqs[i].clockStep(l, spread);
+        seqs[i].clockStep(l, spread, voltRange);
     }
 
     void resetSeq() {
@@ -946,6 +953,8 @@ struct StochSeq4Widget : ModuleWidget {
 		else voltModeItem->rightText = std::string("Sample and Hold") + " " + RIGHT_ARROW;
 		voltModeItem->module = module;
 		menu->addChild(voltModeItem);
+
+        menu->addChild(createIndexPtrSubmenuItem("Volt Offset", {"±5V", "+10V"}, &module->voltRange));
 
         menu->addChild(new MenuEntry);
 

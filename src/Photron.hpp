@@ -188,6 +188,7 @@ struct MarchingCircle {
     float radius;
     int displayWidth = 690;
     int displayHeight = 380;
+    int margin = 40;
 
     MarchingCircle() {}
 
@@ -220,21 +221,32 @@ struct MarchingCircle {
 
     void checkEdges() {
         // bounce off
-        float r = radius/1.5;
+        float r = 0.0;
         if (pos.x - r < 0) {
             pos.x = r;
-            vel.x *= -1;
+            vel.x *= -0.75;
         } else if (pos.x + r > displayWidth) {
             pos.x = displayWidth - r;
-            vel.x *= -1;
+            vel.x *= -0.75;
         }
 
         if (pos.y - r < 0) {
             pos.y = r;
-            vel.y *= -1;
+            vel.y *= -0.75;
         } else if (pos.y + r > displayHeight) {
             pos.y = displayHeight - r;
-            vel.y *= -1;
+            vel.y *= -0.75;
         }
+
+        // // wrap: don't think I like this as much
+        // if (pos.x + radius < margin)
+        //     pos.x = displayWidth + radius;
+        // else if (pos.x - radius > displayWidth)
+        //     pos.x = margin - radius;
+
+        // if (pos.y + radius < 0) 
+        //     pos.y = displayHeight + radius;
+        // else if (pos.y - radius > displayHeight)
+        //     pos.y = -radius;
     }
 };

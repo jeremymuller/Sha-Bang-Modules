@@ -56,6 +56,7 @@ struct StochSeq : Module, Quantize {
 	dsp::PulseGenerator notGatePulse;
 	int gateMode = GATE_MODE;
 	int voltMode = VOLT_INDEPENDENT_MODE;
+	int voltRange = 1;
 	int seqLength = NUM_OF_SLIDERS;
 	int gateIndex = -1;
 	int currentGateOut = gateIndex;
@@ -80,7 +81,7 @@ struct StochSeq : Module, Quantize {
 		configButton(RANDOM_PARAM, "Randomize pattern");
 		configButton(DIMINUTION_PARAM, "Diminish pattern");
 		configParam(LENGTH_PARAM, 1.0, 32.0, 32.0, "Seq length");
-		configParam(SPREAD_PARAM, -4.0, 4.0, 1.0, "Spread");
+		configParam(SPREAD_PARAM, 0.0, 1.0, 0.1, "Volt scale", " %", 0, 100);
 		configParam(ROOT_NOTE_PARAM, 0.0, Quantize::NUM_OF_NOTES - 1, 0.0, "Root note");
 		configParam(SCALE_PARAM, 0.0, Quantize::NUM_OF_SCALES, 0.0, "Scale");
 
@@ -121,6 +122,7 @@ struct StochSeq : Module, Quantize {
 		json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
 		json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
 		json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
+		json_object_set_new(rootJ, "voltRange", json_integer(voltRange));
 
 		return rootJ;
 	}
@@ -137,6 +139,9 @@ struct StochSeq : Module, Quantize {
 
 		json_t *voltModeJ = json_object_get(rootJ, "voltMode");
 		if (voltModeJ) voltMode = json_integer_value(voltModeJ);
+
+		json_t *voltRangeJ = json_object_get(rootJ, "voltRange");
+		if (voltRangeJ) voltRange = json_integer_value(voltRangeJ);
 
 		json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
 		if (currentPatternJ) currentPattern = json_integer_value(currentPatternJ);
@@ -236,9 +241,11 @@ struct StochSeq : Module, Quantize {
 			notGateOn = true;
 		}
 
-		float spread = params[SPREAD_PARAM].getValue();
-		float volts = prob * (2 * spread) - spread;
-		float invVolts = (1.0 - prob) * (2 * spread) - spread;
+		float voltScaled = params[SPREAD_PARAM].getValue();
+		float voltShift = voltRange == 0 ? -5.0 : 0.0;
+		prob *= 10.0; // scale up to 10V
+		float volts = (prob + voltShift) * voltScaled;
+		float invVolts = ((10.0 - prob) + voltShift) * voltScaled;
 		pitchVoltage = Quantize::quantizeRawVoltage(volts, rootNote, scale);
 		invPitchVoltage = Quantize::quantizeRawVoltage(invVolts, rootNote, scale);
 
@@ -747,6 +754,8 @@ struct StochSeqWidget : ModuleWidget {
 		else voltModeItem->rightText = std::string("Sample and Hold") + " " + RIGHT_ARROW;
 		voltModeItem->module = module;
 		menu->addChild(voltModeItem);
+
+		menu->addChild(createIndexPtrSubmenuItem("Volt Offset", {"±5V", "+10V"}, &module->voltRange));
 
 		menu->addChild(new MenuEntry);
 
