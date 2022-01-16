@@ -656,8 +656,8 @@ struct PhotronWidget : ModuleWidget {
         addParam(createParamCentered<TinyAquaButton>(Vec(27.2, 333.8), module, Photron::WAVEFORM_PARAM));
         addParam(createParamCentered<TinyRedButton>(Vec(27.2, 352.1), module, Photron::COLOR_PARAM));
 
-        addInput(createInputCentered<TinyPortAqua>(Vec(9.7, 333.8), module, Photron::WAVEFORM_INPUT));
-        addInput(createInputCentered<TinyPortRed>(Vec(9.7, 352.1), module, Photron::COLOR_TRIGGER_INPUT));
+        addInput(createInputCentered<TinyPJ301MAqua>(Vec(9.7, 333.8), module, Photron::WAVEFORM_INPUT));
+        addInput(createInputCentered<TinyPJ301MRed>(Vec(9.7, 352.1), module, Photron::COLOR_TRIGGER_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 370.3), module, Photron::INVERT_INPUT));
     }
 

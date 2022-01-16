@@ -1033,7 +1033,43 @@ struct SubdivisionDisplay : Widget {
 
     void draw(const DrawArgs &args) override {
         if (module == NULL) {
-            // TODO: draw stuff for preview 
+            // draw stuff for preview
+            float radius = 22.0;
+            Vec center = Vec(box.size.x / 2, box.size.y / 2);
+            int subRhythms = (int)randRange(1, 12);
+
+            // if only one beat
+            if (subRhythms == 1) {
+                nvgBeginPath(args.vg);
+                nvgCircle(args.vg, center.x, center.y, 35.0/2);
+                nvgFill(args.vg);
+            } else {
+                circleRad = rescale(subRhythms, 2.0, MAX_SUBDIVISIONS, 16.0 / 2, 8.0 / 2);
+
+                for (int i = 0; i < subRhythms; i++) {
+                    float angle = rescale((float)i, 0.0, subRhythms, -M_PI/2, M_PI*2.0 - M_PI/2);
+                    float x = cos(angle) * radius;
+                    float y = sin(angle) * radius;
+                    Vec pos = Vec(x, y).plus(center);
+                    positions[i] = pos;
+
+                    // connected lines
+                    nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                    nvgStrokeWidth(args.vg, i == 0 ? 2.5 : 1.0);
+                    nvgBeginPath(args.vg);
+                    nvgMoveTo(args.vg, center.x, center.y);
+                    nvgLineTo(args.vg, pos.x, pos.y);
+                    nvgStroke(args.vg);
+
+                    nvgBeginPath(args.vg);
+                    nvgCircle(args.vg, pos.x, pos.y, circleRad);
+                    nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+                    nvgFill(args.vg);
+                }
+            }
+
+
+
             return;
         }
         
