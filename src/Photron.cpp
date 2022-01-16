@@ -4,7 +4,7 @@
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
 #define BUFFER_SIZE 512 // 512
-#define MARGIN 0
+#define MARGIN 4
 #define NUM_OF_MARCHING_CIRCLES 4
 
 struct Photron : Module {
@@ -250,19 +250,13 @@ struct Photron : Module {
                     blocks[y][x].update();
 
                     // layer 1 marching stuff
-                    float xPos = blocks[y][x].pos.x;
-                    float yPos = blocks[y][x].pos.y;
-                    Vec cell = Vec(xPos, yPos);
-                    float nw = calculateCorner(xPos, yPos);
-                    float ne = calculateCorner(xPos + CELL_SIZE, yPos);
-                    float se = calculateCorner(xPos + CELL_SIZE, yPos + CELL_SIZE);
-                    float sw = calculateCorner(xPos, yPos + CELL_SIZE);
-
-                    // blockAlpha[y][x] = calculateCell(nw, ne, se, sw);
                     blockAlpha[y][x] = calculateCell(blocks[y][x].getCenter());
 
-                    // calculateCell(cell, nw, ne, se, sw);
                 }
+            }
+
+            for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+                circles[i].update();
             }
         }
         sr += srIncrement;
@@ -374,40 +368,6 @@ struct Photron : Module {
             sum = clamp(newSum, 0.0, 255.0);
             return (int)sum;
         }
-    }
-
-    float calculateCorner(float x, float y) {
-        float sum = 0.0;
-        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
-            float r = circles[i].radius * 0.6;
-            float d = (x - circles[i].pos.x) * (x - circles[i].pos.x) + (y - circles[i].pos.y) * (y - circles[i].pos.y);
-            sum += (r * r) / d;
-        }
-        return sum;
-    }
-
-    int calculateCell(float nw, float ne, float se, float sw) {
-        float sum = nw + ne + se + sw;
-
-        if (sum >= 4) {
-            return 255;
-        } else {
-            float newSum = rescale(sum, 0.95, 4, 0, 254);
-            sum = clamp(newSum, 0.0, 255.0);
-            return (int)sum;
-        }
-    }
-
-    int getState(float a, float b, float c, float d) {
-        a = a >= 1 ? 1 : 0;
-        b = b >= 1 ? 1 : 0;
-        c = c >= 1 ? 1 : 0;
-        d = d >= 1 ? 1 : 0;
-        return (int)a * 8 + (int)b * 4 + (int)c * 2 + (int)d * 1;
-    }
-
-    float getPointOnLine(float weakPoint, float strongPoint, float weakValue, float strongValue) {
-        return weakPoint + (strongPoint - weakPoint) * ((1 - weakValue) / (strongValue - weakValue));
     }
 };
 
@@ -601,17 +561,17 @@ struct PhotronDisplay : LightWidget {
                     }
                 }
 
-                for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
-                    module->circles[i].update();
-                    // Vec circle = module->circles[i].getPos();
-                    // float cRadius = module->circles[i].getRadius();
+                // for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+                //     module->circles[i].update();
+                //     // Vec circle = module->circles[i].getPos();
+                //     // float cRadius = module->circles[i].getRadius();
 
-                    // nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
-                    // nvgBeginPath(args.vg);
-                    // nvgCircle(args.vg, circle.x, circle.y, cRadius);
-                    // nvgStroke(args.vg);
+                //     // nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
+                //     // nvgBeginPath(args.vg);
+                //     // nvgCircle(args.vg, circle.x, circle.y, cRadius);
+                //     // nvgStroke(args.vg);
 
-                }
+                // }
 
             }
 
