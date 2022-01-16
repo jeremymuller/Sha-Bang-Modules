@@ -1314,7 +1314,7 @@ struct StochSeqGridWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
 
         menu->addChild(createIndexPtrSubmenuItem("Gate mMde", {"gates", "triggers"}, &module->gateMode));
-        menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"0V 1V", "0V 2V", "-5V +5V", "0V 10V"}, &module->voltMode));
+        menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltMode));
         menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
         menu->addChild(new MenuEntry);
