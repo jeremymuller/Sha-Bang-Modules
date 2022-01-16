@@ -4,7 +4,8 @@
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
 #define BUFFER_SIZE 512 // 512
-#define MARGIN 10
+#define MARGIN 0
+#define NUM_OF_MARCHING_CIRCLES 4
 
 struct Photron : Module {
     enum WaveformIds {
@@ -68,6 +69,10 @@ struct Photron : Module {
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
     static const int rows = DISPLAY_SIZE_HEIGHT / CELL_SIZE;
     Block blocks[rows][cols];
+    float field[rows][cols];
+    int blockAlpha[rows][cols];
+
+    MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
 
     Photron() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -95,7 +100,15 @@ struct Photron : Module {
                 Block b(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE);
                 blocks[y][x] = b;
                 blocks[y][x].isSet = true;
+
+                field[y][x] = random::uniform();
+                blockAlpha[y][x] = 0;
             }
+        }
+
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            MarchingCircle c(randRange(DISPLAY_SIZE_WIDTH), randRange(DISPLAY_SIZE_HEIGHT));
+            circles[i] = c;
         }
     }
 
@@ -235,6 +248,20 @@ struct Photron : Module {
                     }
 
                     blocks[y][x].update();
+
+                    // layer 1 marching stuff
+                    float xPos = blocks[y][x].pos.x;
+                    float yPos = blocks[y][x].pos.y;
+                    Vec cell = Vec(xPos, yPos);
+                    float nw = calculateCorner(xPos, yPos);
+                    float ne = calculateCorner(xPos + CELL_SIZE, yPos);
+                    float se = calculateCorner(xPos + CELL_SIZE, yPos + CELL_SIZE);
+                    float sw = calculateCorner(xPos, yPos + CELL_SIZE);
+
+                    // blockAlpha[y][x] = calculateCell(nw, ne, se, sw);
+                    blockAlpha[y][x] = calculateCell(blocks[y][x].getCenter());
+
+                    // calculateCell(cell, nw, ne, se, sw);
                 }
             }
         }
@@ -258,7 +285,7 @@ struct Photron : Module {
             }
         }
 
-        	// Are we waiting on the next trigger?
+    // Are we waiting on the next trigger?
 	if (bufferIndex >= BUFFER_SIZE) {
 		// Trigger immediately if external but nothing plugged in, or in Lissajous mode
 		// if (lissajous || (external && !inputs[TRIG_INPUT].isConnected())) {
@@ -329,6 +356,58 @@ struct Photron : Module {
                 blocks[y][x].rgb = Vec3(255-rgb.x, 255-rgb.y, 255-rgb.z);
             }
         }
+    }
+
+    int calculateCell(Vec blockPos) {
+        float sum = 0.0;
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            float r = circles[i].radius * 0.9;
+            float d = (blockPos.x - circles[i].pos.x) * (blockPos.x - circles[i].pos.x) + (blockPos.y - circles[i].pos.y) * (blockPos.y - circles[i].pos.y);
+            sum += (r * r) / d;
+        }
+
+        if (sum >= 1) {
+            return 255;
+        } else {
+            sum = sum * sum;
+            float newSum = rescale(sum, 0.2, 1, 0, 254);
+            sum = clamp(newSum, 0.0, 255.0);
+            return (int)sum;
+        }
+    }
+
+    float calculateCorner(float x, float y) {
+        float sum = 0.0;
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            float r = circles[i].radius * 0.6;
+            float d = (x - circles[i].pos.x) * (x - circles[i].pos.x) + (y - circles[i].pos.y) * (y - circles[i].pos.y);
+            sum += (r * r) / d;
+        }
+        return sum;
+    }
+
+    int calculateCell(float nw, float ne, float se, float sw) {
+        float sum = nw + ne + se + sw;
+
+        if (sum >= 4) {
+            return 255;
+        } else {
+            float newSum = rescale(sum, 0.95, 4, 0, 254);
+            sum = clamp(newSum, 0.0, 255.0);
+            return (int)sum;
+        }
+    }
+
+    int getState(float a, float b, float c, float d) {
+        a = a >= 1 ? 1 : 0;
+        b = b >= 1 ? 1 : 0;
+        c = c >= 1 ? 1 : 0;
+        d = d >= 1 ? 1 : 0;
+        return (int)a * 8 + (int)b * 4 + (int)c * 2 + (int)d * 1;
+    }
+
+    float getPointOnLine(float weakPoint, float strongPoint, float weakValue, float strongValue) {
+        return weakPoint + (strongPoint - weakPoint) * ((1 - weakValue) / (strongValue - weakValue));
     }
 };
 
@@ -446,31 +525,43 @@ struct PhotronDisplay : LightWidget {
             for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
                 for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
 
-                    bool topEdge = y < MARGIN;
-                    bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
-                    bool leftEdge = x < MARGIN;
-                    bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
-
-                    if (topEdge || bottomEdge || leftEdge || rightEdge) {
-                        Vec3 rgb = module->blocks[y][x].rgb;
-                        if (module->background == Photron::COLOR) {
-                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        } else {
-                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        }
-
-                        // if (module->isColor) {
-                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        // } else {
-                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        // }
-
-                        nvgBeginPath(args.vg);
-                        nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
-                        nvgFill(args.vg);
+                    Vec3 rgb = module->blocks[y][x].rgb;
+                    if (module->background == Photron::COLOR) {
+                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    } else {
+                        NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
                     }
+
+                    nvgBeginPath(args.vg);
+                    nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                    nvgFill(args.vg);
+
+                    // bool topEdge = y < MARGIN;
+                    // bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
+                    // bool leftEdge = x < MARGIN;
+                    // bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
+
+                    // if (topEdge || bottomEdge || leftEdge || rightEdge) {
+                    //     Vec3 rgb = module->blocks[y][x].rgb;
+                    //     if (module->background == Photron::COLOR) {
+                    //         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    //     } else {
+                    //         NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                    //         nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    //     }
+
+                    //     // if (module->isColor) {
+                    //     //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    //     // } else {
+                    //     //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                    //     //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    //     // }
+
+                    //     nvgBeginPath(args.vg);
+                    //     nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                    //     nvgFill(args.vg);
+                    // }
 
                 }
             }
@@ -480,6 +571,7 @@ struct PhotronDisplay : LightWidget {
     }
 
     void drawLayer(const DrawArgs &args, int layer) override {
+
         if (module == NULL) return;
 
         if (layer == 1) {
@@ -492,29 +584,35 @@ struct PhotronDisplay : LightWidget {
 
             // /************ COLOR FLOCKING STUFF ************/
             if (module->background != Photron::BLACK) {
-                for (int y = MARGIN; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN; y++) {
-                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN; x++) {
+                for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
+                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
                         Vec3 rgb = module->blocks[y][x].rgb;
                         if (module->background == Photron::COLOR) {
-                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                            nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.y, rgb.z, module->blockAlpha[y][x]));
                         } else {
-                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-
+                            // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                            // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                            nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.x, rgb.x, module->blockAlpha[y][x]));
                         }
-
-                        // if (module->isColor) {
-                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        // } else {
-                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        // }
 
                         nvgBeginPath(args.vg);
                         nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
                         nvgFill(args.vg);
                     }
                 }
+
+                for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+                    module->circles[i].update();
+                    // Vec circle = module->circles[i].getPos();
+                    // float cRadius = module->circles[i].getRadius();
+
+                    // nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
+                    // nvgBeginPath(args.vg);
+                    // nvgCircle(args.vg, circle.x, circle.y, cRadius);
+                    // nvgStroke(args.vg);
+
+                }
+
             }
 
 
