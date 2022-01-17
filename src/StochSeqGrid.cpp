@@ -211,6 +211,10 @@ struct SeqCell {
         subPhase = 0.0;
     }
 
+    Vec getStartPos() {
+        return startPos;
+    }
+
     int getCurrentCellIndex() {
         return clamp(currentCellX, 0, 3) + clamp(currentCellY, 0, 3) * 4;
     }
@@ -1175,6 +1179,13 @@ struct CellsDisplay : Widget {
                     if (module->seqs[i].isOn) {
                         int xPos = clamp(module->seqs[i].currentCellX, 0, 3);
                         int yPos = clamp(module->seqs[i].currentCellY, 0, 3);
+
+                        if (module->resetMode) {
+                            Vec rPos = module->seqs[i].getStartPos();
+                            xPos = rPos.x;
+                            yPos = rPos.y;
+                        }
+
                         nvgStrokeColor(args.vg, module->seqs[i].color);
                         nvgFillColor(args.vg, nvgTransRGBA(module->seqs[i].color, 32)); // 35
                         nvgBeginPath(args.vg);
