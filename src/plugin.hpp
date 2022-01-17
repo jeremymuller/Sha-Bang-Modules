@@ -217,6 +217,22 @@ struct Jeremy_HSwitch : SvgSwitch {
     }
 };
 
+struct Purple_V2Switch : SvgSwitch {
+    Purple_V2Switch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Purple_V2Switch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Purple_V2Switch_1.svg")));
+    }
+};
+
+struct Blue_V2Switch : SvgSwitch {
+    Blue_V2Switch() {
+        shadow->opacity = 0;
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Blue_V2Switch_0.svg")));
+        addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Blue_V2Switch_1.svg")));
+    }
+};
+
 struct Purple_VSwitch : SvgSwitch {
     Purple_VSwitch() {
         shadow->opacity = 0;

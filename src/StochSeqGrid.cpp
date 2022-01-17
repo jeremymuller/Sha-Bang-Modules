@@ -282,7 +282,6 @@ struct StochSeqGrid : Module {
     int currentCellY = -1;
     bool clockOn = false;
     float clockFreq = 2.0; // Hz
-    float globalPhase = 0.0;
     bool playCellRhythms = false;
     bool gateOn = false;
     int cellRhythmIndex = 0;
@@ -810,17 +809,11 @@ struct StochSeqGrid : Module {
                 outputs[VOLTS_OUTPUT + i].setVoltage(seqs[i].volts);
             }
 
-            // keep track of global phase for synchronization
-            globalPhase += clockFreq * args.sampleTime;
-            if (globalPhase >= 1.0) {
-                globalPhase = 0.0;
-            }
-
         } else {
-            globalPhase = 0.0;
             for (int i = 0; i < NUM_SEQ; i++) {
                 seqs[i].phase = 0.0;
                 seqs[i].subPhase = 0.0;
+                seqs[i].setBeatPulse();
             }
         }
 

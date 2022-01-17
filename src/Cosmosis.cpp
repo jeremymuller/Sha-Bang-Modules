@@ -807,7 +807,7 @@ struct CosmosisWidget : ModuleWidget {
 
         addParam(createParamCentered<TinyBlueButton>(Vec(108.9, 243.7), module, Cosmosis::RANDOM_POS_PARAM));
         addParam(createParamCentered<TinyBlueButton>(Vec(108.9, 272.7), module, Cosmosis::RANDOM_RAD_PARAM));
-        addParam(createParamCentered<Jeremy_HSwitchBlue>(Vec(111.4, 122.8), module, Cosmosis::PITCH_PARAM));
+        addParam(createParamCentered<Blue_V2Switch>(Vec(101.4, 122.8), module, Cosmosis::PITCH_PARAM));
         addParam(createParamCentered<PurpleInvertKnob>(Vec(26.4, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::PURPLE_SEQ));
         addParam(createParamCentered<BlueInvertKnob>(Vec(61.2, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::BLUE_SEQ));
         addParam(createParamCentered<AquaInvertKnob>(Vec(96, 195.3), module, Cosmosis::OCTAVE_PARAM + Cosmosis::AQUA_SEQ));
