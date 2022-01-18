@@ -5,7 +5,7 @@
 #define CELL_SIZE 10
 #define BUFFER_SIZE 512 // 512
 #define MARGIN 4
-#define NUM_OF_MARCHING_CIRCLES 4
+#define NUM_OF_MARCHING_CIRCLES 5
 
 struct Photron : Module {
     enum WaveformIds {

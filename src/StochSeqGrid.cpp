@@ -199,10 +199,6 @@ struct SeqCell {
     }
 
     void reset() {
-        // TODO
-        // currentCellX = resetPos.x;
-        // currentCellY = resetPos.y;
-        // currentIndex = -1;
         currentCellX = startPos.x;
         currentCellY = startPos.y;
         currentIndex = 0;
@@ -303,6 +299,7 @@ struct StochSeqGrid : Module {
     bool beatPulse[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
     bool isCtrlClick = false;
     bool resetMode = false;
+    bool isFirstTime = false;
     bool useMouseDeltaY = false;
     bool displayCircles = false;
 
@@ -398,6 +395,33 @@ struct StochSeqGrid : Module {
             json_array_append_new(cellBeatsJ, beatsJ);
         }
 
+        // TODO: save data from each seq
+        json_t *seqPhasesJ = json_array();
+        json_t *seqSubPhasesJ = json_array();
+        json_t *seqCurrentXJ = json_array();
+        json_t *seqCurrentYJ = json_array();
+        json_t *seqCurrentIndexJ = json_array();
+
+        for (int i = 0; i < NUM_SEQ; i++) {
+            json_t *seqPhaseJ = json_real(seqs[i].phase);
+            json_t *seqSubPhaseJ = json_real(seqs[i].subPhase);
+            json_t *currentXJ = json_integer(seqs[i].currentCellX);
+            json_t *currentYJ = json_integer(seqs[i].currentCellY);
+            json_t *currentIndexJ = json_integer(seqs[i].currentIndex);
+
+            json_array_append_new(seqPhasesJ, seqPhaseJ);
+            json_array_append_new(seqSubPhasesJ, seqSubPhaseJ);
+            json_array_append_new(seqCurrentXJ, currentXJ);
+            json_array_append_new(seqCurrentYJ, currentYJ);
+            json_array_append_new(seqCurrentIndexJ, currentIndexJ);
+        }
+
+        json_object_set_new(rootJ, "phases", seqPhasesJ);
+        json_object_set_new(rootJ, "subPhases", seqSubPhasesJ);
+        json_object_set_new(rootJ, "seqCurrentX", seqCurrentXJ);
+        json_object_set_new(rootJ, "seqCurrentY", seqCurrentYJ);
+        json_object_set_new(rootJ, "seqCurrentIndex", seqCurrentIndexJ);
+
         json_object_set_new(rootJ, "beats", cellBeatsJ);
         json_object_set_new(rootJ, "subdivisions", subdivisionsJ);
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
@@ -429,6 +453,35 @@ struct StochSeqGrid : Module {
                     if (beatJ) 
                         beats[i][j] = json_boolean_value(beatJ);
                 }
+            }
+        }
+
+        json_t *seqPhasesJ = json_object_get(rootJ, "phases");
+        json_t *seqSubPhasesJ = json_object_get(rootJ, "subPhases");
+        json_t *seqCurrentXJ = json_object_get(rootJ, "seqCurrentX");
+        json_t *seqCurrentYJ = json_object_get(rootJ, "seqCurrentY");
+        json_t *seqCurrentIndexJ = json_object_get(rootJ, "seqCurrentIndex");
+        if (seqPhasesJ) {
+            for (int i = 0; i < NUM_SEQ;i++) {
+                json_t *seqPhaseJ = json_array_get(seqPhasesJ, i);
+                if (seqPhaseJ)
+                    seqs[i].phase = json_real_value(seqPhaseJ);
+
+                json_t *seqSubPhaseJ = json_array_get(seqSubPhasesJ, i);
+                if (seqSubPhaseJ)
+                    seqs[i].subPhase = json_real_value(seqSubPhaseJ);
+
+                json_t *currentXJ = json_array_get(seqCurrentXJ, i);
+                if (currentXJ)
+                    seqs[i].currentCellX = json_integer_value(currentXJ);
+
+                json_t *currentYJ = json_array_get(seqCurrentYJ, i);
+                if (currentYJ)
+                    seqs[i].currentCellY = json_integer_value(currentYJ);
+
+                json_t *currentIndexJ = json_array_get(seqCurrentIndexJ, i);
+                if (currentIndexJ)
+                    seqs[i].currentIndex = json_integer_value(currentIndexJ);
             }
         }
 
@@ -649,6 +702,7 @@ struct StochSeqGrid : Module {
     void process(const ProcessArgs &args) override {
         if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
             resetMode = true;
+            isFirstTime = true;
         }
 
         if (toggleTrig.process(params[CLOCK_TOGGLE_PARAM].getValue())) {
@@ -738,12 +792,14 @@ struct StochSeqGrid : Module {
                 if (seqs[i].isOn) {
                     seqs[i].clockGate = (seqs[i].subPhase < 0.5);
 
-                    if (seqs[i].phase >= 1.0) {
-                        seqs[i].phase -= 1.0;
+                    if (seqs[i].phase >= 1.0 || isFirstTime) {
                         seqs[i].subPhase = 0.0;
                         seqs[i].playCellRhythms = false;
 
-                        seqs[i].clockStep();
+                        if (!isFirstTime) {
+                            seqs[i].phase -= 1.0;
+                            seqs[i].clockStep();
+                        }
 
                         int _index = seqs[i].getCurrentCellIndex();
 
@@ -788,13 +844,15 @@ struct StochSeqGrid : Module {
                     }
 
                 } else {
-                    if (seqs[i].phase >= 1.0) {
-                        seqs[i].phase = 0.0;
+                    if (seqs[i].phase >= 1.0 || isFirstTime) {
                         seqs[i].subPhase = 0.0;
                         seqs[i].playCellRhythms = false;
                         seqs[i].gateOn = false;
 
-                        seqs[i].clockStep();
+                        if (!isFirstTime) {
+                            seqs[i].phase -= 1.0;
+                            seqs[i].clockStep();
+                        }
                     }
                 }
 
@@ -813,24 +871,14 @@ struct StochSeqGrid : Module {
                 outputs[VOLTS_OUTPUT + i].setVoltage(seqs[i].volts);
             }
 
+            isFirstTime = false;
+
         } else {
             for (int i = 0; i < NUM_SEQ; i++) {
-                seqs[i].phase = 0.0;
-                seqs[i].subPhase = 0.0;
+                seqs[i].gateOn = false;
                 seqs[i].setBeatPulse();
             }
         }
-
-        // bool gateVolt = false;
-        // if (gateMode == GATE_MODE) {
-        //     gateVolt = gateOn && clockGate;
-        // } else {
-        //     gateVolt = gatePulse.process(args.sampleTime);
-        // }
-
-        // for (int i = 0; i < NUM_SEQ; i++) {
-        //     outputs[GATES_OUTPUT + i].setVoltage(gateVolt ? 10.0 : 0.0);
-        // }
 
         lights[TOGGLE_LIGHT].setBrightness(clockOn ? 1.0 : 0.0);
     }
@@ -1353,7 +1401,7 @@ struct StochSeqGridWidget : ModuleWidget {
 
         menu->addChild(new MenuSeparator);
 
-        menu->addChild(createIndexPtrSubmenuItem("Gate mMde", {"gates", "triggers"}, &module->gateMode));
+        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"gates", "triggers"}, &module->gateMode));
         menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltMode));
         menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
