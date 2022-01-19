@@ -357,6 +357,7 @@ struct Photron : Module {
         for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
             float r = circles[i].radius * 0.9;
             float d = (blockPos.x - circles[i].pos.x) * (blockPos.x - circles[i].pos.x) + (blockPos.y - circles[i].pos.y) * (blockPos.y - circles[i].pos.y);
+            d = std::fmax(d, 0.001); // to prevent dividing by zero
             sum += (r * r) / d;
         }
 

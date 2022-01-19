@@ -1139,10 +1139,11 @@ struct SubdivisionDisplay : Widget {
             }
         } else {
             circleRad = rescale(subRhythms, 2.0, MAX_SUBDIVISIONS, 16.0 / 2, 8.0 / 2);
-
+            float alpha = rescale(module->getParam(StochSeqGrid::SUBDIVISION_PARAM + index).getValue(), 0.0, 1.0, 25, 200);
+            
             if (module->displayCircles) {
                 nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-                nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 200));
+                nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, alpha));
                 nvgStrokeWidth(args.vg, 1.0);
                 nvgBeginPath(args.vg);
                 nvgCircle(args.vg, center.x, center.y, radius);
@@ -1160,7 +1161,6 @@ struct SubdivisionDisplay : Widget {
 
                 // connected lines
                 if (beatOn && !module->displayCircles) {
-                    float alpha = rescale(module->getParam(StochSeqGrid::SUBDIVISION_PARAM + index).getValue(), 0.0, 1.0, 25, 200);
                     nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, alpha));
                     nvgStrokeWidth(args.vg, i == 0 ? 2.5 : 1.0);
                     nvgBeginPath(args.vg);
