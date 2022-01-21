@@ -233,8 +233,10 @@ struct StochSeqGrid : Module {
     enum ModeIds {
         GATE_MODE,
         TRIG_MODE,
-        NUM_MODES
+        VOLT_INDEPENDENT_MODE = 0,
+        VOLT_SAMPHOLD_MODE
     };
+
     enum ParamIds {
         CLOCK_TOGGLE_PARAM,
         BPM_PARAM,
@@ -285,7 +287,8 @@ struct StochSeqGrid : Module {
     bool playCellRhythms = false;
     bool gateOn = false;
     int cellRhythmIndex = 0;
-    int voltMode = 0;
+    int voltRange = 0;
+    int voltMode = VOLT_INDEPENDENT_MODE;
     float minMaxVolts[2] = {0.0, 1.0};
     int currentPattern = 0;
     int hoverRhythm = 1;
@@ -426,6 +429,7 @@ struct StochSeqGrid : Module {
         json_object_set_new(rootJ, "subdivisions", subdivisionsJ);
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
         json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
+        json_object_set_new(rootJ, "voltRange", json_integer(voltRange));
         json_object_set_new(rootJ, "currentPattern", json_integer(currentPattern));
         json_object_set_new(rootJ, "bpmInputMode", json_integer(bpmInputMode));
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
@@ -492,6 +496,10 @@ struct StochSeqGrid : Module {
         json_t *voltModeJ = json_object_get(rootJ, "voltMode");
         if (voltModeJ)
             voltMode = json_integer_value(voltModeJ);
+
+        json_t *voltRangeJ = json_object_get(rootJ, "voltRange");
+        if (voltRangeJ)
+            voltRange = json_integer_value(voltRangeJ);
 
         json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
         if (currentPatternJ)
@@ -679,7 +687,7 @@ struct StochSeqGrid : Module {
     }
 
     void setMinMaxVolts() {
-        switch (voltMode) {
+        switch (voltRange) {
             case 0:
                 minMaxVolts[0] = 0.0;
                 minMaxVolts[1] = 1.0;
@@ -788,6 +796,7 @@ struct StochSeqGrid : Module {
                 float rhythmFraction = seqs[i].rhythm / seqs[i].duration;
                 seqs[i].phase += clockFreq * rhythmFraction * args.sampleTime;
                 seqs[i].subPhase += clockFreq * rhythmFraction * getSubdivision(seqs[i].currentCellX, seqs[i].currentCellY) * args.sampleTime;
+                bool voltSH = false;
 
                 if (seqs[i].isOn) {
                     seqs[i].clockGate = (seqs[i].subPhase < 0.5);
@@ -806,9 +815,10 @@ struct StochSeqGrid : Module {
 
                         float gateProb = params[CELL_PROB_PARAM + _index].getValue();
                         float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
-                        if (random::uniform() < gateProb) {
-                            seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
+                        seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
 
+                        if (random::uniform() < gateProb) {
+                            voltSH = true;
                             if (subdivisions[_index] == 1) { // if 1 subdivision then don't check rhythm probability
                                 seqs[i].gatePulse.trigger(1e-3);
                                 seqs[i].gateOn = true;
@@ -868,7 +878,11 @@ struct StochSeqGrid : Module {
                 }
 
                 outputs[GATES_OUTPUT + i].setVoltage(gateVolt ? 10.0 : 0.0);
-                outputs[VOLTS_OUTPUT + i].setVoltage(seqs[i].volts);
+
+                if (voltMode == VOLT_SAMPHOLD_MODE && voltSH)
+                    outputs[VOLTS_OUTPUT + i].setVoltage(seqs[i].volts);
+                else if (voltMode == VOLT_INDEPENDENT_MODE)
+                    outputs[VOLTS_OUTPUT + i].setVoltage(seqs[i].volts);
             }
 
             isFirstTime = false;
@@ -1401,8 +1415,9 @@ struct StochSeqGridWidget : ModuleWidget {
 
         menu->addChild(new MenuSeparator);
 
-        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"gates", "triggers"}, &module->gateMode));
-        menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltMode));
+        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"Gates", "Triggers"}, &module->gateMode));
+        menu->addChild(createIndexPtrSubmenuItem("V/OCT mode", {"Independent", "Sample and Hold"}, &module->voltMode));
+        menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltRange));
         menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
         menu->addChild(new MenuEntry);
