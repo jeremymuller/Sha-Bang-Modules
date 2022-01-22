@@ -630,8 +630,7 @@ struct StochSeq4Display : Widget {
                 initX = e.pos.x;
                 initY = e.pos.y;
                 toggleProbabilities(initX);
-            }
-            else {
+            } else {
                 module->isCtrlClick = false;
                 e.consume(this);
                 initX = e.pos.x;

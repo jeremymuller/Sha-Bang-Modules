@@ -63,7 +63,7 @@ struct Photron : Module {
     int resetIndex = 0;
     int checkParams = 0;
     // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
-    int internalHz = 60;
+    int internalHz = 30;
     float srIncrement = APP->engine->getSampleTime() * internalHz;
     float sr = 0;
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
@@ -490,8 +490,9 @@ struct PhotronDisplay : LightWidget {
                     if (module->background == Photron::COLOR) {
                         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
                     } else {
-                        NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.x, rgb.x));
                     }
 
                     nvgBeginPath(args.vg);

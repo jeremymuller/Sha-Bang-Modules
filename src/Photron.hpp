@@ -189,6 +189,7 @@ struct MarchingCircle {
     int displayWidth = 690;
     int displayHeight = 380;
     int margin = 40;
+    float velLimit = 0.8;;
 
     MarchingCircle() {}
 
@@ -197,6 +198,18 @@ struct MarchingCircle {
         vel = Vec(randRange(-1.0, 1.0), randRange(-1.0, 1.0));
         acc  = Vec();
         radius = randRange(50.0, 100.0);
+    }
+
+    MarchingCircle(float x, float y, float r) {
+        pos = Vec(x, y);
+        vel = Vec(randRange(-1.0, 1.0), randRange(-1.0, 1.0));
+        acc = Vec();
+        radius = r;
+    }
+
+    void setSize(int width, int height) {
+        displayWidth = width;
+        displayHeight = height;
     }
 
     Vec getPos() {
@@ -213,7 +226,7 @@ struct MarchingCircle {
 
         vel = vel.plus(acc);
         vel = vel.normalize();
-        vel = vel.mult(0.8);
+        vel = vel.mult(velLimit);
         pos = pos.plus(vel);
 
         checkEdges();
