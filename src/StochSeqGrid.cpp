@@ -361,7 +361,7 @@ struct StochSeqGrid : Module {
         for (int i = 0; i < NUM_OF_CELLS; i++) {
             // cellOn[i] = true;
             configParam(CELL_PROB_PARAM + i, 0.0, 1.0, 1.0, "Cell Probability", "%", 0, 100);
-            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "Rhythm Probability", "%", 0, 100);
+            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "Rhythm Probability / V/OCT", "%", 0, 100);
             gateProbabilities[i] = params[CELL_PROB_PARAM].getValue();
             // gateProbabilities[i] = (float)i / NUM_OF_CELLS;
             rhythmProbabilities[i] = params[SUBDIVISION_PARAM].getValue();

@@ -220,6 +220,10 @@ struct MarchingCircle {
         return radius;
     }
 
+    void setRadius(float _radius) {
+        radius = _radius;
+    }
+
     void update() {
         acc.x = randRange(-0.05, 0.05);
         acc.y = randRange(-0.05, 0.05);

@@ -67,14 +67,14 @@ struct PhotronPanel : Module {
 
     void onRandomize() override {
         resetBlocks(PhotronPanel::RANDOMIZE_PARAM);
-    }
-
-    void onReset() override {
-        resetBlocks(PhotronPanel::RESET_PARAM);
 
         for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
             circles[i].radius = randRange(10.0, 35.0);
         }
+    }
+
+    void onReset() override {
+        resetBlocks(PhotronPanel::RESET_PARAM);
     }
 
     void setHz(int hz) {
@@ -350,6 +350,17 @@ struct PhotronPanelDisplay : Widget {
                     nvgFill(args.vg);
                 }
             }
+
+            // // draw green circles for debugging
+            // for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            //     Vec circle = module->circles[i].getPos();
+            //     float cRadius = module->circles[i].getRadius();
+
+            //     nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
+            //     nvgBeginPath(args.vg);
+            //     nvgCircle(args.vg, circle.x, circle.y, cRadius);
+            //     nvgStroke(args.vg);
+            // }
         }
         Widget::drawLayer(args, layer);
 

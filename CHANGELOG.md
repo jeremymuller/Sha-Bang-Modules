@@ -1,7 +1,7 @@
 v2.1.0 (01-??-2022)
 - Added new module StochSeqGrid
 - Updated port UIs
-- Added animation to Photron for dark room
+- Added animation to Photron & PhotronPanel for dark room
 - Updated volt ranges for StochSeq and StochSeq4
 
 v2.0.2 (12-14-2021)
