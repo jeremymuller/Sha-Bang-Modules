@@ -295,8 +295,6 @@ struct StochSeqGrid : Module {
     int hoverCell = 0;
 
     SeqCell *seqs = new SeqCell[NUM_SEQ];
-    float *gateProbabilities = new float[NUM_OF_CELLS];
-    float *rhythmProbabilities = new float[NUM_OF_CELLS];
     int *subdivisions = new int[NUM_OF_CELLS];
     bool beats[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
     bool beatPulse[NUM_OF_CELLS][MAX_SUBDIVISIONS] = {};
@@ -343,10 +341,10 @@ struct StochSeqGrid : Module {
         configInput(EXT_CLOCK_INPUT, "External clock");
         configInput(RESET_INPUT, "Reset");
 
-        configOutput(VOLTS_OUTPUT + PURPLE_SEQ, "Purple V/OCT");
-        configOutput(VOLTS_OUTPUT + BLUE_SEQ, "Blue V/OCT");
-        configOutput(VOLTS_OUTPUT + AQUA_SEQ, "Aqua V/OCT");
-        configOutput(VOLTS_OUTPUT + RED_SEQ, "Red V/OCT");
+        configOutput(VOLTS_OUTPUT + PURPLE_SEQ, "Purple CV");
+        configOutput(VOLTS_OUTPUT + BLUE_SEQ, "Blue CV");
+        configOutput(VOLTS_OUTPUT + AQUA_SEQ, "Aqua CV");
+        configOutput(VOLTS_OUTPUT + RED_SEQ, "Red CV");
 
         configOutput(GATES_OUTPUT + PURPLE_SEQ, "Purple Gates");
         configOutput(GATES_OUTPUT + BLUE_SEQ, "Blue Gates");
@@ -361,10 +359,7 @@ struct StochSeqGrid : Module {
         for (int i = 0; i < NUM_OF_CELLS; i++) {
             // cellOn[i] = true;
             configParam(CELL_PROB_PARAM + i, 0.0, 1.0, 1.0, "Cell Probability", "%", 0, 100);
-            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "Rhythm Probability / V/OCT", "%", 0, 100);
-            gateProbabilities[i] = params[CELL_PROB_PARAM].getValue();
-            // gateProbabilities[i] = (float)i / NUM_OF_CELLS;
-            rhythmProbabilities[i] = params[SUBDIVISION_PARAM].getValue();
+            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "CV / Rhythm Probability", "%", 0, 100);
             subdivisions[i] = 1;
             for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
                 beats[i][j] = true;
@@ -374,8 +369,6 @@ struct StochSeqGrid : Module {
     }
 
     ~StochSeqGrid() {
-        delete[] gateProbabilities;
-        delete[] rhythmProbabilities;
         delete[] subdivisions;
         delete[] seqs;
     }
@@ -1398,7 +1391,7 @@ struct StochSeqGridWidget : ModuleWidget {
         addParam(createParamCentered<RedInvertKnob>(Vec(54.2, 330.3), module, StochSeqGrid::DUR_PARAMS + RED_SEQ));
         addParam(createParamCentered<NanoRedButton>(Vec(41.3, 344.8), module, StochSeqGrid::ON_PARAMS + RED_SEQ));
 
-        // v/oct outputs
+        // cv outputs
         addOutput(createOutputCentered<PJ301MPurple>(Vec(98, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + PURPLE_SEQ));
         addOutput(createOutputCentered<PJ301MBlue>(Vec(125, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + BLUE_SEQ));
         addOutput(createOutputCentered<PJ301MAqua>(Vec(152, 347.6), module, StochSeqGrid::VOLTS_OUTPUT + AQUA_SEQ));
@@ -1416,7 +1409,7 @@ struct StochSeqGridWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
 
         menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"Gates", "Triggers"}, &module->gateMode));
-        menu->addChild(createIndexPtrSubmenuItem("V/OCT mode", {"Independent", "Sample and Hold"}, &module->voltMode));
+        menu->addChild(createIndexPtrSubmenuItem("CV mode", {"Independent", "Sample and Hold"}, &module->voltMode));
         menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltRange));
         menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
