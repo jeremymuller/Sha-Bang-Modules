@@ -522,84 +522,6 @@ struct Orbitones : Module {
     }
 };
 
-namespace OrbitonesNS {
-    struct ChannelValueItem : MenuItem {
-        Orbitones *module;
-        int channels;
-        void onAction(const event::Action &e) override {
-            module->channels = channels;
-        }
-    };
-
-    struct ChannelItem : MenuItem {
-        Orbitones *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            for (int channels = 1; channels <= 16; channels++) {
-                ChannelValueItem *item = new ChannelValueItem;
-                if (channels == 1)
-                    item->text = "Monophonic";
-                else
-                    item->text = string::f("%d", channels);
-                item->rightText = CHECKMARK(module->channels == channels);
-                item->module = module;
-                item->channels = channels;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-
-    struct DrawTrailsValueItem : MenuItem {
-        Orbitones *module;
-        int trailId;
-        void onAction(const event::Action &e) override {
-            module->setTrails(trailId);
-        }
-    };
-
-    struct DrawTrailsItem : MenuItem {
-        Orbitones *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            for (int i = 0; i < Orbitones::NUM_TRAIL; i++) {
-                DrawTrailsValueItem *item = new DrawTrailsValueItem;
-                item->text = module->trails[i];
-                item->rightText = CHECKMARK(module->currentTrailId == i);
-                item->module = module;
-                item->trailId = i;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-
-    struct ParticleBoundaryValueItem : MenuItem {
-        Orbitones *module;
-        bool boundary;
-        void onAction(const event::Action &e) override {
-            module->particleBoundary = boundary;
-        }
-    };
-
-    struct ParticleBoundaryItem : MenuItem {
-        Orbitones *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            for (int i = 0; i < 2; i++) {
-                bool boundary = (i == 0);
-                ParticleBoundaryValueItem *item = new ParticleBoundaryValueItem;
-                item->text = i == 0 ? "on" : "off";
-                item->rightText = CHECKMARK(module->particleBoundary == boundary);
-                item->module = module;
-                item->boundary = boundary;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-}
-
 struct OrbitonesDisplay : Widget {
     Orbitones *module;
     float initX = 0;
@@ -834,27 +756,38 @@ struct OrbitonesWidget : ModuleWidget {
 
         menu->addChild(new MenuEntry);
 
-        OrbitonesNS::ChannelItem *channelItem = new OrbitonesNS::ChannelItem;
-        channelItem->text = "Polyphony channels";
-        channelItem->rightText = string::f("%d", module->channels) + " " + RIGHT_ARROW;
-        channelItem->module = module;
-        menu->addChild(channelItem);
+		struct ChannelItem : MenuItem {
+			Orbitones* module;
+			Menu* createChildMenu() override {
+				Menu* menu = new Menu;
+				for (int c = 1; c <= 16; c++) {
+					menu->addChild(createCheckMenuItem((c == 1) ? "Monophonic" : string::f("%d", c), "",
+						[=]() {return module->channels == c;},
+						[=]() {module->channels = c;}
+					));
+				}
+				return menu;
+			}
+		};
+		ChannelItem* channelItem = new ChannelItem;
+		channelItem->text = "Polyphony channels";
+		channelItem->rightText = string::f("%d", module->channels) + "  " + RIGHT_ARROW;
+		channelItem->module = module;
+		menu->addChild(channelItem);
 
         menu->addChild(new MenuEntry);
 
-        OrbitonesNS::DrawTrailsItem *drawTrailsItem = new OrbitonesNS::DrawTrailsItem;
-        drawTrailsItem->text = "Particle trails";
-        std::string rightText = module->getTrailString();
-        drawTrailsItem->rightText = rightText + RIGHT_ARROW;
-        drawTrailsItem->module = module;
-        menu->addChild(drawTrailsItem);
+        menu->addChild(createIndexSubmenuItem("Particle trails",
+            {"off", "white", "red/blue shift"},
+            [=]() {
+                return module->currentTrailId;
+            },
+            [=](int mode) {
+                module->setTrails(mode);
+            }
+        ));
 
-        OrbitonesNS::ParticleBoundaryItem *particleBoundaryItem = new OrbitonesNS::ParticleBoundaryItem;
-        particleBoundaryItem->text = "Particle boundaries";
-        std::string boundaryText = module->particleBoundary ? "on " : "off ";
-        particleBoundaryItem->rightText = boundaryText + RIGHT_ARROW;
-        particleBoundaryItem->module = module;
-        menu->addChild(particleBoundaryItem);
+        menu->addChild(createBoolPtrMenuItem("Particle boundaries", "", &module->particleBoundary));
 
     }
 };
