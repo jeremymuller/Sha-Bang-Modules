@@ -28,7 +28,7 @@ struct Sequencer {
         }
     }
 
-    void clockStep(int l, float spread) {
+    void clockStep(int l, float voltScaled, int voltRange) {
         // increment index
         seqLength = l;
         gateIndex  = (gateIndex + 1) % seqLength;
@@ -46,8 +46,10 @@ struct Sequencer {
         }
 
         // pitch
-        volts = prob * (2 * spread) - spread;
-        invVolts = (1.0 - prob) * (2 * spread) - spread;
+        float voltShift = voltRange == 0? -5.0 : 0.0;
+        prob *= 10.0; // scale up to 10V
+        volts = (prob + voltShift) * voltScaled;
+        invVolts = ((10.0 - prob) + voltShift) * voltScaled;
     }
 };
 
@@ -55,7 +57,7 @@ struct StochSeq4 : Module, Quantize {
     enum ModeIds {
 		GATE_MODE,
 		TRIG_MODE,
-		VOLT_INDEPENDENT_MODE,
+		VOLT_INDEPENDENT_MODE = 0,
 		VOLT_SAMPHOLD_MODE,
 		NUM_MODES
     };
@@ -108,6 +110,7 @@ struct StochSeq4 : Module, Quantize {
     bool mclkOverride = true;
     int gateMode = GATE_MODE;
     int voltMode = VOLT_INDEPENDENT_MODE;
+    int voltRange = 1;
     bool resetMode = false;
     bool showPercentages = true;
     bool enableKBShortcuts = true;
@@ -143,10 +146,10 @@ struct StochSeq4 : Module, Quantize {
         configButton(DIMINUTION_PARAM + AQUA_SEQ, "Diminish aqua pattern");
         configButton(DIMINUTION_PARAM + RED_SEQ, "Diminish red pattern");
 
-        configParam(SPREAD_PARAM + PURPLE_SEQ, -4.0, 4.0, 1.0, "Purple spread");
-        configParam(SPREAD_PARAM + BLUE_SEQ, -4.0, 4.0, 1.0, "Blue spread");
-        configParam(SPREAD_PARAM + AQUA_SEQ, -4.0, 4.0, 1.0, "Aqua spread");
-        configParam(SPREAD_PARAM + RED_SEQ, -4.0, 4.0, 1.0, "Red spread");
+        configParam(SPREAD_PARAM + PURPLE_SEQ, 0.0, 1.0, 0.1, "Purple volt scale", " %", 0, 100);
+        configParam(SPREAD_PARAM + BLUE_SEQ, 0.0, 1.0, 0.1, "Blue volt scale", " %", 0, 100);
+        configParam(SPREAD_PARAM + AQUA_SEQ, 0.0, 1.0, 0.1, "Aqua volt scale", " %", 0, 100);
+        configParam(SPREAD_PARAM + RED_SEQ, 0.0, 1.0, 0.1, "Red volt scale", " %", 0, 100);
 
         configInput(MASTER_CLOCK_INPUT, "Master clock");
         configInput(RESET_INPUT, "Reset");
@@ -213,6 +216,7 @@ struct StochSeq4 : Module, Quantize {
         json_object_set_new(rootJ, "focusId", json_integer(focusedSeq));
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
         json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
+        json_object_set_new(rootJ, "voltRange", json_integer(voltRange));
 
         return rootJ;
     }
@@ -235,6 +239,9 @@ struct StochSeq4 : Module, Quantize {
 
         json_t *voltModeJ = json_object_get(rootJ, "voltMode");
         if (voltModeJ) voltMode = json_integer_value(voltModeJ);
+
+        json_t *voltRangeJ = json_object_get(rootJ, "voltRange");
+		if (voltRangeJ) voltRange = json_integer_value(voltRangeJ);
 
         json_t *currentPatternsJ = json_object_get(rootJ, "currentPatterns");
         json_t *seqsProbsJ = json_object_get(rootJ, "seqsProbs");
@@ -358,7 +365,7 @@ struct StochSeq4 : Module, Quantize {
         for (int i = 0; i < NUM_SEQS; i++) {
             int l = (int)params[LENGTH_PARAM+i].getValue();
             float spread = params[SPREAD_PARAM+i].getValue();
-            seqs[i].clockStep(l, spread);    
+            seqs[i].clockStep(l, spread, voltRange);    
         }
     }
 
@@ -366,7 +373,7 @@ struct StochSeq4 : Module, Quantize {
         // individual clock steps
         int l = (int)params[LENGTH_PARAM + i].getValue();
         float spread = params[SPREAD_PARAM + i].getValue();
-        seqs[i].clockStep(l, spread);
+        seqs[i].clockStep(l, spread, voltRange);
     }
 
     void resetSeq() {
@@ -501,110 +508,6 @@ struct StochSeq4 : Module, Quantize {
 	}
 };
 
-namespace StochSeq4NS {
-	struct GateModeValueItem : MenuItem {
-		StochSeq4 *module;
-		int gateMode;
-		void onAction(const event::Action &e) override {
-			module->gateMode = gateMode;
-		}
-	};
-
-	struct GateModeItem : MenuItem {
-		StochSeq4 *module;
-		Menu *createChildMenu() override {
-			Menu *menu = new Menu;
-			std::vector<std::string> modes = {"Gates", "Triggers"};
-			for (int i = 0; i < 2; i++) {
-				GateModeValueItem *item = new GateModeValueItem;
-				item->text = modes[i];
-				item->rightText = CHECKMARK(module->gateMode == i);
-				item->module = module;
-				item->gateMode = i;
-				menu->addChild(item);
-			}
-			return menu;
-		}
-	};
-
-	struct VoltModeValueItem : MenuItem {
-		StochSeq4 *module;
-		int voltMode;
-		void onAction(const event::Action &e) override {
-			module->voltMode = voltMode;
-		}
-	};
-
-	struct VoltModeItem : MenuItem {
-		StochSeq4 *module;
-		Menu *createChildMenu() override {
-			Menu *menu = new Menu;
-			std::vector<std::string> modes = {"Independent", "Sample and Hold"};
-			for (int i = 0; i < 2; i++) {
-				VoltModeValueItem *item = new VoltModeValueItem;
-				item->text = modes[i];
-				item->rightText = CHECKMARK(module->voltMode == i + StochSeq4::VOLT_INDEPENDENT_MODE);
-				item->module = module;
-				item->voltMode = i + StochSeq4::VOLT_INDEPENDENT_MODE;
-				menu->addChild(item);
-			}
-			return menu;
-		}
-	};
-
-	struct ShowTextValueItem : MenuItem {
-        StochSeq4 *module;
-        bool showPercentages;
-        void onAction(const event::Action &e) override {
-            module->showPercentages = showPercentages;
-        }
-    };
-
-    struct ShowTextItem : MenuItem {
-        StochSeq4 *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> percentages = {"show", "hide"};
-            for (int i = 0; i < 2; i++) {
-                ShowTextValueItem *item = new ShowTextValueItem;
-                item->text = percentages[i];
-                bool isOn = (i == 0) ? true : false;
-                item->rightText = CHECKMARK(module->showPercentages == isOn);
-                item->module = module;
-                item->showPercentages = isOn;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-
-	struct EnableShortcutsValueItem : MenuItem {
-		StochSeq4 *module;
-		bool enableKBShortcuts;
-		void onAction(const event::Action &e) override {
-			module->enableKBShortcuts = enableKBShortcuts;
-		}
-	};
-
-	struct EnableShortcutsItem : MenuItem {
-		StochSeq4 *module;
-		Menu *createChildMenu() override {
-			Menu *menu = new Menu;
-			std::vector<std::string> enabled = {"on", "off"};
-            for (int i = 0; i < 2; i++) {
-                EnableShortcutsValueItem *item = new EnableShortcutsValueItem;
-                item->text = enabled[i];
-                bool isOn = (i == 0) ? true : false;
-                item->rightText = CHECKMARK(module->enableKBShortcuts == isOn);
-                item->module = module;
-				item->enableKBShortcuts = isOn;
-				menu->addChild(item);
-            }
-            return menu;
-		}
-	};
-}
-
 struct StochSeq4Display : Widget {
     StochSeq4 *module;
     float initX = 0;
@@ -623,8 +526,7 @@ struct StochSeq4Display : Widget {
                 initX = e.pos.x;
                 initY = e.pos.y;
                 toggleProbabilities(initX);
-            }
-            else {
+            } else {
                 module->isCtrlClick = false;
                 e.consume(this);
                 initX = e.pos.x;
@@ -932,37 +834,16 @@ struct StochSeq4Widget : ModuleWidget {
 		menu->addChild(createBoolPtrMenuItem("MCLK override", "", &module->mclkOverride));
         
         menu->addChild(new MenuEntry);
-        
-        StochSeq4NS::GateModeItem *gateModeItem = new StochSeq4NS::GateModeItem;
-		gateModeItem->text = "Gate mode";
-		if (module->gateMode == StochSeq4::GATE_MODE) gateModeItem->rightText = std::string("Gates") + " " + RIGHT_ARROW;
-		else gateModeItem->rightText = std::string("Triggers") + " " + RIGHT_ARROW;
-		gateModeItem->module = module;
-		menu->addChild(gateModeItem);
 
-		StochSeq4NS::VoltModeItem *voltModeItem = new StochSeq4NS::VoltModeItem;
-		voltModeItem->text = "V/OCT mode";
-		if (module->voltMode == StochSeq4::VOLT_INDEPENDENT_MODE) voltModeItem->rightText = std::string("Independent") + " " + RIGHT_ARROW;
-		else voltModeItem->rightText = std::string("Sample and Hold") + " " + RIGHT_ARROW;
-		voltModeItem->module = module;
-		menu->addChild(voltModeItem);
+        menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"Gates", "Triggers"}, &module->gateMode));
+        menu->addChild(createIndexPtrSubmenuItem("V/OCT mode", {"Independent", "Sample and Hold"}, &module->voltMode));
+        menu->addChild(createIndexPtrSubmenuItem("Volt Offset", {"±5V", "+10V"}, &module->voltRange));
 
         menu->addChild(new MenuEntry);
 
-        StochSeq4NS::ShowTextItem *showTextItem = new StochSeq4NS::ShowTextItem;
-		showTextItem->text = "Slider Percentages";
-		if (module->showPercentages) showTextItem->rightText = std::string("show") + " " + RIGHT_ARROW;
-		else showTextItem->rightText = std::string("hide") + " " + RIGHT_ARROW;
-		showTextItem->module = module;
-		menu->addChild(showTextItem);
-
-        StochSeq4NS::EnableShortcutsItem *enableShortcutItem = new StochSeq4NS::EnableShortcutsItem;
-		enableShortcutItem->text = "Keyboard Shortcuts";
-		if (module->enableKBShortcuts) enableShortcutItem->rightText = std::string("on") + " " + RIGHT_ARROW;
-		else enableShortcutItem->rightText = std::string("off") + " " + RIGHT_ARROW;
-		enableShortcutItem->module = module;
-		menu->addChild(enableShortcutItem);
-	}
+        menu->addChild(createBoolPtrMenuItem("Slider Percentages", "", &module->showPercentages));
+        menu->addChild(createBoolPtrMenuItem("Keyboard Shortcuts", "", &module->enableKBShortcuts));
+    }
 
     void onHoverKey(const event::HoverKey &e) override {
         StochSeq4 *module = dynamic_cast<StochSeq4 *>(this->module);

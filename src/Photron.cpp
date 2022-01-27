@@ -4,7 +4,8 @@
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
 #define BUFFER_SIZE 512 // 512
-#define MARGIN 10
+#define MARGIN 4
+#define NUM_OF_MARCHING_CIRCLES 5
 
 struct Photron : Module {
     enum WaveformIds {
@@ -62,12 +63,16 @@ struct Photron : Module {
     int resetIndex = 0;
     int checkParams = 0;
     // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
-    int internalHz = 60;
+    int internalHz = 30;
     float srIncrement = APP->engine->getSampleTime() * internalHz;
     float sr = 0;
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
     static const int rows = DISPLAY_SIZE_HEIGHT / CELL_SIZE;
     Block blocks[rows][cols];
+    float field[rows][cols];
+    int blockAlpha[rows][cols];
+
+    MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
 
     Photron() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -95,7 +100,15 @@ struct Photron : Module {
                 Block b(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE);
                 blocks[y][x] = b;
                 blocks[y][x].isSet = true;
+
+                field[y][x] = random::uniform();
+                blockAlpha[y][x] = 0;
             }
+        }
+
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            MarchingCircle c(randRange(DISPLAY_SIZE_WIDTH), randRange(DISPLAY_SIZE_HEIGHT));
+            circles[i] = c;
         }
     }
 
@@ -235,7 +248,15 @@ struct Photron : Module {
                     }
 
                     blocks[y][x].update();
+
+                    // layer 1 marching stuff
+                    blockAlpha[y][x] = calculateCell(blocks[y][x].getCenter());
+
                 }
+            }
+
+            for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+                circles[i].update();
             }
         }
         sr += srIncrement;
@@ -258,7 +279,7 @@ struct Photron : Module {
             }
         }
 
-        	// Are we waiting on the next trigger?
+    // Are we waiting on the next trigger?
 	if (bufferIndex >= BUFFER_SIZE) {
 		// Trigger immediately if external but nothing plugged in, or in Lissajous mode
 		// if (lissajous || (external && !inputs[TRIG_INPUT].isConnected())) {
@@ -330,6 +351,25 @@ struct Photron : Module {
             }
         }
     }
+
+    int calculateCell(Vec blockPos) {
+        float sum = 0.0;
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            float r = circles[i].radius * 0.9;
+            float d = (blockPos.x - circles[i].pos.x) * (blockPos.x - circles[i].pos.x) + (blockPos.y - circles[i].pos.y) * (blockPos.y - circles[i].pos.y);
+            d = std::fmax(d, 0.001); // to prevent dividing by zero
+            sum += (r * r) / d;
+        }
+
+        if (sum >= 1) {
+            return 255;
+        } else {
+            sum = sum * sum;
+            float newSum = rescale(sum, 0.2, 1, 0, 254);
+            sum = clamp(newSum, 0.0, 255.0);
+            return (int)sum;
+        }
+    }
 };
 
 namespace PhotronNS {
@@ -356,17 +396,6 @@ namespace PhotronNS {
                 menu->addChild(item);
             }
             return menu;
-        }
-    };
-
-    struct LissajousModeItem : MenuItem {
-        Photron *module;
-        void onAction(const event::Action &e) override {
-            module->lissajous = !module->lissajous;
-        }
-        void step() override {
-            rightText = module->lissajous ? "✓" : "";
-            MenuItem::step();
         }
     };
 }
@@ -457,31 +486,44 @@ struct PhotronDisplay : LightWidget {
             for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
                 for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
 
-                    bool topEdge = y < MARGIN;
-                    bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
-                    bool leftEdge = x < MARGIN;
-                    bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
-
-                    if (topEdge || bottomEdge || leftEdge || rightEdge) {
-                        Vec3 rgb = module->blocks[y][x].rgb;
-                        if (module->background == Photron::COLOR) {
-                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        } else {
-                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        }
-
-                        // if (module->isColor) {
-                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        // } else {
-                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        // }
-
-                        nvgBeginPath(args.vg);
-                        nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
-                        nvgFill(args.vg);
+                    Vec3 rgb = module->blocks[y][x].rgb;
+                    if (module->background == Photron::COLOR) {
+                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    } else {
+                        // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.x, rgb.x));
                     }
+
+                    nvgBeginPath(args.vg);
+                    nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                    nvgFill(args.vg);
+
+                    // bool topEdge = y < MARGIN;
+                    // bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
+                    // bool leftEdge = x < MARGIN;
+                    // bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
+
+                    // if (topEdge || bottomEdge || leftEdge || rightEdge) {
+                    //     Vec3 rgb = module->blocks[y][x].rgb;
+                    //     if (module->background == Photron::COLOR) {
+                    //         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    //     } else {
+                    //         NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                    //         nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    //     }
+
+                    //     // if (module->isColor) {
+                    //     //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    //     // } else {
+                    //     //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                    //     //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    //     // }
+
+                    //     nvgBeginPath(args.vg);
+                    //     nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                    //     nvgFill(args.vg);
+                    // }
 
                 }
             }
@@ -491,6 +533,7 @@ struct PhotronDisplay : LightWidget {
     }
 
     void drawLayer(const DrawArgs &args, int layer) override {
+
         if (module == NULL) return;
 
         if (layer == 1) {
@@ -503,29 +546,34 @@ struct PhotronDisplay : LightWidget {
 
             // /************ COLOR FLOCKING STUFF ************/
             if (module->background != Photron::BLACK) {
-                for (int y = MARGIN; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN; y++) {
-                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN; x++) {
+                for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
+                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
                         Vec3 rgb = module->blocks[y][x].rgb;
                         if (module->background == Photron::COLOR) {
-                            nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                            nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.y, rgb.z, module->blockAlpha[y][x]));
                         } else {
-                            NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                            nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-
+                            // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                            // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                            nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.x, rgb.x, module->blockAlpha[y][x]));
                         }
-
-                        // if (module->isColor) {
-                        //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
-                        // } else {
-                        //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
-                        // }
 
                         nvgBeginPath(args.vg);
                         nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
                         nvgFill(args.vg);
                     }
                 }
+
+                // // draw green circles for debugging
+                // for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+                //     Vec circle = module->circles[i].getPos();
+                //     float cRadius = module->circles[i].getRadius();
+
+                //     nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
+                //     nvgBeginPath(args.vg);
+                //     nvgCircle(args.vg, circle.x, circle.y, cRadius);
+                //     nvgStroke(args.vg);
+                // }
+
             }
 
 
@@ -610,8 +658,8 @@ struct PhotronWidget : ModuleWidget {
         addParam(createParamCentered<TinyAquaButton>(Vec(27.2, 333.8), module, Photron::WAVEFORM_PARAM));
         addParam(createParamCentered<TinyRedButton>(Vec(27.2, 352.1), module, Photron::COLOR_PARAM));
 
-        addInput(createInputCentered<TinyPortAqua>(Vec(9.7, 333.8), module, Photron::WAVEFORM_INPUT));
-        addInput(createInputCentered<TinyPortRed>(Vec(9.7, 352.1), module, Photron::COLOR_TRIGGER_INPUT));
+        addInput(createInputCentered<TinyPJ301MAqua>(Vec(9.7, 333.8), module, Photron::WAVEFORM_INPUT));
+        addInput(createInputCentered<TinyPJ301MRed>(Vec(9.7, 352.1), module, Photron::COLOR_TRIGGER_INPUT));
         addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 370.3), module, Photron::INVERT_INPUT));
     }
 
@@ -625,10 +673,7 @@ struct PhotronWidget : ModuleWidget {
         hzModeItem->module = module;
         menu->addChild(hzModeItem);
 
-        PhotronNS::LissajousModeItem *lissajousItem = new PhotronNS::LissajousModeItem;
-        lissajousItem->text = "Lissajous mode";
-        lissajousItem->module = module;
-        menu->addChild(lissajousItem);
+        menu->addChild(createBoolPtrMenuItem("Lissajous mode", "", &module->lissajous));
     }
 };
 

@@ -471,9 +471,9 @@ struct PolyrhythmClockWidget : ModuleWidget {
         addParam(createParamCentered<TinyRedKnob>(Vec(45, 322.7), module, PolyrhythmClock::TUPLETS_RAND_PARAM+2));
 
         addOutput(createOutputCentered<PJ301MPurple>(Vec(45, 119.8), module, PolyrhythmClock::MASTER_PULSE_OUTPUT));
-        addOutput(createOutputCentered<TinyPortBlue>(Vec(45, 195.8), module, PolyrhythmClock::TUPLET1_OUTPUT));
-        addOutput(createOutputCentered<TinyPortAqua>(Vec(45, 271.1), module, PolyrhythmClock::TUPLET2_OUTPUT));
-        addOutput(createOutputCentered<TinyPortRed>(Vec(45, 344.3), module, PolyrhythmClock::TUPLET3_OUTPUT));
+        addOutput(createOutputCentered<TinyPJ301MBlue>(Vec(45, 195.8), module, PolyrhythmClock::TUPLET1_OUTPUT));
+        addOutput(createOutputCentered<TinyPJ301MAqua>(Vec(45, 271.1), module, PolyrhythmClock::TUPLET2_OUTPUT));
+        addOutput(createOutputCentered<TinyPJ301MRed>(Vec(45, 344.3), module, PolyrhythmClock::TUPLET3_OUTPUT));
     }
 
     void appendContextMenu(Menu *menu) override {

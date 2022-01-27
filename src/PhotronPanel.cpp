@@ -3,10 +3,7 @@
 #define DISPLAY_SIZE_WIDTH 60
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 5 // 5? or 10?
-
-// TODO: add options menu
-// make svg panel
-
+#define NUM_OF_MARCHING_CIRCLES 5
 
 struct PhotronPanel : Module {
     enum ParamIds {
@@ -26,8 +23,9 @@ struct PhotronPanel : Module {
 
     dsp::SchmittTrigger colorTrig, invertTrig, resetTrig;
     bool isColor = true;
+    bool darkRoomBlobs = true;
     // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
-    int internalHz = 60;
+    int internalHz = 30;
     float srIncrement = APP->engine->getSampleTime() * internalHz;
     float sr = 0;
     float sep = 0.1;
@@ -37,6 +35,8 @@ struct PhotronPanel : Module {
     static const int cols = DISPLAY_SIZE_WIDTH / CELL_SIZE;
     static const int rows = DISPLAY_SIZE_HEIGHT / CELL_SIZE;
     Block blocks[rows][cols];
+    int blockAlpha[rows][cols];
+    MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
 
     PhotronPanel() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -46,7 +46,16 @@ struct PhotronPanel : Module {
                 Block b(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE);
                 blocks[y][x] = b;
                 blocks[y][x].isSet = true;
+
+                blockAlpha[y][x] = 0;
             }
+        }
+
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            MarchingCircle c(randRange(DISPLAY_SIZE_WIDTH), randRange(DISPLAY_SIZE_HEIGHT), randRange(10.0, 35.0));
+            c.setSize(DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
+            c.velLimit = 0.5;
+            circles[i] = c;
         }
 
         resetBlocks(PhotronPanel::RESET_PARAM);
@@ -58,6 +67,10 @@ struct PhotronPanel : Module {
 
     void onRandomize() override {
         resetBlocks(PhotronPanel::RANDOMIZE_PARAM);
+
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            circles[i].radius = randRange(10.0, 35.0);
+        }
     }
 
     void onReset() override {
@@ -94,6 +107,7 @@ struct PhotronPanel : Module {
 
         json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
         json_object_set_new(rootJ, "color", json_boolean(isColor));
+        json_object_set_new(rootJ, "blobs", json_boolean(darkRoomBlobs));
         json_object_set_new(rootJ, "blocks", blocksJ);
         return rootJ;
     }
@@ -104,6 +118,9 @@ struct PhotronPanel : Module {
 
         json_t *colorJ = json_object_get(rootJ, "color");
         if (colorJ) isColor = json_boolean_value(colorJ);
+
+        json_t *blobsJ = json_object_get(rootJ, "blobs");
+        if (blobsJ) darkRoomBlobs = json_boolean_value(blobsJ);
 
         json_t *blocksJ = json_object_get(rootJ, "blocks");
         if (blocksJ) {
@@ -156,7 +173,13 @@ struct PhotronPanel : Module {
                     Block b[8] = {west, east, north, south, northwest, northeast, southwest, southeast};
                     blocks[y][x].flock(b, 8);
                     blocks[y][x].update();
+
+                    blockAlpha[y][x] = calculateCell(blocks[y][x].getCenter());
                 }
+            }
+
+            for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+                circles[i].update();
             }
         }
         sr += srIncrement;
@@ -189,6 +212,25 @@ struct PhotronPanel : Module {
                     }
                 }
             }           
+        }
+    }
+
+    int calculateCell(Vec blockPos) {
+        float sum = 0.0;
+        for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            float r = circles[i].radius * 0.9;
+            float d = (blockPos.x - circles[i].pos.x) * (blockPos.x - circles[i].pos.x) + (blockPos.y - circles[i].pos.y) * (blockPos.y - circles[i].pos.y);
+            d = std::fmax(d, 0.001); // to prevent dividing by zero
+            sum += (r * r) / d;
+        }
+
+        if (sum >= 1) {
+            return 255;
+        } else {
+            sum = sum * sum;
+            float newSum = rescale(sum, 0.2, 1, 0, 254);
+            sum = clamp(newSum, 0.0, 255.0);
+            return (int)sum;
         }
     }
 };
@@ -250,13 +292,36 @@ namespace PhotronPanelNS {
 struct PhotronPanelDisplay : Widget {
     PhotronPanel *module;
 
-    // top row?
-    // void onButton(const event::Button &e) override {
-    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-    //         e.consume(this);
-            
-    //     }
-    // }
+    void onButton(const event::Button &e) override {
+        if (module == NULL) return;
+
+        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+            if ((e.mods & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+                e.consume(this);
+                module->isColor = !module->isColor;
+            }
+        }
+    }
+
+    void draw(const DrawArgs &args) override {
+        if (module == NULL) return;
+
+        for (int y = 0; y <DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
+            for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+                Vec3 rgb = module->blocks[y][x].rgb;
+                if (module->isColor) {
+                    nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                } else {
+                    // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                    nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.x, rgb.x));
+                }
+
+                nvgBeginPath(args.vg);
+                nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                nvgFill(args.vg);
+            }
+        }
+    }
 
     void drawLayer(const DrawArgs &args, int layer) override {
         if (module == NULL) return;
@@ -264,25 +329,38 @@ struct PhotronPanelDisplay : Widget {
         if (layer == 1) {
             //background
             // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
-            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
-            nvgFill(args.vg);
+            // nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+            // nvgBeginPath(args.vg);
+            // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+            // nvgFill(args.vg);
 
             for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
                 for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
                     Vec3 rgb = module->blocks[y][x].rgb;
+                    bool isBlobs = module->darkRoomBlobs;
                     if (module->isColor) {
-                        nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                        nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.y, rgb.z, isBlobs ? module->blockAlpha[y][x] : 255));
                     } else {
-                        NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                        nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
+                        // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                        nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.x, rgb.x, isBlobs ? module->blockAlpha[y][x] : 255));
                     }
                     nvgBeginPath(args.vg);
                     nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
                     nvgFill(args.vg);
                 }
             }
+
+            // // draw green circles for debugging
+            // for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
+            //     Vec circle = module->circles[i].getPos();
+            //     float cRadius = module->circles[i].getRadius();
+
+            //     nvgStrokeColor(args.vg, nvgRGB(0, 255, 0));
+            //     nvgBeginPath(args.vg);
+            //     nvgCircle(args.vg, circle.x, circle.y, cRadius);
+            //     nvgStroke(args.vg);
+            // }
         }
         Widget::drawLayer(args, layer);
 
@@ -318,6 +396,8 @@ struct PhotronPanelWidget : ModuleWidget {
         else colorModeItem->rightText = std::string("black & white ") + " " + RIGHT_ARROW;
         colorModeItem->module = module;
         menu->addChild(colorModeItem);
+
+        menu->addChild(createBoolPtrMenuItem("Dark Room Blobs", "", &module->darkRoomBlobs));
     }
 };
 

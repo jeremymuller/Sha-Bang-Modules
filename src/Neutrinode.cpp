@@ -1037,7 +1037,7 @@ struct NeutrinodeWidget : ModuleWidget {
         addChild(scaleLabel);
         addParam(scaleKnob);
 
-        addParam(createParamCentered<Jeremy_HSwitch>(Vec(111.4, 122.8), module, Neutrinode::PITCH_PARAM));
+        addParam(createParamCentered<Purple_V2Switch>(Vec(101.4, 122.8), module, Neutrinode::PITCH_PARAM));
         addParam(createParamCentered<TinyPurpleButton>(Vec(130.7, 91.4), module, Neutrinode::CLEAR_PARTICLES_PARAM));
 
         addChild(createLight<SmallLight<JeremyAquaLight>>(Vec(110.5 - 3, 24.3 - 3), module, Neutrinode::PAUSE_LIGHT));

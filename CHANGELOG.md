@@ -1,3 +1,9 @@
+v2.1.0 (01-27-2022)
+- Added new module StochSeqGrid
+- Updated port UIs
+- Added animation to Photron & PhotronPanel for dark room
+- Updated volt ranges for StochSeq and StochSeq4
+
 v2.0.2 (12-14-2021)
 - Added MCLK override in StochSeq4
 - Fixed clock resets in StochSeq and StochSeq4

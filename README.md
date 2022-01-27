@@ -21,6 +21,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [StochSeq](#stochseq) :tv:
 * [StochSeq4](#stochseq4) :tv:
 * [StochSeq4X](#stochseq4x)
+* [StochSeqGrid](#stochseqgrid)
 * [Talea](#talea) :tv:
 
 ## Video playlists:
@@ -36,7 +37,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 
 *A physical model of various of shakers and wind chimes (maracas, sleigh bells, bamboo chimes, metallic chimes, etc).*
 
-Watch the tutorial: 
+Watch the tutorial:
 
 [![Collider_video](docs/Collider-video.png)](https://youtu.be/nC_NozyveTc "Collider tutorial")
 
@@ -424,7 +425,7 @@ Watch the tutorial:
 - `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
 - `INV` outputs invert of `V/OCT`.
 - `OR` outputs pulse when at least one of the gates is on.
-- `XOR` outputs pulse when ONLY one gate is on. 
+- `XOR` outputs pulse when ONLY one gate is on.
 
 ---
 
@@ -440,6 +441,60 @@ Watch the tutorial:
 - The buttons under each column toggle whether they are gates or not gates.
 ##### OUTPUTS:
 - All 32 (or first 8) gate outputs from StochSeq4.
+
+---
+
+### StochSeqGrid
+
+![StochSeqGrid](/docs/StochSeqGrid.png)
+
+*A rhythmic sequencer that uses four independent stochastic (probabilistic) patterns. Each cell contains rhythmic subdivisions that are triggered based on probability.*
+
+Click and/or drag to draw your own patterns!
+
+Watch the tutorial:
+
+[![StochSeqGrid_video](docs/StochSeqGrid-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq Grid tutorial")
+
+##### RIGHT-CLICK MENU:
+- `MCLK` override: if `MCLK` has a connected cable then it will disable all individual clocks.
+- Show or hide slider percentages.
+- Enable keyboard shortcuts.
+##### KEYBOARD SHORTCUTS:
+- `Ctrl+C` copies focused pattern and length.
+- `Ctrl+V` pastes the copied pattern and length to the focused one.
+- `Ctrl+Enter` focuses and highlights a single pattern.
+- `Ctrl+Left` shifts focused sliders to the left.
+- `Ctrl+Right` shifts focused sliders to the right.
+- `Ctrl+Up` shifts focused sliders up by 5%.
+- `Ctrl+Down` shifts focused sliders down by 5%.
+##### INPUTS:
+- `MCLK` controls timing of all patterns (overrides all individual clocks).
+- `CLK` controls timing of individual patterns.
+- `RST` resets sequences to beginning of timeline.
+- `RND` gate input randomizes all probabilities.
+- `INV` gate input inverts all probabilities.
+- `DIM` gate input cuts the current pattern in half and repeats.
+##### KNOBS:
+- `LEN` length of the individual sequence.
+- `PATT` selects from preset patterns.
+- `SPREAD` determines the pitch spread of the `V/OCT` output.
+  - Center will always be the same pitch.
+  - Right of center: 0% to 100% in sliders correspond to low to high pitches.
+  - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
+- Two knobs control the root note and the scale just like [StochSeq](#stochseq).
+##### BUTTONS:
+- Resets sequences to beginning of timeline.
+- `RND` randomizes all probabilities.
+- `INV` inverts all probabilities.
+- `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
+##### OUTPUTS:
+- `GATE` outputs a pulse based on the probability of the current individual sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
+- `NOT` outputs only when `GATE` isn't triggered.
+- `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
+- `INV` outputs invert of `V/OCT`.
+- `OR` outputs pulse when at least one of the gates is on.
+- `XOR` outputs pulse when ONLY one gate is on.
 
 ---
 
