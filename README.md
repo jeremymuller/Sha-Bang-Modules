@@ -476,13 +476,23 @@ Watch the tutorial (coming soon):
 ##### INPUTS:
 - `RST` resets sequences to beginning of timeline.
 - `EXT` is an external clock to control the StochSeqGrid determined by the External Clock Mode.
-##### KNOBS:
-- `LEN` length of the individual sequence.
-- `TODO`
-##### BUTTONS:
+##### PATHS:
+- `length` length of the individual sequences.
+- `path` toggles the type of path
+  - `default` will traverse the grid based on the `length` small color indicators arrows just outside the grid display.
+  - `random` will randomly pick a cell based on the `length` range.
+  - `random walk` will ignore the `length` and only pick cells that are adjacent to the current cell the sequencer is in.
+##### RATES:
+- left-side knobs control the numerator part of the fraction (or ratio) of the corresponding sequence based on the global tempo.
+- right-side knobs control the denominator part of the fraction (or ratio) of the corresponding sequence based on the global tempo.
+- buttons toggle the corresponding sequence on/off.
+##### MAIN BUTTONS & KNOBS:
 - `Run` toggle the sequencer on/off.
 - `RST` resets sequences to beginning of timeline.
-- `TODO`
+- `Tempo` controls the global tempo of the StochSeqGrid.
+##### CELL KNOBS:
+- `Cell Probability` controls the overall probability of whether or not the cell will happen.
+- `CV / Rhythm Probability` controls the probability of whether or not the subdivision will happen. If the cell is triggered but the subdivision isn't, the output will be a single rhythmic gate/trigger. This knob also controls the volts for the `CV` outputs in relation to the `Volt range`.
 ##### OUTPUTS:
 - `GATES` outputs a pulse based on the probability of the current individual sequence position. (i.e. a cell at 50% will only trigger a pulse half of the time)
 - `CV` outputs voltage based on the `Rhythmic Probability` position and `Volt Range`.
