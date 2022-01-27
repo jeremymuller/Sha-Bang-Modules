@@ -1,4 +1,4 @@
-v2.1.0 (01-??-2022)
+v2.1.0 (01-27-2022)
 - Added new module StochSeqGrid
 - Updated port UIs
 - Added animation to Photron & PhotronPanel for dark room
