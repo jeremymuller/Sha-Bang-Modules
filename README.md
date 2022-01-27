@@ -450,51 +450,42 @@ Watch the tutorial:
 
 *A rhythmic sequencer that uses four independent stochastic (probabilistic) patterns. Each cell contains rhythmic subdivisions that are triggered based on probability.*
 
-Click and/or drag to draw your own patterns!
+Inspired by JW-Modules GridSeq!
 
-Watch the tutorial:
+Watch the tutorial (coming soon):
 
-[![StochSeqGrid_video](docs/StochSeqGrid-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq Grid tutorial")
+<!-- [![StochSeqGrid_video](docs/StochSeqGrid-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq Grid tutorial") -->
 
 ##### RIGHT-CLICK MENU:
-- `MCLK` override: if `MCLK` has a connected cable then it will disable all individual clocks.
-- Show or hide slider percentages.
-- Enable keyboard shortcuts.
-##### KEYBOARD SHORTCUTS:
-- `Ctrl+C` copies focused pattern and length.
-- `Ctrl+V` pastes the copied pattern and length to the focused one.
-- `Ctrl+Enter` focuses and highlights a single pattern.
-- `Ctrl+Left` shifts focused sliders to the left.
-- `Ctrl+Right` shifts focused sliders to the right.
-- `Ctrl+Up` shifts focused sliders up by 5%.
-- `Ctrl+Down` shifts focused sliders down by 5%.
+- Gate mode: gates or triggers.
+- CV mode: independent or sample & hold (based on whether the cell was triggered or not).
+- Volt range: +1V, +2V, ±5V, +10V (only effects the `CV` output)
+- Mouse drag: horizontal or vertical controls the increase/decrease of subdivisions within each cell.
+- External Clock Mode:
+  - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
+  - `2, 4, 8, 12, 24` `PPQN` controls bpm based on the number pulses per quarter note.
+- If the mode is set to any of the `PPQN` modes, the clock will turn on automatically when it receives a pulse. It will also turn off automatically after it times out from not receiving any more pulses.
+- Display: blooms or circles (doesn't affect the module other than visual aesthetic).
+##### MOUSE/KEYBOARD CONTROLS:
+- `Click` a cell to increase subdivisions.
+- `Shift+Click` a cell to double its subdivisions (up to 16).
+- `Click+Drag` in a cell to increase/decrease subdivisions.
+- `Ctrl+Click` on a subdivision to toggle.
+- `Ctrl+Click` off of a subdivision to toggle all of them on in current cell.
+- `Ctrl+Click+Drag` on multiple subdivisions to toggle.
 ##### INPUTS:
-- `MCLK` controls timing of all patterns (overrides all individual clocks).
-- `CLK` controls timing of individual patterns.
 - `RST` resets sequences to beginning of timeline.
-- `RND` gate input randomizes all probabilities.
-- `INV` gate input inverts all probabilities.
-- `DIM` gate input cuts the current pattern in half and repeats.
+- `EXT` is an external clock to control the StochSeqGrid determined by the External Clock Mode.
 ##### KNOBS:
 - `LEN` length of the individual sequence.
-- `PATT` selects from preset patterns.
-- `SPREAD` determines the pitch spread of the `V/OCT` output.
-  - Center will always be the same pitch.
-  - Right of center: 0% to 100% in sliders correspond to low to high pitches.
-  - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
-- Two knobs control the root note and the scale just like [StochSeq](#stochseq).
+- `TODO`
 ##### BUTTONS:
-- Resets sequences to beginning of timeline.
-- `RND` randomizes all probabilities.
-- `INV` inverts all probabilities.
-- `DIM` cuts the current pattern in half and repeats. Keep clicking this button to continue to diminish the pattern.
+- `Run` toggle the sequencer on/off.
+- `RST` resets sequences to beginning of timeline.
+- `TODO`
 ##### OUTPUTS:
-- `GATE` outputs a pulse based on the probability of the current individual sequence position. (i.e. a slider at 50% will only trigger a pulse half of the time)
-- `NOT` outputs only when `GATE` isn't triggered.
-- `V/OCT` outputs pitch based on the slider position and `SPREAD` knob, regardless of probability of the event.
-- `INV` outputs invert of `V/OCT`.
-- `OR` outputs pulse when at least one of the gates is on.
-- `XOR` outputs pulse when ONLY one gate is on.
+- `GATES` outputs a pulse based on the probability of the current individual sequence position. (i.e. a cell at 50% will only trigger a pulse half of the time)
+- `CV` outputs voltage based on the `Rhythmic Probability` position and `Volt Range`.
 
 ---
 
