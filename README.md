@@ -450,7 +450,7 @@ Watch the tutorial:
 
 *A rhythmic sequencer that uses four independent stochastic (probabilistic) patterns. Each cell contains rhythmic subdivisions that are triggered based on probability.*
 
-Inspired by JW-Modules GridSeq!
+Inspired by JW-Modules GridSeq :smiley:
 
 Watch the tutorial (coming soon):
 
