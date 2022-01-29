@@ -4,7 +4,7 @@ A collection of innovative, probabilistic, generative, and rhythmically complex 
 
 Add these modules to VCVRack through the [Rack library](https://library.vcvrack.com/?brand=Sha%23Bang!%20Modules).
 
-![modulesall](/docs/Modules_ALL3.gif)
+![modulesall](/docs/Modules_ALL4.gif)
 
 ## Contents:
 
@@ -21,7 +21,7 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [StochSeq](#stochseq) :tv:
 * [StochSeq4](#stochseq4) :tv:
 * [StochSeq4X](#stochseq4x)
-* [StochSeqGrid](#stochseqgrid)
+* [StochSeqGrid](#stochseqgrid) :tv:
 * [Talea](#talea) :tv:
 
 ## Video playlists:
@@ -452,9 +452,10 @@ Watch the tutorial:
 
 Inspired by JW-Modules GridSeq 🙂
 
-Watch the tutorial (coming soon):
+Watch the tutorial:
 
-<!-- [![StochSeqGrid_video](docs/StochSeqGrid-video.png)](https://youtu.be/LBL_VYe_stU "Stoch Seq Grid tutorial") -->
+[![StochSeqGrid_video](docs/StochSeqGrid-video.png)](https://youtu.be/b79O2fSgdCE "Stoch Seq Grid tutorial")
+
 
 ##### RIGHT-CLICK MENU:
 - Gate mode: gates or triggers.
