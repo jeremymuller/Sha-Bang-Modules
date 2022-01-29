@@ -729,32 +729,6 @@ namespace NeutrinodeNS {
             return menu;
         }
     };
-
-    struct CollisionModeValueItem : MenuItem {
-        Neutrinode *module;
-        bool nodeCollisions;
-        void onAction(const event::Action &e) override {
-            module->nodeCollisionMode = nodeCollisions;
-        }
-    };
-
-    struct CollisionModeItem : MenuItem {
-        Neutrinode *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> collModes = {"on", "off"};
-            for (int i = 0; i < 2; i++) {
-                CollisionModeValueItem *item = new CollisionModeValueItem;
-                item->text = collModes[i];
-                bool isOn = (i == 0) ? true : false;
-                item->rightText = CHECKMARK(module->nodeCollisionMode == isOn);
-                item->module = module;
-                item->nodeCollisions = isOn;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
 }
 
 
@@ -1079,12 +1053,7 @@ struct NeutrinodeWidget : ModuleWidget {
         playModeItem->module = module;
         menu->addChild(playModeItem);
 
-        NeutrinodeNS::CollisionModeItem *collisionModeItem = new NeutrinodeNS::CollisionModeItem;
-        collisionModeItem->text = "Collisions";
-        if (module->nodeCollisionMode) collisionModeItem->rightText = std::string("on") + " " + RIGHT_ARROW;
-        else collisionModeItem->rightText = std::string("off") + " " + RIGHT_ARROW;
-        collisionModeItem->module = module;
-        menu->addChild(collisionModeItem);
+        menu->addChild(createBoolPtrMenuItem("Collisions", "", &module->nodeCollisionMode));
 
         NeutrinodeNS::ChannelItem *channelItem = new NeutrinodeNS::ChannelItem;
         channelItem->text = "Polyphony channels";
