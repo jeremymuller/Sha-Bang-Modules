@@ -71,6 +71,9 @@ struct PolyrhythmClock : Module {
     float dur2;
     float dur3;
 
+    int currentTheme = 0;
+    int previousTheme = 0;
+
     PolyrhythmClock() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configButton(CLOCK_TOGGLE_PARAM, "Toggle clock");
@@ -340,10 +343,12 @@ struct ExternalClockModeItem : MenuItem {
 struct BPMDisplay : Widget {
     std::string text;
     int fontSize;
+    NVGcolor color;
     PolyrhythmClock *module;
     BPMDisplay(int _fontSize = 15) {
         fontSize = _fontSize;
         box.size.y = BND_WIDGET_HEIGHT;
+        color = getPurple();
     }
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
@@ -352,7 +357,7 @@ struct BPMDisplay : Widget {
         int bpm = static_cast<int>(round(module->currentBPM));
         text = std::to_string(bpm) + " bpm";
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(128, 0, 219));
+        nvgFillColor(args.vg, color);
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, 0, 0, text.c_str(), NULL);
     }
@@ -361,10 +366,12 @@ struct BPMDisplay : Widget {
 struct RatioDisplay : Widget {
     std::string text1, text2, text3;
 	int fontSize;
+    NVGcolor color;
     PolyrhythmClock *module;
 	RatioDisplay(int _fontSize = 13) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
+        color = nvgRGB(0, 0, 0);
 	}
 	void draw(const DrawArgs &args) override {
         //background
@@ -381,7 +388,7 @@ struct RatioDisplay : Widget {
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT + NVG_ALIGN_TOP);
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
         // nvgFillColor(args.vg, nvgRGB(38, 0, 255));
-        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+        nvgFillColor(args.vg, color);
         nvgFontSize(args.vg, fontSize);
 		nvgText(args.vg, xPos1, 0, text1.c_str(), NULL);
 
@@ -391,7 +398,7 @@ struct RatioDisplay : Widget {
         float xPos2 = num2 < 10 ? 7.6 : 0.0;
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
         // nvgTextAlign(args.vg, NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+        nvgFillColor(args.vg, color);
         nvgFontSize(args.vg, fontSize);
         // nvgText(args.vg, 5, 5, text2.c_str(), NULL);
         nvgText(args.vg, xPos2, 75.4, text2.c_str(), NULL);
@@ -402,13 +409,16 @@ struct RatioDisplay : Widget {
         float xPos3 = num3 < 10 ? 7.6 : 0.0;
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER);
         // nvgTextAlign(args.vg, NVG_ALIGN_TOP);
-        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+        nvgFillColor(args.vg, color);
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, xPos3, 148.5, text3.c_str(), NULL);
     }
 };
 
 struct PolyrhythmClockWidget : ModuleWidget {
+    BPMDisplay *bpmLabel = new BPMDisplay();
+    RatioDisplay  *ratioLabel1 = new RatioDisplay();
+
     PolyrhythmClockWidget(PolyrhythmClock *module) {
         setModule(module);
         setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock.svg")));
@@ -417,12 +427,11 @@ struct PolyrhythmClockWidget : ModuleWidget {
         // ratioLabel->box.pos = Vec(60.9, 203.5);
         // ratioLabel->text = "5:4";
         // addChild(ratioLabel);
-        BPMDisplay *bpmLabel = new BPMDisplay();
         bpmLabel->module = module;
         bpmLabel->box.pos = Vec(45, 92.8);
         addChild(bpmLabel);
 
-        RatioDisplay *ratioLabel1 = new RatioDisplay();
+        // RatioDisplay *ratioLabel1 = new RatioDisplay();
         ratioLabel1->module = module;
         // ratioLabel1->box.pos = Vec(36, 175.5);
         ratioLabel1->box.pos = Vec(29, 151.6);
@@ -430,12 +439,6 @@ struct PolyrhythmClockWidget : ModuleWidget {
         ratioLabel1->box.size.x = 30; // 10
         ratioLabel1->text2 = "5:4";
         addChild(ratioLabel1);
-        // RatioDisplay *ratioLabel2 = new RatioDisplay();
-        // ratioLabel2->module = module;
-        // ratioLabel2->box.pos = Vec(36.7, 229.6);
-        // ratioLabel2->box.size.x = 10;
-        // ratioLabel2->text = "5:4";
-        // addChild(ratioLabel2);
 
         addChild(createWidget<JeremyScrew>(Vec(12, 2)));
         addChild(createWidget<JeremyScrew>(Vec(12, box.size.y - 14)));
@@ -485,6 +488,32 @@ struct PolyrhythmClockWidget : ModuleWidget {
         extClockModeItem->rightText = RIGHT_ARROW;
         extClockModeItem->module = module;
         menu->addChild(extClockModeItem);
+
+        menu->addChild(createIndexPtrSubmenuItem("Panel", {"Default", "Dark"}, &module->currentTheme));
+    }
+
+    void step() override {
+        PolyrhythmClock *module = dynamic_cast<PolyrhythmClock *>(this->module);
+        if (module) {
+            if (module->currentTheme != module->previousTheme) {
+                if (module->currentTheme == 0) {
+                    setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock.svg")));
+                    bpmLabel->color = getPurple();
+                    ratioLabel1->color = nvgRGB(0, 0, 0);
+                    PurpleKnob::setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleKnob.svg")));
+                }
+                else if (module->currentTheme == 1) {
+                    setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock_dark.svg")));
+                    bpmLabel->color = getAqua();
+                    ratioLabel1->color = nvgRGB(255, 255, 255);
+                    // PurpleKnob::setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleInvertKnob.svg")));
+                }
+
+                module->previousTheme = module->currentTheme;
+            }
+        }
+
+        Widget::step();
     }
 };
 

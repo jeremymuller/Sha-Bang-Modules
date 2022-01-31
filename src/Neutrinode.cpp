@@ -703,32 +703,6 @@ namespace NeutrinodeNS {
             return menu;
         }
     };
-
-    struct PlayModeValueItem : MenuItem {
-        Neutrinode *module;
-        bool oneShot;
-        void onAction(const event::Action &e) override {
-            module->setPlayMode(oneShot);
-        }
-    };
-
-    struct PlayModeItem : MenuItem {
-        Neutrinode *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> playModes = {"continuous", "1-shot"};
-            for (int i = 0; i < 2; i++) {
-                PlayModeValueItem *item = new PlayModeValueItem;
-                item->text = playModes[i];
-                bool isOn = i;
-                item->rightText = CHECKMARK(module->oneShotMode == isOn);
-                item->module = module;
-                item->oneShot = isOn;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
 }
 
 
@@ -1046,12 +1020,15 @@ struct NeutrinodeWidget : ModuleWidget {
         Neutrinode *module = dynamic_cast<Neutrinode*>(this->module);
         menu->addChild(new MenuEntry);
 
-        NeutrinodeNS::PlayModeItem *playModeItem = new NeutrinodeNS::PlayModeItem;
-        playModeItem->text = "Play mode";
-        if (module->oneShotMode) playModeItem->rightText = std::string("1-shot") + " " + RIGHT_ARROW;
-        else playModeItem->rightText = std::string("continuous") + " " + RIGHT_ARROW;
-        playModeItem->module = module;
-        menu->addChild(playModeItem);
+        menu->addChild(createIndexSubmenuItem("Play mode",
+            {"continuous", "1-shot"},
+            [=]() {
+                return module->oneShotMode;
+            },
+            [=](int mode) {
+                module->setPlayMode(mode);
+            }
+        ));
 
         menu->addChild(createBoolPtrMenuItem("Collisions", "", &module->nodeCollisionMode));
 
