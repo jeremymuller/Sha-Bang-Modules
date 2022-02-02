@@ -4,44 +4,6 @@
 #define SLIDER_TOP 4
 #define NUM_OF_SLIDERS 32
 #define NUM_OF_LIGHTS 32
-#define NUM_OF_MEM_BANK 12
-
-struct MemoryBank {
-	bool isOn;
-	int length;
-	float *gateProbabilities = new float[NUM_OF_SLIDERS];
-
-	MemoryBank() {
-		isOn = false;
-		length = NUM_OF_SLIDERS;
-
-		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
-			gateProbabilities[i] = 0.0;
-		}
-	}
-
-	~MemoryBank() {
-		delete[] gateProbabilities;
-	}
-
-	void setProbabilities(const float *probs, int size) {
-		isOn = true;
-		length = size;
-		DEBUG("size: %d", size);
-		DEBUG("length: %d", length);
-
-		for (int i = 0; i < length; i++) {
-			gateProbabilities[i] = probs[i];
-		}
-	}
-
-	void clearBank() {
-		isOn = false;
-		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
-			gateProbabilities[i] = 0.0;
-		}
-	}
-};
 
 struct StochSeq : Module, Quantize {
 	enum ModeIds {
@@ -108,9 +70,6 @@ struct StochSeq : Module, Quantize {
 	float pitchVoltage = 0.0;
 	float invPitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
-	MemoryBank memBanks[NUM_OF_MEM_BANK];
-	// float memBanks[NUM_OF_MEM_BANK][NUM_OF_SLIDERS] = {};
-	int currentMemBank = 0;
 	bool enableKBShortcuts = true;
 	bool isCtrlClick = false;
 
@@ -141,12 +100,6 @@ struct StochSeq : Module, Quantize {
 			gateProbabilities[i] = random::uniform();
 			configOutput(GATES_OUTPUT + i, "Gate " + std::to_string(i+1));
 		}
-
-		// for (int i = 0; i < NUM_OF_MEM_BANK; i++) {
-		// 	for (int j = 0; j < NUM_OF_SLIDERS; j++) {
-		// 		memBanks[i][j] = 0.0;
-		// 	}
-		// }
 
 		randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 	}
@@ -573,58 +526,6 @@ struct StochSeqDisplay : Widget {
 	}
 };
 
-struct MemoryBankDisplay : Widget {
-	StochSeq *module;
-	int bankId;
-	float sliderWidth = 1.25;
-
-	MemoryBankDisplay() {}
-
-	void onButton(const event::Button &e) override {
-        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-			e.consume(this);
-			int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
-			module->memBanks[bankId].setProbabilities(module->gateProbabilities, visibleSliders);
-
-			// select from bank
-			// highlight too
-        }
-	}
-
-	float getSliderHeight(int index) {
-		float y = box.size.y;
-		return y - (y * module->memBanks[bankId].gateProbabilities[index]);
-	}
-
-	void draw(const DrawArgs& args) override {
-
-		if (module == NULL) {
-			// draw for preview
-
-			return;
-		}
-
-
-
-		if (module->memBanks[bankId].isOn) {
-
-			// sliders
-			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
-			sliderWidth = box.size.x / (float)module->memBanks[bankId].length;
-			for (int i = 0; i < module->memBanks[bankId].length; i++) {
-				float sHeight = getSliderHeight(i);
-
-				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 220)); // bars
-				nvgBeginPath(args.vg);
-				nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
-				nvgFill(args.vg);
-			}
-
-		}
-	}
-
-};
-
 struct StochSeqWidget : ModuleWidget {
 	StochSeqWidget(StochSeq* module) {
 		setModule(module);
@@ -633,17 +534,8 @@ struct StochSeqWidget : ModuleWidget {
 		StochSeqDisplay *display = new StochSeqDisplay();
 		display->module = module;
 		display->box.pos = Vec(7.4, 47.7);
-		display->box.size = Vec(480, 102.9); // Vec(480, 141.9)
+		display->box.size = Vec(480, 141.9);
 		addChild(display);
-
-		for (int i = 0; i < NUM_OF_MEM_BANK; i++) {
-			MemoryBankDisplay *memDisplay = new MemoryBankDisplay();
-			memDisplay->module = module;
-			memDisplay->bankId = i;
-			memDisplay->box.pos = Vec(7.6 + (i * 40), 160.8);
-			memDisplay->box.size = Vec(40, 28.9);
-			addChild(memDisplay);
-		}
 
 		addChild(createWidget<JeremyScrew>(Vec(25.9, 2)));
 		addChild(createWidget<JeremyScrew>(Vec(25.9, box.size.y-14)));
