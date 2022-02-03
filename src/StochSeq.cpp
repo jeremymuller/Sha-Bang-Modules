@@ -150,11 +150,7 @@ struct StochSeq : Module, Quantize {
 			configOutput(GATES_OUTPUT + i, "Gate " + std::to_string(i+1));
 		}
 
-		// for (int i = 0; i < NUM_OF_MEM_BANK; i++) {
-		// 	for (int j = 0; j < NUM_OF_SLIDERS; j++) {
-		// 		memBanks[i][j] = 0.0;
-		// 	}
-		// }
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 
 		randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 	}
@@ -275,7 +271,6 @@ struct StochSeq : Module, Quantize {
 			currentMemBank = bankId;
 		}
 
-		// TODO: pattern, random, invert, and dim don't change the memory bank
 		if ((int)params[PATTERN_PARAM].getValue() != currentPattern) {
 			int patt = (int)params[PATTERN_PARAM].getValue();
 			currentPattern = patt;
@@ -286,9 +281,11 @@ struct StochSeq : Module, Quantize {
 		}
 		if (invertTrig.process(params[INVERT_PARAM].getValue() + inputs[INVERT_INPUT].getVoltage())) {
 			invert();
+			memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 		}
 		if (dimTrig.process(params[DIMINUTION_PARAM].getValue() + inputs[DIMINUTION_INPUT].getVoltage())) {
 			diminish();
+			memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 		}
 		if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage())) {
 			if (resetMode) {
@@ -310,7 +307,7 @@ struct StochSeq : Module, Quantize {
 		// float blink = lightBlink ? 1.0 : 0.0;
 		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt ? 10.0 : 0.0);
 		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt ? 10.0 : 0.0);
-		outputs[NOT_GATE_MAIN_OUTPUT].setVoltage(notGateVolt ? 10.0 : 0.0); // todo
+		outputs[NOT_GATE_MAIN_OUTPUT].setVoltage(notGateVolt ? 10.0 : 0.0);
 		if (voltMode == VOLT_SAMPHOLD_MODE && gateVolt) {
 			outputs[INV_VOLT_OUTPUT].setVoltage(invPitchVoltage);
 			outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
@@ -402,6 +399,8 @@ struct StochSeq : Module, Quantize {
 				gateProbabilities[i] = gateProbabilities[i+1];
 			}
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void shiftPatternRight() {
@@ -413,6 +412,8 @@ struct StochSeq : Module, Quantize {
 				gateProbabilities[i] = gateProbabilities[i-1];
 			}
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void shiftPatternUp() {
@@ -420,6 +421,8 @@ struct StochSeq : Module, Quantize {
 			gateProbabilities[i] += 0.05;
 			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void shiftPatternDown() {
@@ -427,6 +430,8 @@ struct StochSeq : Module, Quantize {
 			gateProbabilities[i] -= 0.05;
 			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void genPatterns(int c) {
@@ -481,6 +486,8 @@ struct StochSeq : Module, Quantize {
 					gateProbabilities[i] = random::uniform();
 				}
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 };
 
@@ -564,8 +571,11 @@ struct StochSeqDisplay : Widget {
 				nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
 				nvgStroke(args.vg);
 
-				// random sliders
-				float rHeight = (box.size.y-SLIDER_TOP) * random::uniform();
+				// sine wave sliders
+				float sinHeight = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
+				float rHeight = (box.size.y-SLIDER_TOP) * (1 - sinHeight);
+				// float rHeight = (box.size.y-SLIDER_TOP) * random::uniform();
+
 				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
 				nvgBeginPath(args.vg);
 				nvgRect(args.vg, i * SLIDER_WIDTH, rHeight, SLIDER_WIDTH, box.size.y - rHeight);
@@ -687,6 +697,29 @@ struct MemoryBankDisplay : Widget {
 
 		if (module == NULL) {
 			// draw for preview
+
+			// border lines
+			if (bankId < 11) {
+				nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
+				nvgStrokeWidth(args.vg, 1.5);
+				nvgBeginPath(args.vg);
+				nvgMoveTo(args.vg, box.size.x, 0);
+				nvgLineTo(args.vg, box.size.x, box.size.y);
+				nvgStroke(args.vg);
+			}
+
+			if (bankId == 0) {
+				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+					float sinHeight = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
+					float rHeight = (box.size.y - SLIDER_TOP) * (1 - sinHeight);
+					if (sinHeight > 0.0) {
+						nvgBeginPath(args.vg);
+						nvgRect(args.vg, i * sliderWidth, rHeight, sliderWidth, box.size.y - rHeight);
+						nvgFill(args.vg);
+					}
+				}
+			}
+
 
 			return;
 		}
