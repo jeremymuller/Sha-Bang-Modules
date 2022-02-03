@@ -128,10 +128,10 @@ struct StochSeq4 : Module, Quantize {
         configParam(LENGTH_PARAM + BLUE_SEQ, 1.0, 32.0, 32.0, "Blue seq length");
         configParam(LENGTH_PARAM + AQUA_SEQ, 1.0, 32.0, 32.0, "Aqua seq length");
         configParam(LENGTH_PARAM + RED_SEQ, 1.0, 32.0, 32.0, "Red seq length");
-        configParam(PATTERN_PARAM + PURPLE_SEQ, 0.0, 7.0, 0.0, "Purple pattern");
-        configParam(PATTERN_PARAM + BLUE_SEQ, 0.0, 7.0, 0.0, "Blue pattern");
-        configParam(PATTERN_PARAM + AQUA_SEQ, 0.0, 7.0, 0.0, "Aqua pattern");
-        configParam(PATTERN_PARAM + RED_SEQ, 0.0, 7.0, 0.0, "Red pattern");
+        configParam(PATTERN_PARAM + PURPLE_SEQ, 0.0, 8.0, 0.0, "Purple pattern");
+        configParam(PATTERN_PARAM + BLUE_SEQ, 0.0, 8.0, 0.0, "Blue pattern");
+        configParam(PATTERN_PARAM + AQUA_SEQ, 0.0, 8.0, 0.0, "Aqua pattern");
+        configParam(PATTERN_PARAM + RED_SEQ, 0.0, 8.0, 0.0, "Red pattern");
 
         configButton(RANDOM_PARAM + PURPLE_SEQ, "Randomize purple pattern");
         configButton(RANDOM_PARAM + BLUE_SEQ, "Randomize blue pattern");
@@ -500,6 +500,11 @@ struct StochSeq4 : Module, Quantize {
                     seqs[id].gateProbabilities[i] = std::sin(i / (NUM_OF_SLIDERS - 1.0) * M_PI);
                 }
 				break;
+            case 8:
+                for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+					seqs[id].gateProbabilities[i] = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
+				}
+                break;
 			default:
 				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
                     seqs[id].gateProbabilities[i] = random::uniform();
