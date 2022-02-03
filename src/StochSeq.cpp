@@ -124,7 +124,7 @@ struct StochSeq : Module, Quantize {
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configButton(RESET_PARAM, "Reset");
-		configParam(PATTERN_PARAM, 0.0, 7.0, 0.0, "Pattern");
+		configParam(PATTERN_PARAM, 0.0, 8.0, 0.0, "Pattern");
 		configButton(INVERT_PARAM, "Invert pattern");
 		configButton(RANDOM_PARAM, "Randomize pattern");
 		configButton(DIMINUTION_PARAM, "Diminish pattern");
@@ -469,6 +469,11 @@ struct StochSeq : Module, Quantize {
 			case 7:
 				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 					gateProbabilities[i] = std::sin(i / (NUM_OF_SLIDERS - 1.0) * M_PI);
+				}
+				break;
+			case 8:
+				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+					gateProbabilities[i] = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
 				}
 				break;
 			default:
