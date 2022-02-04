@@ -500,7 +500,7 @@ struct PolyrhythmClockWidget : ModuleWidget {
                     setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock.svg")));
                     bpmLabel->color = getPurple();
                     ratioLabel1->color = nvgRGB(0, 0, 0);
-                    PurpleKnob::setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleKnob.svg")));
+                    // PurpleKnob::setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleKnob.svg")));
                 }
                 else if (module->currentTheme == 1) {
                     setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock_dark.svg")));
