@@ -71,7 +71,6 @@ struct PolyrhythmClock : Module {
     float dur2;
     float dur3;
 
-    int currentTheme = 0;
     int previousTheme = 0;
 
     PolyrhythmClock() {
@@ -488,32 +487,6 @@ struct PolyrhythmClockWidget : ModuleWidget {
         extClockModeItem->rightText = RIGHT_ARROW;
         extClockModeItem->module = module;
         menu->addChild(extClockModeItem);
-
-        menu->addChild(createIndexPtrSubmenuItem("Panel", {"Default", "Dark"}, &module->currentTheme));
-    }
-
-    void step() override {
-        PolyrhythmClock *module = dynamic_cast<PolyrhythmClock *>(this->module);
-        if (module) {
-            if (module->currentTheme != module->previousTheme) {
-                if (module->currentTheme == 0) {
-                    setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock.svg")));
-                    bpmLabel->color = getPurple();
-                    ratioLabel1->color = nvgRGB(0, 0, 0);
-                    // PurpleKnob::setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleKnob.svg")));
-                }
-                else if (module->currentTheme == 1) {
-                    setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock_dark.svg")));
-                    bpmLabel->color = getAqua();
-                    ratioLabel1->color = nvgRGB(255, 255, 255);
-                    // PurpleKnob::setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PurpleInvertKnob.svg")));
-                }
-
-                module->previousTheme = module->currentTheme;
-            }
-        }
-
-        Widget::step();
     }
 };
 
