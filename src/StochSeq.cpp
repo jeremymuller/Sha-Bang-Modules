@@ -6,6 +6,8 @@
 #define NUM_OF_LIGHTS 32
 #define NUM_OF_MEM_BANK 12
 
+// TODO: docs!!!!
+
 struct MemoryBank {
 	bool isOn;
 	int length;
