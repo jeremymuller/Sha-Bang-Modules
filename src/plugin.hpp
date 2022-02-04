@@ -123,6 +123,12 @@ struct CenterAlignedLabel : Widget {
 
 /************************** PORTS **************************/
 
+struct DefaultPort : SvgPort {
+    DefaultPort() {
+        setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/DefaultPort.svg")));
+    }
+};
+
 struct TinyPortPurple : SvgPort {
     TinyPortPurple() {
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/TinyPortPurple.svg")));
@@ -457,6 +463,7 @@ struct BlueInvertKnob : RoundKnob {
         // shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BlueInvertKnob.svg")));
         snap = true;
+        shadow->blurRadius = 2.0;
     }
 };
 

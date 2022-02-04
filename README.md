@@ -343,6 +343,9 @@ Watch the tutorial:
 [![StochSeq_video](docs/StochSeq-video.png)](https://youtu.be/QtNtazAv73M "Stochastic Sequencer tutorial")
 
 ##### RIGHT-CLICK MENU:
+- Gate mode: gates or triggers.
+- V/OCT mode: Independent or Sample and Hold (only changes based on whether gate triggers).
+- Volt Offset: ±5V or +10V
 - Show or hide slider percentages.
 - Enable keyboard shortcuts.
 ##### KEYBOARD SHORTCUTS:
@@ -356,10 +359,7 @@ Watch the tutorial:
 ##### KNOBS:
 - `LEN` length of the sequence.
 - `PATT` selects from preset patterns.
-- `SPREAD` determines the pitch spread of the `V/OCT` output.
-  - Center will always be the same pitch.
-  - Right of center: 0% to 100% in sliders correspond to low to high pitches.
-  - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
+- `SCALE` percentage of the pitch based on the `V/OCT` output and Volt Offset.
 - Two knobs control the root note and the scale. The Messiaen modes are based on the wonderful French composer, Olivier Messiaen and his [modes of limited transposition](https://en.wikipedia.org/wiki/Mode_of_limited_transposition) found in his book *The Technique of My Musical Language*.
 - Chords like MM7, Mm7, mm7, etc. are based on [seventh chords](https://en.wikipedia.org/wiki/Seventh_chord).
 ##### BUTTONS:
@@ -389,6 +389,9 @@ Watch the tutorial:
 
 ##### RIGHT-CLICK MENU:
 - `MCLK` override: if `MCLK` has a connected cable then it will disable all individual clocks.
+- Gate mode: gates or triggers.
+- V/OCT mode: Independent or Sample and Hold (only changes based on whether gate triggers).
+- Volt Offset: ±5V or +10V
 - Show or hide slider percentages.
 - Enable keyboard shortcuts.
 ##### KEYBOARD SHORTCUTS:
@@ -409,10 +412,7 @@ Watch the tutorial:
 ##### KNOBS:
 - `LEN` length of the individual sequence.
 - `PATT` selects from preset patterns.
-- `SPREAD` determines the pitch spread of the `V/OCT` output.
-  - Center will always be the same pitch.
-  - Right of center: 0% to 100% in sliders correspond to low to high pitches.
-  - Left of center: 0% to 100% in sliders correspond to high to low pitches (inverted).
+- `SCALE` percentage of the pitch based on the `V/OCT` output and Volt Offset.
 - Two knobs control the root note and the scale just like [StochSeq](#stochseq).
 ##### BUTTONS:
 - Resets sequences to beginning of timeline.
