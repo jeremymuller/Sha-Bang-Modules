@@ -426,6 +426,8 @@ struct StochSeqGrid : Module {
         json_object_set_new(rootJ, "currentPattern", json_integer(currentPattern));
         json_object_set_new(rootJ, "bpmInputMode", json_integer(bpmInputMode));
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
+        json_object_set_new(rootJ, "mouseDrag", json_boolean(useMouseDeltaY));
+        json_object_set_new(rootJ, "displayCircles", json_boolean(displayCircles));
 
         return rootJ;
     }
@@ -505,6 +507,14 @@ struct StochSeqGrid : Module {
         json_t *runJ = json_object_get(rootJ, "run");
         if (runJ) 
             clockOn = json_boolean_value(runJ);
+
+        json_t *mouseDragJ = json_object_get(rootJ, "mouseDrag");
+        if (mouseDragJ)
+            useMouseDeltaY = json_boolean_value(mouseDragJ);
+
+        json_t *displayCirclesJ = json_object_get(rootJ, "displayCircles");
+        if (displayCirclesJ)
+            displayCircles = json_boolean_value(displayCirclesJ);
     }
 
     void onReset() override {
