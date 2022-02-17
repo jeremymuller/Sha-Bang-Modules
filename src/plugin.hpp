@@ -546,6 +546,7 @@ struct NanoRedKnob : RoundKnob {
 
 struct NanoWhiteKnob : RoundKnob {
     NanoWhiteKnob() {
+        shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoWhiteKnob.svg")));
     }
 };

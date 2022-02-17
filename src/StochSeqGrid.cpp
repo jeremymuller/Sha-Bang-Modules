@@ -246,7 +246,8 @@ struct StochSeqGrid : Module {
         DUR_PARAMS = RHYTHM_PARAMS + NUM_SEQ,
         CELL_PROB_PARAM = DUR_PARAMS + NUM_SEQ,
         SUBDIVISION_PARAM = CELL_PROB_PARAM + NUM_OF_CELLS,
-        RESET_PARAM = SUBDIVISION_PARAM + NUM_OF_CELLS,
+        CV_PARAM = SUBDIVISION_PARAM + NUM_OF_CELLS,
+        RESET_PARAM = CV_PARAM + NUM_OF_CELLS,
         ON_PARAMS,
         PATTERN_PARAM = ON_PARAMS + NUM_SEQ,
         NUM_PARAMS
@@ -359,7 +360,8 @@ struct StochSeqGrid : Module {
         for (int i = 0; i < NUM_OF_CELLS; i++) {
             // cellOn[i] = true;
             configParam(CELL_PROB_PARAM + i, 0.0, 1.0, 1.0, "Cell Probability", "%", 0, 100);
-            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "CV / Rhythm Probability", "%", 0, 100);
+            configParam(CV_PARAM + i, -10.0, 10.0, 0.0, "Cell CV", " V");
+            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "Rhythm Probability", "%", 0, 100);
             subdivisions[i] = 1;
             for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
                 beats[i][j] = true;
@@ -771,7 +773,8 @@ struct StochSeqGrid : Module {
         if (clockOn) {
             if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
                 period += args.sampleTime;
-                if (period > timeOut) clockOn = false;
+                if (period > timeOut) 
+                    clockOn = false;
                 if (bpmDetect) {
                     if (extPulseIndex > 1) {
                         clockFreq = (1.0 / period) / (float)ppqn;
@@ -817,8 +820,10 @@ struct StochSeqGrid : Module {
 
 
                         float gateProb = params[CELL_PROB_PARAM + _index].getValue();
+                        float cVolt = params[CV_PARAM + _index].getValue();
                         float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
-                        seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
+                        seqs[i].volts = cVolt;
+                        // seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
 
                         if (random::uniform() < gateProb) {
                             voltSH = true;
@@ -1023,7 +1028,8 @@ struct SubdivisionDisplay : Widget {
                 clickedOnBeat = false;
                 toggleRhythms(initX, initY, isBeatOn);
                 if (!clickedOnBeat)
-                    module->resetRhythms(index);
+                    decrementSubdivisions();
+                // module->resetRhythms(index);
             } else if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
                 module->isCtrlClick = false;
                 e.consume(this);
@@ -1067,6 +1073,10 @@ struct SubdivisionDisplay : Widget {
     void incrementSubdivisions(float dy) {
         int sd = static_cast<int>(round(module->subdivisions[index] + dy * 0.25));
         module->subdivisions[index] = clamp(sd, 1, MAX_SUBDIVISIONS);
+    }
+
+    void decrementSubdivisions() {
+        module->subdivisions[index] = clamp(--module->subdivisions[index], 1, MAX_SUBDIVISIONS);
     }
 
     void toggleRhythms(float currentX, float currentY, bool on) {
@@ -1364,6 +1374,7 @@ struct StochSeqGridWidget : ModuleWidget {
                 addParam(createParamCentered<TinyWhiteKnob>(Vec(116.3 + (x * CELL_SIZE), 88.5 + (y * CELL_SIZE)), module, StochSeqGrid::SUBDIVISION_PARAM + index));
                 // addParam(createParamCentered<NanoWhiteKnob>(Vec(116.3 + (x * CELL_SIZE), 88.5 + (y * CELL_SIZE)), module, StochSeqGrid::SUBDIVISION_PARAM + index));
                 addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
+                addParam(createParamCentered<NanoWhiteKnob>(Vec(143.1 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CV_PARAM + index));
             }
         }
 
