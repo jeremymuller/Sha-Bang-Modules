@@ -117,6 +117,8 @@ struct StochSeq : Module, Quantize {
 	float pitchVoltage = 0.0;
 	float invPitchVoltage = 0.0;
 	float *gateProbabilities = new float[NUM_OF_SLIDERS];
+	MemoryBank memBanks[NUM_OF_MEM_BANK];
+	int currentMemBank = 0;
 	bool enableKBShortcuts = true;
 	bool isCtrlClick = false;
 
@@ -781,8 +783,17 @@ struct StochSeqWidget : ModuleWidget {
 		StochSeqDisplay *display = new StochSeqDisplay();
 		display->module = module;
 		display->box.pos = Vec(7.4, 47.7);
-		display->box.size = Vec(480, 141.9);
+		display->box.size = Vec(480, 102.9); // Vec(480, 141.9)
 		addChild(display);
+
+		for (int i = 0; i < NUM_OF_MEM_BANK; i++) {
+			MemoryBankDisplay *memDisplay = new MemoryBankDisplay();
+			memDisplay->module = module;
+			memDisplay->bankId = i;
+			memDisplay->box.pos = Vec(7.6 + (i * 40), 160.8);
+			memDisplay->box.size = Vec(40, 28.9);
+			addChild(memDisplay);
+		}
 
 		addChild(createWidget<JeremyScrew>(Vec(25.9, 2)));
 		addChild(createWidget<JeremyScrew>(Vec(25.9, box.size.y-14)));

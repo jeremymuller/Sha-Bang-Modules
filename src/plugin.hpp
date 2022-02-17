@@ -463,7 +463,7 @@ struct BlueInvertKnob : RoundKnob {
         // shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/BlueInvertKnob.svg")));
         snap = true;
-        shadow->blurRadius = 2.0;
+        // shadow->blurRadius = 2.0;
     }
 };
 
