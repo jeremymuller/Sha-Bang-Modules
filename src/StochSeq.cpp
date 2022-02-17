@@ -4,6 +4,52 @@
 #define SLIDER_TOP 4
 #define NUM_OF_SLIDERS 32
 #define NUM_OF_LIGHTS 32
+#define NUM_OF_MEM_BANK 12
+
+// TODO: docs!!!!
+
+struct MemoryBank {
+	bool isOn;
+	int length;
+	float *gateProbabilities = new float[NUM_OF_SLIDERS];
+
+	MemoryBank() {
+		isOn = false;
+		length = NUM_OF_SLIDERS;
+
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			gateProbabilities[i] = 0.0;
+		}
+	}
+
+	~MemoryBank() {
+		delete[] gateProbabilities;
+	}
+
+	void setGates(float *probs) {
+		for (int i = 0; i < length; i++) {
+			probs[i] = gateProbabilities[i];
+		}
+	}
+
+	void setProbabilities(const float *probs, int size) {
+		isOn = true;
+		length = size;
+		DEBUG("size: %d", size);
+		DEBUG("length: %d", length);
+
+		for (int i = 0; i < length; i++) {
+			gateProbabilities[i] = probs[i];
+		}
+	}
+
+	void clearBank() {
+		isOn = false;
+		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+			gateProbabilities[i] = 0.0;
+		}
+	}
+};
 
 struct StochSeq : Module, Quantize {
 	enum ModeIds {
@@ -31,6 +77,7 @@ struct StochSeq : Module, Quantize {
 		DIMINUTION_INPUT,
 		CLOCK_INPUT,
 		RESET_INPUT,
+		MEM_BANK_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -76,7 +123,7 @@ struct StochSeq : Module, Quantize {
 	StochSeq() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configButton(RESET_PARAM, "Reset");
-		configParam(PATTERN_PARAM, 0.0, 7.0, 0.0, "Pattern");
+		configParam(PATTERN_PARAM, 0.0, 8.0, 0.0, "Pattern");
 		configButton(INVERT_PARAM, "Invert pattern");
 		configButton(RANDOM_PARAM, "Randomize pattern");
 		configButton(DIMINUTION_PARAM, "Diminish pattern");
@@ -87,6 +134,7 @@ struct StochSeq : Module, Quantize {
 
 		configInput(CLOCK_INPUT, "Clock");
 		configInput(RESET_INPUT, "Reset");
+		configInput(MEM_BANK_INPUT, "Memory Bank CV");
 		configInput(INVERT_INPUT, "Invert pattern");
 		configInput(RANDOM_INPUT, "Randomize pattern");
 		configInput(DIMINUTION_INPUT, "Diminish pattern");
@@ -101,6 +149,8 @@ struct StochSeq : Module, Quantize {
 			configOutput(GATES_OUTPUT + i, "Gate " + std::to_string(i+1));
 		}
 
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
+
 		randLight = static_cast<int>(random::uniform() * NUM_OF_LIGHTS);
 	}
 
@@ -112,12 +162,34 @@ struct StochSeq : Module, Quantize {
 		json_t *rootJ = json_object();
 		json_object_set_new(rootJ, "currentPattern", json_integer(currentPattern));
 
+		// memory bank stuff
+        json_t *memBankProbsJ = json_array();
+		json_t *lengthsJ = json_array();
+		json_t *onJ = json_array();
+        for (int i = 0; i < NUM_OF_MEM_BANK; i++) {
+			json_t *lengthJ = json_integer(memBanks[i].length);
+			json_array_append_new(lengthsJ, lengthJ);
+			json_t *isOnJ = json_boolean(memBanks[i].isOn);
+			json_array_append_new(onJ, isOnJ);
+
+            json_t *probsJ = json_array();
+            for (int j = 0; j < NUM_OF_SLIDERS; j++) {
+                json_t *probJ = json_real(memBanks[i].gateProbabilities[j]);
+                json_array_append_new(probsJ, probJ);
+            }
+            json_array_append_new(memBankProbsJ, probsJ);
+        }
+
 		json_t *probsJ = json_array();
 		for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 			json_t *probJ = json_real(gateProbabilities[i]);
 			json_array_append_new(probsJ, probJ);
 		}
 		json_object_set_new(rootJ, "probs", probsJ);
+		json_object_set_new(rootJ, "memBankProbs", memBankProbsJ);
+		json_object_set_new(rootJ, "isOn", onJ);
+		json_object_set_new(rootJ, "lengths", lengthsJ);
+		json_object_set_new(rootJ, "currentMemBank", json_integer(currentMemBank));
 		json_object_set_new(rootJ, "percentages", json_boolean(showPercentages));
 		json_object_set_new(rootJ, "kbshortcuts", json_boolean(enableKBShortcuts));
 		json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
@@ -146,6 +218,9 @@ struct StochSeq : Module, Quantize {
 		json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
 		if (currentPatternJ) currentPattern = json_integer_value(currentPatternJ);
 
+		json_t *currentBankJ = json_object_get(rootJ, "currentMemBank");
+		if (currentBankJ) currentMemBank = json_integer_value(currentBankJ);
+
 		json_t *probsJ = json_object_get(rootJ, "probs");
 		if (probsJ) {
 			for (int i = 0; i < NUM_OF_SLIDERS; i++) {
@@ -154,12 +229,47 @@ struct StochSeq : Module, Quantize {
 					gateProbabilities[i] = json_real_value(probJ);
 			}
 		}
+
+		json_t *memBankProbsJ = json_object_get(rootJ, "memBankProbs");
+		json_t *onJ = json_object_get(rootJ, "isOn");
+		json_t *lengthsJ = json_object_get(rootJ, "lengths");
+		if (memBankProbsJ) {
+            for (int i = 0; i < NUM_OF_MEM_BANK; i++) {
+				json_t *isOnJ = json_array_get(onJ, i);
+				if (isOnJ)
+					memBanks[i].isOn = json_boolean_value(isOnJ);
+
+				json_t *lengthJ = json_array_get(lengthsJ, i);
+				if (lengthJ)
+					memBanks[i].length = json_integer_value(lengthJ);
+
+				json_t *probsJ = json_array_get(memBankProbsJ, i);
+				if (probsJ) {
+                    for (int j = 0; j < NUM_OF_SLIDERS; j++) {
+                        json_t *probJ = json_array_get(probsJ, j);
+                        if (probJ) {
+                            memBanks[i].gateProbabilities[j] = json_real_value(probJ);
+                        }
+                    }
+                }
+            }
+        }
 	}
 
 	void process(const ProcessArgs& args) override {
 		if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
 			resetMode = true;
 		}
+		if (inputs[MEM_BANK_INPUT].isConnected()) {
+			float cv = inputs[MEM_BANK_INPUT].getVoltage();
+			float whole = floor(cv);
+			float cvDecimal = cv - whole;
+			int bankId = (int)rescale(cvDecimal, 0.0, 1.0, 0.0, 12.0);
+			params[LENGTH_PARAM].setValue(memBanks[bankId].length);
+			memBanks[bankId].setGates(gateProbabilities);
+			currentMemBank = bankId;
+		}
+
 		if ((int)params[PATTERN_PARAM].getValue() != currentPattern) {
 			int patt = (int)params[PATTERN_PARAM].getValue();
 			currentPattern = patt;
@@ -170,9 +280,11 @@ struct StochSeq : Module, Quantize {
 		}
 		if (invertTrig.process(params[INVERT_PARAM].getValue() + inputs[INVERT_INPUT].getVoltage())) {
 			invert();
+			memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 		}
 		if (dimTrig.process(params[DIMINUTION_PARAM].getValue() + inputs[DIMINUTION_INPUT].getVoltage())) {
 			diminish();
+			memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 		}
 		if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage())) {
 			if (resetMode) {
@@ -194,7 +306,7 @@ struct StochSeq : Module, Quantize {
 		// float blink = lightBlink ? 1.0 : 0.0;
 		outputs[GATES_OUTPUT + currentGateOut].setVoltage(gateVolt ? 10.0 : 0.0);
 		outputs[GATE_MAIN_OUTPUT].setVoltage(gateVolt ? 10.0 : 0.0);
-		outputs[NOT_GATE_MAIN_OUTPUT].setVoltage(notGateVolt ? 10.0 : 0.0); // todo
+		outputs[NOT_GATE_MAIN_OUTPUT].setVoltage(notGateVolt ? 10.0 : 0.0);
 		if (voltMode == VOLT_SAMPHOLD_MODE && gateVolt) {
 			outputs[INV_VOLT_OUTPUT].setVoltage(invPitchVoltage);
 			outputs[VOLT_OUTPUT].setVoltage(pitchVoltage);
@@ -286,6 +398,8 @@ struct StochSeq : Module, Quantize {
 				gateProbabilities[i] = gateProbabilities[i+1];
 			}
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void shiftPatternRight() {
@@ -297,6 +411,8 @@ struct StochSeq : Module, Quantize {
 				gateProbabilities[i] = gateProbabilities[i-1];
 			}
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void shiftPatternUp() {
@@ -304,6 +420,8 @@ struct StochSeq : Module, Quantize {
 			gateProbabilities[i] += 0.05;
 			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void shiftPatternDown() {
@@ -311,6 +429,8 @@ struct StochSeq : Module, Quantize {
 			gateProbabilities[i] -= 0.05;
 			gateProbabilities[i] = clamp(gateProbabilities[i], 0.0, 1.0);
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 
 	void genPatterns(int c) {
@@ -355,11 +475,18 @@ struct StochSeq : Module, Quantize {
 					gateProbabilities[i] = std::sin(i / (NUM_OF_SLIDERS - 1.0) * M_PI);
 				}
 				break;
+			case 8:
+				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+					gateProbabilities[i] = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
+				}
+				break;
 			default:
 				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
 					gateProbabilities[i] = random::uniform();
 				}
 		}
+
+		memBanks[currentMemBank].setProbabilities(gateProbabilities, seqLength);
 	}
 };
 
@@ -411,6 +538,8 @@ struct StochSeqDisplay : Widget {
 		else if (dragY > box.size.y) dragY = box.size.y - SLIDER_TOP;
 		float prob = 1.0 - dragY / (box.size.y - SLIDER_TOP);
 		module->gateProbabilities[index] = clamp(prob, 0.0, 1.0);
+		int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
+		module->memBanks[module->currentMemBank].setProbabilities(module->gateProbabilities, visibleSliders);
 	}
 
 	void toggleProbabilities(float currentX) {
@@ -419,7 +548,9 @@ struct StochSeqDisplay : Widget {
         if (index >= NUM_OF_SLIDERS) index = NUM_OF_SLIDERS - 1;
         float p = module->gateProbabilities[index];
         module->gateProbabilities[index] = p < 0.5 ? 1.0 : 0.0;
-    }
+		int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
+		module->memBanks[module->currentMemBank].setProbabilities(module->gateProbabilities, visibleSliders);
+	}
 
 	float getSliderHeight(int index) {
 		float y = box.size.y - SLIDER_TOP;
@@ -439,8 +570,11 @@ struct StochSeqDisplay : Widget {
 				nvgLineTo(args.vg, i * SLIDER_WIDTH, box.size.y);
 				nvgStroke(args.vg);
 
-				// random sliders
-				float rHeight = (box.size.y-SLIDER_TOP) * random::uniform();
+				// sine wave sliders
+				float sinHeight = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
+				float rHeight = (box.size.y-SLIDER_TOP) * (1 - sinHeight);
+				// float rHeight = (box.size.y-SLIDER_TOP) * random::uniform();
+
 				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 191)); // bottoms
 				nvgBeginPath(args.vg);
 				nvgRect(args.vg, i * SLIDER_WIDTH, rHeight, SLIDER_WIDTH, box.size.y - rHeight);
@@ -463,6 +597,11 @@ struct StochSeqDisplay : Widget {
 		// sliders
 		nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
 		int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
+		int mLength = module->memBanks[module->currentMemBank].length;
+		if (mLength != visibleSliders)
+			module->memBanks[module->currentMemBank].setProbabilities(module->gateProbabilities, visibleSliders);
+
+		module->memBanks[module->currentMemBank].length = visibleSliders;
 		sliderWidth = box.size.x / (float)visibleSliders;
 		for (int i = 0; i < visibleSliders; i++) {
 			nvgStrokeWidth(args.vg, (i % 4 == 0 ? 2 : 0.5));
@@ -526,6 +665,114 @@ struct StochSeqDisplay : Widget {
 	}
 };
 
+struct MemoryBankDisplay : Widget {
+	StochSeq *module;
+	int bankId;
+	float sliderWidth = 1.25;
+
+	MemoryBankDisplay() {}
+
+	void onButton(const event::Button &e) override {
+        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+			e.consume(this);
+			module->params[StochSeq::LENGTH_PARAM].setValue(module->memBanks[bankId].length);
+			module->memBanks[bankId].setGates(module->gateProbabilities);
+			module->currentMemBank = bankId;
+
+			// int visibleSliders = (int)module->params[StochSeq::LENGTH_PARAM].getValue();
+			// module->memBanks[bankId].setProbabilities(module->gateProbabilities, visibleSliders);
+
+			// select from bank
+			// highlight too
+        }
+	}
+
+	float getSliderHeight(int index) {
+		float y = box.size.y;
+		return y - (y * module->memBanks[bankId].gateProbabilities[index]);
+	}
+
+	void draw(const DrawArgs& args) override {
+
+		if (module == NULL) {
+			// draw for preview
+
+			// border lines
+			if (bankId < 11) {
+				nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
+				nvgStrokeWidth(args.vg, 1.5);
+				nvgBeginPath(args.vg);
+				nvgMoveTo(args.vg, box.size.x, 0);
+				nvgLineTo(args.vg, box.size.x, box.size.y);
+				nvgStroke(args.vg);
+			}
+
+			if (bankId == 0) {
+				for (int i = 0; i < NUM_OF_SLIDERS; i++) {
+					float sinHeight = (std::sin(i / (float)NUM_OF_SLIDERS * M_PI * 2)) * 0.5 + 0.5;
+					float rHeight = (box.size.y - SLIDER_TOP) * (1 - sinHeight);
+					if (sinHeight > 0.0) {
+						nvgBeginPath(args.vg);
+						nvgRect(args.vg, i * sliderWidth, rHeight, sliderWidth, box.size.y - rHeight);
+						nvgFill(args.vg);
+					}
+				}
+			}
+
+
+			return;
+		}
+
+		// border lines
+		if (bankId < 11) {
+			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
+			nvgStrokeWidth(args.vg, 1.5);
+			nvgBeginPath(args.vg);
+			nvgMoveTo(args.vg, box.size.x, 0);
+			nvgLineTo(args.vg, box.size.x, box.size.y);
+			nvgStroke(args.vg);
+		}
+
+		if (module->memBanks[bankId].isOn) {
+			// sliders
+			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
+			sliderWidth = box.size.x / (float)module->memBanks[bankId].length;
+
+			if (module->currentMemBank == bankId)
+				nvgFillColor(args.vg, nvgRGB(255, 255, 255)); // bars
+			else
+				nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 220)); // bars
+			
+			for (int i = 0; i < module->memBanks[bankId].length; i++) {
+				if (module->memBanks[bankId].gateProbabilities[i] > 0.0) {
+					float sHeight = getSliderHeight(i);
+					nvgBeginPath(args.vg);
+					nvgRect(args.vg, i * sliderWidth, sHeight, sliderWidth, box.size.y - sHeight);
+					nvgFill(args.vg);
+				}
+			}
+
+		}
+	}
+
+	void drawLayer(const DrawArgs& args, int layer) override {
+
+		if (module == NULL) return;
+
+		if (layer == 1) {
+			if (bankId != module->currentMemBank) {
+				nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 120));
+				nvgBeginPath(args.vg);
+				nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+				nvgFill(args.vg);
+			}
+		}
+
+		Widget::drawLayer(args, layer);
+	}
+
+};
+
 struct StochSeqWidget : ModuleWidget {
 	StochSeqWidget(StochSeq* module) {
 		setModule(module);
@@ -571,7 +818,8 @@ struct StochSeqWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(Vec(209.5, 256.8), module, StochSeq::INVERT_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(244.1, 256.8), module, StochSeq::DIMINUTION_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 228.7), module, StochSeq::CLOCK_INPUT));
-		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 228.7), module, StochSeq::RESET_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(36.9, 256.8), module, StochSeq::RESET_INPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(71.4, 228.7), module, StochSeq::MEM_BANK_INPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(360.7, 228.7), module, StochSeq::GATE_MAIN_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(397.1, 228.7), module, StochSeq::NOT_GATE_MAIN_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(433.5, 228.7), module, StochSeq::INV_VOLT_OUTPUT));
