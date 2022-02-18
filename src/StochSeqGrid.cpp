@@ -289,9 +289,7 @@ struct StochSeqGrid : Module {
     bool gateOn = false;
     bool overrideExtClk = true;
     int cellRhythmIndex = 0;
-    int voltRange = 0;
     int voltMode = VOLT_INDEPENDENT_MODE;
-    float minMaxVolts[2] = {0.0, 1.0};
     int currentPattern = 0;
     int hoverRhythm = 1;
     int hoverCell = 0;
@@ -424,7 +422,6 @@ struct StochSeqGrid : Module {
         json_object_set_new(rootJ, "subdivisions", subdivisionsJ);
         json_object_set_new(rootJ, "gateMode", json_integer(gateMode));
         json_object_set_new(rootJ, "voltMode", json_integer(voltMode));
-        json_object_set_new(rootJ, "voltRange", json_integer(voltRange));
         json_object_set_new(rootJ, "currentPattern", json_integer(currentPattern));
         json_object_set_new(rootJ, "bpmInputMode", json_integer(bpmInputMode));
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
@@ -494,10 +491,6 @@ struct StochSeqGrid : Module {
         json_t *voltModeJ = json_object_get(rootJ, "voltMode");
         if (voltModeJ)
             voltMode = json_integer_value(voltModeJ);
-
-        json_t *voltRangeJ = json_object_get(rootJ, "voltRange");
-        if (voltRangeJ)
-            voltRange = json_integer_value(voltRangeJ);
 
         json_t *currentPatternJ = json_object_get(rootJ, "currentPattern");
         if (currentPatternJ)
@@ -696,27 +689,6 @@ struct StochSeqGrid : Module {
         return clamp(currentCellX, 0, 3) + clamp(currentCellY, 0, 3) * 4;
     }
 
-    void setMinMaxVolts() {
-        switch (voltRange) {
-            case 0:
-                minMaxVolts[0] = 0.0;
-                minMaxVolts[1] = 1.0;
-                break;
-            case 1:
-                minMaxVolts[0] = 0.0;
-                minMaxVolts[1] = 2.0;
-                break;
-            case 2:
-                minMaxVolts[0] = -5.0;
-                minMaxVolts[1] = 5.0;
-                break;
-            case 3:
-                minMaxVolts[0] = 0.0;
-                minMaxVolts[1] = 10.0;
-                break;
-        }
-    }
-
     void process(const ProcessArgs &args) override {
         if (resetTrig.process(params[RESET_PARAM].getValue() + inputs[RESET_INPUT].getVoltage())) {
             resetMode = true;
@@ -792,9 +764,6 @@ struct StochSeqGrid : Module {
                     period = 0.0;
                 }
             }
-
-            setMinMaxVolts();
-
             
             // float bpmParam = params[BPM_PARAM].getValue();
             // clockFreq = std::pow(2.0, bpmParam);
@@ -830,7 +799,6 @@ struct StochSeqGrid : Module {
                         float cVolt = params[CV_PARAM + _index].getValue();
                         float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
                         seqs[i].volts = cVolt;
-                        // seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
 
                         if (random::uniform() < gateProb) {
                             voltSH = true;
@@ -1438,7 +1406,7 @@ struct StochSeqGridWidget : ModuleWidget {
 
         menu->addChild(createIndexPtrSubmenuItem("Gate mode", {"Gates", "Triggers"}, &module->gateMode));
         menu->addChild(createIndexPtrSubmenuItem("CV mode", {"Independent", "Sample and Hold"}, &module->voltMode));
-        menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltRange));
+        // menu->addChild(createIndexPtrSubmenuItem("Volt Range", {"+1V", "+2V", "±5V", "+10V"}, &module->voltRange));
         menu->addChild(createIndexPtrSubmenuItem("Mouse Drag", {"horizontal", "vertical"}, &module->useMouseDeltaY));
 
         menu->addChild(new MenuEntry);
