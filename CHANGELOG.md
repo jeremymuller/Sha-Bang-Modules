@@ -1,4 +1,4 @@
-v2.1.1 (02-??-2022)
+v2.1.1 (02-18-2022)
 - Added a memory bank to StochSeq
 - Added CV knobs to StochSeqGrid
 - External Clock auto start/stop can be overridden
