@@ -278,7 +278,7 @@ struct StochSeqGrid : Module {
     int bpmInputMode = BPM_CV;
     int ppqn = 0;
     float period = 0.0;
-    int timeOut = 1; // seconds
+    float timeOut = 1.0; // seconds
     int extPulseIndex = 0;
     int gateMode = GATE_MODE;
     int currentCellX = -1;
@@ -287,6 +287,7 @@ struct StochSeqGrid : Module {
     float clockFreq = 2.0; // Hz
     bool playCellRhythms = false;
     bool gateOn = false;
+    bool overrideExtClk = true;
     int cellRhythmIndex = 0;
     int voltRange = 0;
     int voltMode = VOLT_INDEPENDENT_MODE;
@@ -393,7 +394,6 @@ struct StochSeqGrid : Module {
             json_array_append_new(cellBeatsJ, beatsJ);
         }
 
-        // TODO: save data from each seq
         json_t *seqPhasesJ = json_array();
         json_t *seqSubPhasesJ = json_array();
         json_t *seqCurrentXJ = json_array();
@@ -430,6 +430,7 @@ struct StochSeqGrid : Module {
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
         json_object_set_new(rootJ, "mouseDrag", json_boolean(useMouseDeltaY));
         json_object_set_new(rootJ, "displayCircles", json_boolean(displayCircles));
+        json_object_set_new(rootJ, "overrideExtClk", json_boolean(overrideExtClk));
 
         return rootJ;
     }
@@ -517,6 +518,10 @@ struct StochSeqGrid : Module {
         json_t *displayCirclesJ = json_object_get(rootJ, "displayCircles");
         if (displayCirclesJ)
             displayCircles = json_boolean_value(displayCirclesJ);
+
+        json_t *overrideExtClkJ = json_object_get(rootJ, "overrideExtClk");
+        if (overrideExtClkJ)
+            overrideExtClk = json_boolean_value(overrideExtClkJ);
     }
 
     void onReset() override {
@@ -741,11 +746,13 @@ struct StochSeqGrid : Module {
 
         bool bpmDetect = false;
         if (inputs[EXT_CLOCK_INPUT].isConnected()) {
+            float bpmParam = params[BPM_PARAM].getValue();
+            timeOut = std::pow(2.0, bpmParam) * 0.9;
             if (bpmInputMode == BPM_CV) {
                 clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
             } else {
                 bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
-                if (bpmDetect)
+                if (bpmDetect && overrideExtClk)
                     clockOn = true;
                 switch(bpmInputMode) {
                     case BPM_P2: 
@@ -773,7 +780,7 @@ struct StochSeqGrid : Module {
         if (clockOn) {
             if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
                 period += args.sampleTime;
-                if (period > timeOut) 
+                if (period > timeOut && overrideExtClk) 
                     clockOn = false;
                 if (bpmDetect) {
                     if (extPulseIndex > 1) {
@@ -1437,6 +1444,7 @@ struct StochSeqGridWidget : ModuleWidget {
         menu->addChild(new MenuEntry);
         
         menu->addChild(createIndexPtrSubmenuItem("External Clock Mode", {"CV (0V = 120 bpm)", "2 PPQN", "4 PPQN", "8 PPQN", "12 PPQN", "24 PPQN"}, &module->bpmInputMode));
+        menu->addChild(createBoolPtrMenuItem("Ext Clk Auto Start", "", &module->overrideExtClk));
 
         menu->addChild(new MenuEntry);
 

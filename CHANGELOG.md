@@ -1,3 +1,8 @@
+v2.1.1 (02-??-2022)
+- Added a memory bank to StochSeq
+- Added CV knobs to StochSeqGrid
+- External Clock auto start/stop can be overridden
+
 v2.1.0 (01-27-2022)
 - Added new module StochSeqGrid
 - Updated port UIs
