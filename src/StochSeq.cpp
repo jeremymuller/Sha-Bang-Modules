@@ -727,16 +727,6 @@ struct MemoryBankDisplay : Widget {
 			return;
 		}
 
-		// border lines
-		if (bankId < 11) {
-			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
-			nvgStrokeWidth(args.vg, 1.5);
-			nvgBeginPath(args.vg);
-			nvgMoveTo(args.vg, box.size.x, 0);
-			nvgLineTo(args.vg, box.size.x, box.size.y);
-			nvgStroke(args.vg);
-		}
-
 		if (module->memBanks[bankId].isOn) {
 			// sliders
 			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
@@ -755,7 +745,16 @@ struct MemoryBankDisplay : Widget {
 					nvgFill(args.vg);
 				}
 			}
+		}
 
+		// border lines
+		if (bankId < 11) {
+			nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
+			nvgStrokeWidth(args.vg, 1.5);
+			nvgBeginPath(args.vg);
+			nvgMoveTo(args.vg, box.size.x, 0);
+			nvgLineTo(args.vg, box.size.x, box.size.y);
+			nvgStroke(args.vg);
 		}
 	}
 
