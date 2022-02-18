@@ -267,9 +267,11 @@ struct StochSeq : Module, Quantize {
 			float whole = floor(cv);
 			float cvDecimal = cv - whole;
 			int bankId = (int)rescale(cvDecimal, 0.0, 1.0, 0.0, 12.0);
-			params[LENGTH_PARAM].setValue(memBanks[bankId].length);
-			memBanks[bankId].setGates(gateProbabilities);
-			currentMemBank = bankId;
+			if (bankId != currentMemBank) {
+				params[LENGTH_PARAM].setValue(memBanks[bankId].length);
+				memBanks[bankId].setGates(gateProbabilities);
+				currentMemBank = bankId;
+			}
 		}
 
 		if ((int)params[PATTERN_PARAM].getValue() != currentPattern) {
