@@ -414,7 +414,7 @@ struct NanoRedButton : SvgSwitch {
     }
 };
 
-struct NanoBlueSwitch :SvgSwitch {
+struct NanoBlueSwitch : SvgSwitch {
     NanoBlueSwitch() {
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_0.svg")));
         addFrame(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoBlueSwitch_1.svg")));
@@ -546,6 +546,7 @@ struct NanoRedKnob : RoundKnob {
 
 struct NanoWhiteKnob : RoundKnob {
     NanoWhiteKnob() {
+        shadow->opacity = 0;
         setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/NanoWhiteKnob.svg")));
     }
 };

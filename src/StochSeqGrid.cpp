@@ -246,7 +246,8 @@ struct StochSeqGrid : Module {
         DUR_PARAMS = RHYTHM_PARAMS + NUM_SEQ,
         CELL_PROB_PARAM = DUR_PARAMS + NUM_SEQ,
         SUBDIVISION_PARAM = CELL_PROB_PARAM + NUM_OF_CELLS,
-        RESET_PARAM = SUBDIVISION_PARAM + NUM_OF_CELLS,
+        CV_PARAM = SUBDIVISION_PARAM + NUM_OF_CELLS,
+        RESET_PARAM = CV_PARAM + NUM_OF_CELLS,
         ON_PARAMS,
         PATTERN_PARAM = ON_PARAMS + NUM_SEQ,
         NUM_PARAMS
@@ -277,7 +278,7 @@ struct StochSeqGrid : Module {
     int bpmInputMode = BPM_CV;
     int ppqn = 0;
     float period = 0.0;
-    int timeOut = 1; // seconds
+    float timeOut = 1.0; // seconds
     int extPulseIndex = 0;
     int gateMode = GATE_MODE;
     int currentCellX = -1;
@@ -286,6 +287,7 @@ struct StochSeqGrid : Module {
     float clockFreq = 2.0; // Hz
     bool playCellRhythms = false;
     bool gateOn = false;
+    bool overrideExtClk = true;
     int cellRhythmIndex = 0;
     int voltRange = 0;
     int voltMode = VOLT_INDEPENDENT_MODE;
@@ -359,7 +361,8 @@ struct StochSeqGrid : Module {
         for (int i = 0; i < NUM_OF_CELLS; i++) {
             // cellOn[i] = true;
             configParam(CELL_PROB_PARAM + i, 0.0, 1.0, 1.0, "Cell Probability", "%", 0, 100);
-            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "CV / Rhythm Probability", "%", 0, 100);
+            configParam(CV_PARAM + i, -10.0, 10.0, 0.0, "Cell CV", " V");
+            configParam(SUBDIVISION_PARAM + i, 0.0, 1.0, 1.0, "Rhythm Probability", "%", 0, 100);
             subdivisions[i] = 1;
             for (int j = 0; j < MAX_SUBDIVISIONS; j++) {
                 beats[i][j] = true;
@@ -391,7 +394,6 @@ struct StochSeqGrid : Module {
             json_array_append_new(cellBeatsJ, beatsJ);
         }
 
-        // TODO: save data from each seq
         json_t *seqPhasesJ = json_array();
         json_t *seqSubPhasesJ = json_array();
         json_t *seqCurrentXJ = json_array();
@@ -426,6 +428,9 @@ struct StochSeqGrid : Module {
         json_object_set_new(rootJ, "currentPattern", json_integer(currentPattern));
         json_object_set_new(rootJ, "bpmInputMode", json_integer(bpmInputMode));
         json_object_set_new(rootJ, "run", json_boolean(clockOn));
+        json_object_set_new(rootJ, "mouseDrag", json_boolean(useMouseDeltaY));
+        json_object_set_new(rootJ, "displayCircles", json_boolean(displayCircles));
+        json_object_set_new(rootJ, "overrideExtClk", json_boolean(overrideExtClk));
 
         return rootJ;
     }
@@ -505,6 +510,18 @@ struct StochSeqGrid : Module {
         json_t *runJ = json_object_get(rootJ, "run");
         if (runJ) 
             clockOn = json_boolean_value(runJ);
+
+        json_t *mouseDragJ = json_object_get(rootJ, "mouseDrag");
+        if (mouseDragJ)
+            useMouseDeltaY = json_boolean_value(mouseDragJ);
+
+        json_t *displayCirclesJ = json_object_get(rootJ, "displayCircles");
+        if (displayCirclesJ)
+            displayCircles = json_boolean_value(displayCirclesJ);
+
+        json_t *overrideExtClkJ = json_object_get(rootJ, "overrideExtClk");
+        if (overrideExtClkJ)
+            overrideExtClk = json_boolean_value(overrideExtClkJ);
     }
 
     void onReset() override {
@@ -729,11 +746,13 @@ struct StochSeqGrid : Module {
 
         bool bpmDetect = false;
         if (inputs[EXT_CLOCK_INPUT].isConnected()) {
+            float bpmParam = params[BPM_PARAM].getValue();
+            timeOut = std::pow(2.0, bpmParam) * 0.9;
             if (bpmInputMode == BPM_CV) {
                 clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
             } else {
                 bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
-                if (bpmDetect)
+                if (bpmDetect && overrideExtClk)
                     clockOn = true;
                 switch(bpmInputMode) {
                     case BPM_P2: 
@@ -761,7 +780,8 @@ struct StochSeqGrid : Module {
         if (clockOn) {
             if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
                 period += args.sampleTime;
-                if (period > timeOut) clockOn = false;
+                if (period > timeOut && overrideExtClk) 
+                    clockOn = false;
                 if (bpmDetect) {
                     if (extPulseIndex > 1) {
                         clockFreq = (1.0 / period) / (float)ppqn;
@@ -807,8 +827,10 @@ struct StochSeqGrid : Module {
 
 
                         float gateProb = params[CELL_PROB_PARAM + _index].getValue();
+                        float cVolt = params[CV_PARAM + _index].getValue();
                         float rhythmProb = params[SUBDIVISION_PARAM + _index].getValue();
-                        seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
+                        seqs[i].volts = cVolt;
+                        // seqs[i].volts = rescale(rhythmProb, 0.0, 1.0, minMaxVolts[0], minMaxVolts[1]);
 
                         if (random::uniform() < gateProb) {
                             voltSH = true;
@@ -1013,7 +1035,8 @@ struct SubdivisionDisplay : Widget {
                 clickedOnBeat = false;
                 toggleRhythms(initX, initY, isBeatOn);
                 if (!clickedOnBeat)
-                    module->resetRhythms(index);
+                    decrementSubdivisions();
+                // module->resetRhythms(index);
             } else if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
                 module->isCtrlClick = false;
                 e.consume(this);
@@ -1057,6 +1080,10 @@ struct SubdivisionDisplay : Widget {
     void incrementSubdivisions(float dy) {
         int sd = static_cast<int>(round(module->subdivisions[index] + dy * 0.25));
         module->subdivisions[index] = clamp(sd, 1, MAX_SUBDIVISIONS);
+    }
+
+    void decrementSubdivisions() {
+        module->subdivisions[index] = clamp(--module->subdivisions[index], 1, MAX_SUBDIVISIONS);
     }
 
     void toggleRhythms(float currentX, float currentY, bool on) {
@@ -1354,6 +1381,7 @@ struct StochSeqGridWidget : ModuleWidget {
                 addParam(createParamCentered<TinyWhiteKnob>(Vec(116.3 + (x * CELL_SIZE), 88.5 + (y * CELL_SIZE)), module, StochSeqGrid::SUBDIVISION_PARAM + index));
                 // addParam(createParamCentered<NanoWhiteKnob>(Vec(116.3 + (x * CELL_SIZE), 88.5 + (y * CELL_SIZE)), module, StochSeqGrid::SUBDIVISION_PARAM + index));
                 addParam(createParamCentered<NanoWhiteKnob>(Vec(89.4 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CELL_PROB_PARAM + index));
+                addParam(createParamCentered<NanoWhiteKnob>(Vec(143.1 + (x * CELL_SIZE), 61.7 + (y * CELL_SIZE)), module, StochSeqGrid::CV_PARAM + index));
             }
         }
 
@@ -1416,6 +1444,7 @@ struct StochSeqGridWidget : ModuleWidget {
         menu->addChild(new MenuEntry);
         
         menu->addChild(createIndexPtrSubmenuItem("External Clock Mode", {"CV (0V = 120 bpm)", "2 PPQN", "4 PPQN", "8 PPQN", "12 PPQN", "24 PPQN"}, &module->bpmInputMode));
+        menu->addChild(createBoolPtrMenuItem("Ext Clk Auto Start", "", &module->overrideExtClk));
 
         menu->addChild(new MenuEntry);
 
