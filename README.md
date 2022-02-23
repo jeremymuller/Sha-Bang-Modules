@@ -336,7 +336,7 @@ Watch the tutorial:
 
 *A sequencer that uses stochastic (probabilistic) patterns. The outputs can be used as gates (triggered based on probability) or as ±5 volts (probability is converted to voltage).*
 
-Click and/or drag to draw your own patterns!
+Click and/or drag to draw your own patterns! Also, click on the different memory banks to recall/store the slider information.
 
 Watch the tutorial:
 
@@ -356,6 +356,7 @@ Watch the tutorial:
 ##### INPUTS:
 - `CLK` controls timing.
 - `RST` resets sequence to beginning of timeline.
+- `MEM` CV input to switch between memory banks. A single 1V/oct can control which memory bank to select.
 ##### KNOBS:
 - `LEN` length of the sequence.
 - `PATT` selects from preset patterns.
@@ -460,7 +461,6 @@ Watch the tutorial:
 ##### RIGHT-CLICK MENU:
 - Gate mode: gates or triggers.
 - CV mode: independent or sample & hold (based on whether the cell was triggered or not).
-- Volt range: +1V, +2V, ±5V, +10V (only effects the `CV` output)
 - Mouse drag: horizontal or vertical controls the increase/decrease of subdivisions within each cell.
 - External Clock Mode:
   - `CV` controls bpm (beats per minute) based on the input voltage using this formula: 120 * 2<sup>V</sup>.
@@ -493,10 +493,11 @@ Watch the tutorial:
 - `Tempo` controls the global tempo of the StochSeqGrid.
 ##### CELL KNOBS:
 - `Cell Probability` controls the overall probability of whether or not the cell will happen.
-- `CV / Rhythm Probability` controls the probability of whether or not the subdivision will happen. If the cell is triggered but the subdivision isn't, the output will be a single rhythmic gate/trigger. This knob also controls the volts for the `CV` outputs in relation to the `Volt range`.
+- `Cell CV` controls the volts for the `CV` outputs.
+- `Rhythm Probability` controls the probability of whether or not the subdivision will happen. If the cell is triggered but the subdivision isn't, the output will be a single rhythmic gate/trigger.
 ##### OUTPUTS:
 - `GATES` outputs a pulse based on the probability of the current individual sequence position. (i.e. a cell at 50% will only trigger a pulse half of the time)
-- `CV` outputs voltage based on the `Rhythmic Probability` position and `Volt Range`.
+- `CV` outputs voltage based on the `Cell CV` position and independent/S&H mode.
 
 ---
 
