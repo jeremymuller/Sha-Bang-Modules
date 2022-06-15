@@ -62,8 +62,15 @@
           "slug": "PhotronPanel",
           "name": "Photron Panel",
           "description": "Animated panel",
-          "tags": ["Visual"],
+          "tags": ["Visual", "Expander"],
           "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#photron-panel"
+      },
+      {
+          "slug": "PhotronStrip",
+          "name": "Photron Strip",
+          "description": "Animated panel",
+          "tags": ["Visual", "Expander"],
+          "manualUrl": "https://github.com/jeremymuller/Sha-Bang-Modules#photron-strip"
       },
       {
           "slug": "PolyrhythmClock",

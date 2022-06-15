@@ -20,6 +20,7 @@ extern Model *modelJeremyBlankPanel;
 extern Model *modelQubitCrusher;
 extern Model *modelPhotron;
 extern Model *modelPhotronPanel;
+extern Model *modelPhotronStrip;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
@@ -28,6 +29,10 @@ extern Model *modelStochSeq4X;
 extern Model *modelStochSeqGrid;
 
 /************************** INLINE FUNCTIONS **************************/
+
+inline float toRadians(float degrees) {
+    return degrees * (M_PI / 180.0);
+}
 
 inline float modNeg(float num, int mod) {
     return num - floorf(num / mod) * mod;

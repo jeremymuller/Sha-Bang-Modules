@@ -18,8 +18,9 @@ void init(Plugin* p) {
 	p->addModel(modelJeremyBlankPanel);
 	p->addModel(modelQubitCrusher);
 	p->addModel(modelPhotron);
-	p->addModel(modelPhotronPanel);
-	p->addModel(modelOrbitones);
+    p->addModel(modelPhotronPanel);
+    p->addModel(modelPhotronStrip);
+    p->addModel(modelOrbitones);
 	p->addModel(modelAbsorptionSpectrum);
 	p->addModel(modelTalea);
 	p->addModel(modelCollider);

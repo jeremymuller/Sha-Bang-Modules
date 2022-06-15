@@ -1,3 +1,6 @@
+v2.1.2 (??-??-2022)
+
+
 v2.1.1 (02-18-2022)
 - Added a memory bank to StochSeq
 - Added CV knobs to StochSeqGrid

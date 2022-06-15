@@ -1,17 +1,17 @@
 #include "Photron.hpp"
 
-#define DISPLAY_SIZE_WIDTH 75
+#define DISPLAY_SIZE_WIDTH 15
 #define DISPLAY_SIZE_HEIGHT 380
-#define CELL_SIZE 5 // 5? or 10?
-#define NUM_OF_MARCHING_CIRCLES 5
+#define CELL_SIZE 5
+#define NUM_OF_MARCHING_CIRCLES 4
 
 struct BlockMessage {
     Block block;
-    int internalHz = 30;
+    int hertzIndex = 2;
     int colorMode = 0;
 };
 
-struct PhotronPanel : Module {
+struct PhotronStrip : Module {
     enum ModeIds {
         COLOR,
         B_W,
@@ -34,17 +34,14 @@ struct PhotronPanel : Module {
 		NUM_LIGHTS
 	};
 
-    dsp::SchmittTrigger colorTrig, invertTrig, resetTrig;
-    int width = 4;
     ModeIds colorMode = COLOR;
-    bool isColor = true;
-    bool darkRoomBlobs = true;
+    bool darkRoomBlobs = false;
     float hue = 0.5;
     float pulsePhase = 0.0;
-    // float pulseHz[8] = {0.0, 0.1, 0.2, 0.25, 0.33, 0.4, 0.5, 1.0};
     float pulseHz = 0.5;
-    // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
     int internalHz = 30;
+    int hertzIndex = 2;
+    int hertz[7] = {60, 45, 30, 20, 15, 12, 10};
     float srIncrement = APP->engine->getSampleTime() * internalHz;
     float sr = 0;
     float sep = 0.1;
@@ -62,7 +59,7 @@ struct PhotronPanel : Module {
     Block rightOutputValues[rows];
     Block rightMessages[2][rows];
 
-    PhotronPanel() {
+    PhotronStrip() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 
         for (int y = 0; y < rows; y++) {
@@ -82,7 +79,7 @@ struct PhotronPanel : Module {
             circles[i] = c;
         }
 
-        resetBlocks(PhotronPanel::RESET_PARAM);
+        resetBlocks(PhotronStrip::RESET_PARAM);
 
         leftExpander.producerMessage = leftMessages[0];
         leftExpander.consumerMessage = leftMessages[1];
@@ -96,7 +93,7 @@ struct PhotronPanel : Module {
     }
 
     void onRandomize() override {
-        resetBlocks(PhotronPanel::RANDOMIZE_PARAM);
+        resetBlocks(PhotronStrip::RANDOMIZE_PARAM);
 
         for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
             circles[i].radius = randRange(10.0, 35.0);
@@ -104,12 +101,17 @@ struct PhotronPanel : Module {
     }
 
     void onReset() override {
-        resetBlocks(PhotronPanel::RESET_PARAM);
+        resetBlocks(PhotronStrip::RESET_PARAM);
     }
 
     void setHz(int hz) {
-        internalHz = hz;
+        hertzIndex = hz;
+        internalHz = hertz[hertzIndex];
         srIncrement = APP->engine->getSampleTime() * internalHz;
+    }
+
+    int getHz() {
+        return hertzIndex;
     }
 
     void incrementColorMode() {
@@ -130,8 +132,6 @@ struct PhotronPanel : Module {
     }
 
     json_t *dataToJson() override {
-        // stores whether it's black and white
-        // stores current RGB of each block
         json_t *rootJ = json_object();
 
         json_t *blocksJ = json_array();
@@ -152,26 +152,17 @@ struct PhotronPanel : Module {
             }
         }
 
-        json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
-        json_object_set_new(rootJ, "blobs", json_boolean(darkRoomBlobs));
-        json_object_set_new(rootJ, "width", json_integer(width));
+        json_object_set_new(rootJ, "hertzIndex", json_integer(getHz()));
         json_object_set_new(rootJ, "color", json_integer(colorMode));
+        json_object_set_new(rootJ, "blobs", json_boolean(darkRoomBlobs));
         json_object_set_new(rootJ, "hue", json_real(hue));
-        json_object_set_new(rootJ, "pulsePhase", json_real(pulsePhase));
-        json_object_set_new(rootJ, "pulseHz", json_real(pulseHz));
         json_object_set_new(rootJ, "blocks", blocksJ);
         return rootJ;
     }
 
     void dataFromJson(json_t *rootJ) override {
-        json_t *internalHzJ = json_object_get(rootJ, "internalHz");
-        if (internalHzJ) setHz(json_integer_value(internalHzJ));
-
-        json_t *pulsePhaseJ = json_object_get(rootJ, "pulsePhase");
-        if (pulsePhaseJ) pulsePhase = json_real_value(pulsePhaseJ);
-
-        json_t *pulseHzJ = json_object_get(rootJ, "pulseHz");
-        if (pulseHzJ) pulseHz = json_real_value(pulseHzJ);
+        json_t *hertzIndexJ = json_object_get(rootJ, "hertzIndex");
+        if (hertzIndexJ) setHz(json_integer_value(hertzIndexJ));
 
         json_t *colorJ = json_object_get(rootJ, "color");
         if (colorJ) colorMode = (ModeIds)json_integer_value(colorJ);
@@ -182,10 +173,7 @@ struct PhotronPanel : Module {
         json_t *hueJ = json_object_get(rootJ, "hue");
         if (hueJ) hue = json_real_value(hueJ);
 
-        json_t *widthJ = json_object_get(rootJ, "width");
-        if (widthJ) width = json_integer_value(widthJ);
-
-        json_t *blocksJ = json_object_get(rootJ, "blocks");
+        json_t *blocksJ = json_object_get(rootJ, "blocks");  
         if (blocksJ) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
@@ -208,42 +196,42 @@ struct PhotronPanel : Module {
 
         if (sr == 0) {
 
-            bool isParent = (leftExpander.module && leftExpander.module->model == modelPhotronPanel);
+            bool isParent = (leftExpander.module && leftExpander.module->model == modelPhotronStrip);
             if (isParent) {
-                BlockMessage *outputFromParent = (BlockMessage *)(leftExpander.consumerMessage);
-                memcpy(outputValues, outputFromParent, sizeof(BlockMessage) * rows);
+                Block *outputFromParent = (Block *)(leftExpander.consumerMessage);
+                memcpy(outputValues, outputFromParent, sizeof(Block) * rows);
 
-                internalHz = outputValues[0].internalHz;
+                setHz(outputValues[0].hertzIndex);
                 colorMode = (ModeIds)outputValues[0].colorMode;
             }
 
-            bool isRightExpander = (rightExpander.module && rightExpander.module->model == modelPhotronPanel);
+            bool isRightExpander = (rightExpander.module && rightExpander.module->model == modelPhotronStrip);
             if (isRightExpander) {
                 Block *outputFromRight = (Block *)(rightExpander.consumerMessage);
                 memcpy(rightOutputValues, outputFromRight, sizeof(Block) * rows);
             }
 
-            int edge = width * RACK_GRID_WIDTH / CELL_SIZE;
+            // bool isParent = false;
 
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
-                    blocks[y][x].sepInput = PhotronPanel::sep;
-                    // blocks[y][x].aliInput = PhotronPanel::ali;
-                    // blocks[y][x].cohInput = PhotronPanel::coh;
+                    blocks[y][x].sepInput = PhotronStrip::sep;
+                    // blocks[y][x].aliInput = PhotronStrip::ali;
+                    // blocks[y][x].cohInput = PhotronStrip::coh;
 
                     // adjacents
                     Block west;
                     Block east;
                     Block north;
                     Block south;
-                    if (isParent && x == 0)
+                    if (isParent && x == 0) 
                         west = outputValues[y].block;
                     else if (x > 0)
-                        west = blocks[y][x - 1];
+                        west = blocks[y][x-1];
 
-                    if (isRightExpander && x == edge-1)
+                    if (isRightExpander && x == cols-1)
                         east = rightOutputValues[y];
-                    else if (x < cols-1) 
+                    else if (x < cols-1)
                         east = blocks[y][x+1];
 
                     if (y > 0) north = blocks[y-1][x];
@@ -254,23 +242,22 @@ struct PhotronPanel : Module {
                     Block northeast;
                     Block southwest;
                     Block southeast;
+                    if (isParent && (x == 0) && (y > 0)) 
+                        northwest = outputValues[y-1].block; 
+                    else if ((x > 0) && (y > 0)) 
+                        northwest = blocks[y-1][x-1]; 
 
-                    if (isParent && (x == 0) && (y > 0))
-                        northwest = outputValues[y - 1].block;
-                    else if ((x > 0) && (y > 0))
-                        northwest = blocks[y - 1][x - 1];
-
-                    if (isRightExpander && (x == edge-1) && (y > 0))
+                    if (isRightExpander && (x == cols-1) && (y > 0))
                         northeast = rightOutputValues[y-1];
                     else if ((x < cols-1) && (y > 0)) 
                         northeast = blocks[y-1][x+1];
 
-                    if (isParent && (x == 0) && (y < rows - 1))
-                        southwest = outputValues[y + 1].block;
-                    else if ((y < rows - 1) && (x > 0))
-                        southwest = blocks[y + 1][x - 1];
+                    if (isParent && (x == 0) && (y < rows-1)) 
+                        southwest = outputValues[y+1].block; 
+                    else if ((y < rows-1) && (x > 0)) 
+                        southwest = blocks[y+1][x-1];
 
-                    if (isRightExpander && (x == edge-1) && (y < rows-1))
+                    if (isRightExpander && (x == cols-1) && (y < rows-1))
                         southeast = rightOutputValues[y+1];
                     else if ((y < rows-1) && (x < cols-1)) 
                         southeast = blocks[y+1][x+1];
@@ -287,24 +274,22 @@ struct PhotronPanel : Module {
                 circles[i].update();
             }
 
-            // to expander (right side)
-            if (rightExpander.module && (rightExpander.module->model == modelPhotronPanel)) {
+            // to expander
+            if (rightExpander.module && (rightExpander.module->model == modelPhotronStrip)) {
                 BlockMessage *messageToExpander = (BlockMessage *)(rightExpander.module->leftExpander.producerMessage);
 
-                // int edge = width * RACK_GRID_WIDTH / CELL_SIZE;
-
-                messageToExpander[0].internalHz = internalHz;
+                messageToExpander[0].hertzIndex = getHz();
                 messageToExpander[0].colorMode = (int)colorMode;
 
                 for (int y = 0; y < rows; y++) {
-                    messageToExpander[y].block = blocks[y][edge-1];
+                    messageToExpander[y].block = blocks[y][cols-1];
                 }
 
                 rightExpander.module->leftExpander.messageFlipRequested = true;
             }
 
             // to expander (left side to parent)
-            if (leftExpander.module && (leftExpander.module->model == modelPhotronPanel)) {
+            if (leftExpander.module && (leftExpander.module->model == modelPhotronStrip)) {
                 Block *messageToExpander = (Block *)(leftExpander.module->rightExpander.producerMessage);
 
                 for (int y = 0; y < rows; y++) {
@@ -333,13 +318,13 @@ struct PhotronPanel : Module {
     }
 
     void resetBlocks(int param) {
-        if (param == PhotronPanel::RANDOMIZE_PARAM) {
+        if (param == PhotronStrip::RANDOMIZE_PARAM) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
                     blocks[y][x].reset();
                 }
             }
-        } else if (param == PhotronPanel::RESET_PARAM) {
+        } else if (param == PhotronStrip::RESET_PARAM) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
                     if (y < rows/4.0)
@@ -351,7 +336,7 @@ struct PhotronPanel : Module {
                     else
                         blocks[y][x].setColor(255, 0, 0); // red
                 }
-            }          
+            }           
         }
     }
 
@@ -375,66 +360,13 @@ struct PhotronPanel : Module {
     }
 };
 
-namespace PhotronPanelNS {
-    struct HzModeValueItem : MenuItem {
-        PhotronPanel *module;
-        int hz;
-        void onAction(const event::Action &e) override {
-            module->setHz(hz);
-        }
-    };
-
-    struct HzModeItem : MenuItem {
-        PhotronPanel *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> hzModes = {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"};
-            int hertz[] = {60, 45, 30, 20, 15, 12, 10};
-            for (int i = 0; i < 7; i++) {
-                HzModeValueItem *item = new HzModeValueItem;
-                item->text = hzModes[i];
-                item->rightText = CHECKMARK(module->internalHz == hertz[i]);
-                item->module = module;
-                item->hz = hertz[i];
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-
-    struct ColorModeValueItem : MenuItem {
-        PhotronPanel *module;
-        bool isColor;
-        void onAction(const event::Action &e) override {
-            module->isColor = isColor;
-        }
-    };
-
-    struct ColorModeItem : MenuItem {
-        PhotronPanel *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> colorModes = {"color", "black & white"};
-            for (int i = 0; i < 2; i++) {
-                ColorModeValueItem *item = new ColorModeValueItem;
-                item->text = colorModes[i];
-                bool isColor = (i == 0) ? true : false;
-                item->rightText = CHECKMARK(module->isColor == isColor);
-                item->module = module;
-                item->isColor = isColor;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-}
-
-struct PhotronPanelDisplay : Widget {
-    PhotronPanel *module;
+struct PhotronStripDisplay : Widget {
+    PhotronStrip *module;
+    float initY = 0;
+    float dragY = 0;
 
     void onButton(const event::Button &e) override {
         if (module == NULL) return;
-
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
             if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
                 e.consume(this);
@@ -442,6 +374,17 @@ struct PhotronPanelDisplay : Widget {
             }
         }
     }
+
+	// void onDragStart(const event::DragStart &e) override {
+	// 	dragY = APP->scene->rack->getMousePos().y;
+	// }
+
+	// void onDragMove(const event::DragMove &e) override {
+	// 	if (isCClick) {
+	// 		float newDragY = APP->scene->rack->getMousePos().y;
+    //         module->hue = (initY + (newDragY - dragY)) / DISPLAY_SIZE_HEIGHT;
+    //     }
+	// }
 
     void drawSingleColor(const DrawArgs &args) {
         nvgFillColor(args.vg, nvgHSL(module->hue, 1.0, module->getPulsePhase() * 0.5));
@@ -466,18 +409,17 @@ struct PhotronPanelDisplay : Widget {
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
-        if (module->colorMode == PhotronPanel::SINGLE_COLOR) {
+        if (module->colorMode == PhotronStrip::SINGLE_COLOR) {
             drawSingleColor(args);
-        } else if (module->colorMode == PhotronPanel::STRIP_COLOR) {
+        } else if (module->colorMode == PhotronStrip::STRIP_COLOR) {
             drawStripColor(args);
         } else {
             for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-                for (int x = 0; x < box.size.x/CELL_SIZE; x++) {
+                for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
                     Vec3 rgb = module->blocks[y][x].rgb;
-                    if (module->colorMode == PhotronPanel::COLOR) {
+                    if (module->colorMode == PhotronStrip::COLOR) {
                         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
                     } else {
-                        // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
                         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.x, rgb.x));
                     }
 
@@ -487,7 +429,6 @@ struct PhotronPanelDisplay : Widget {
                 }
             }
         }
-
     }
 
     void drawLayer(const DrawArgs &args, int layer) override {
@@ -501,20 +442,36 @@ struct PhotronPanelDisplay : Widget {
             // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
             // nvgFill(args.vg);
 
-            if (module->colorMode == PhotronPanel::SINGLE_COLOR) {
-                drawSingleColor(args);
-            } else if (module->colorMode == PhotronPanel::STRIP_COLOR) {
-                drawStripColor(args);
+            if (module->colorMode == PhotronStrip::SINGLE_COLOR) {
+                nvgFillColor(args.vg, nvgHSL(module->hue, 1.0, module->getPulsePhase() * 0.5));
+
+                nvgBeginPath(args.vg);
+                nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+                nvgFill(args.vg);
+            } else if (module->colorMode == PhotronStrip::STRIP_COLOR) {
+                int height = DISPLAY_SIZE_HEIGHT/CELL_SIZE;
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+                        if (x == 1 && y > 0 && y < height-1) {
+                            // nvgFillColor(args.vg, nvgHSL(module->hue, 1.0, 0.5));
+                            nvgFillColor(args.vg, nvgHSL(module->hue, 1.0, module->getPulsePhase() * 0.5));
+                        } else {
+                            nvgFillColor(args.vg, nvgRGB(0.0, 0.0, 0.0));
+                        }
+                        nvgBeginPath(args.vg);
+                        nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                        nvgFill(args.vg);
+                    }
+                }           
             } else {
                 for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-                    for (int x = 0; x < box.size.x/CELL_SIZE; x++) {
+                    for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
                         Vec3 rgb = module->blocks[y][x].rgb;
                         bool isBlobs = module->darkRoomBlobs;
-                        if (module->colorMode == PhotronPanel::COLOR) {
+                        if (module->colorMode == PhotronStrip::COLOR) {
                             nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.y, rgb.z, isBlobs ? module->blockAlpha[y][x] : 255));
                         } else {
                             // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                            // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
                             nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.x, rgb.x, isBlobs ? module->blockAlpha[y][x] : 255));
                         }
                         nvgBeginPath(args.vg);
@@ -542,7 +499,7 @@ struct PhotronPanelDisplay : Widget {
 };
 
 struct LightMenuItem : MenuItem {
-    PhotronPanel *module;
+    PhotronStrip *module;
     float *pulseHz = NULL;
     float *hue = NULL;
 
@@ -643,113 +600,33 @@ struct LightMenuItem : MenuItem {
     }
 };
 
-// code modified from https://github.com/VCVRack/Rack/blob/9ad53329fff74989daf3365600f9fccc0b6f5266/src/core/Blank.cpp#L57
-struct PhotronPanelResizeHandle : OpaqueWidget {
-	bool right = false;
-	Vec dragPos;
-	Rect originalBox;
-	PhotronPanel *module;
-
-	PhotronPanelResizeHandle() {
-		box.size = Vec(RACK_GRID_WIDTH * 1, RACK_GRID_HEIGHT);
-	}
-
-	void onDragStart(const DragStartEvent& e) override {
-		if (e.button != GLFW_MOUSE_BUTTON_LEFT)
-			return;
-
-		dragPos = APP->scene->rack->getMousePos();
-		ModuleWidget* mw = getAncestorOfType<ModuleWidget>();
-		assert(mw);
-		originalBox = mw->box;
-	}
-
-	void onDragMove(const DragMoveEvent& e) override {
-		ModuleWidget* mw = getAncestorOfType<ModuleWidget>();
-		assert(mw);
-
-		Vec newDragPos = APP->scene->rack->getMousePos();
-		float deltaX = newDragPos.x - dragPos.x;
-
-		Rect newBox = originalBox;
-		Rect oldBox = mw->box;
-		const float minWidth = 3 * RACK_GRID_WIDTH;
-        const float maxWidth = DISPLAY_SIZE_WIDTH;
-		if (right) {
-			newBox.size.x += deltaX;
-			// newBox.size.x = std::fmax(newBox.size.x, minWidth);
-            newBox.size.x = clamp(newBox.size.x, minWidth, maxWidth);
-			newBox.size.x = std::round(newBox.size.x / RACK_GRID_WIDTH) * RACK_GRID_WIDTH;
-		}
-		else {
-			newBox.size.x -= deltaX;
-			// newBox.size.x = std::fmax(newBox.size.x, minWidth);
-            newBox.size.x = clamp(newBox.size.x, minWidth, maxWidth);
-            newBox.size.x = std::round(newBox.size.x / RACK_GRID_WIDTH) * RACK_GRID_WIDTH;
-			newBox.pos.x = originalBox.pos.x + originalBox.size.x - newBox.size.x;
-		}
-
-		// Set box and test whether it's valid
-		mw->box = newBox;
-		if (!APP->scene->rack->requestModulePos(mw, newBox.pos)) {
-			mw->box = oldBox;
-		}
-		module->width = std::round(mw->box.size.x / RACK_GRID_WIDTH);
-	}
-};
-
-struct PhotronPanelWidget : ModuleWidget {
-    Widget *rightHandle;
-    PhotronPanelDisplay *display;
-
-    PhotronPanelWidget(PhotronPanel *module) {
+struct PhotronStripWidget : ModuleWidget {
+    PhotronStripWidget(PhotronStrip *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PhotronPanel.svg")));
+        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PhotronStrip.svg")));
 
-        display = new PhotronPanelDisplay();
+        PhotronStripDisplay *display = new PhotronStripDisplay();
         display->module = module;
         display->box.pos = Vec(0.0, 0.0);
-        // display->box.size = Vec(DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
+        display->box.size = Vec(DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
         addChild(display);
 
-        PhotronPanelResizeHandle *leftHandle = new PhotronPanelResizeHandle;
-        leftHandle->module = module;
-        addChild(leftHandle);
 
-        PhotronPanelResizeHandle *rightHandle = new PhotronPanelResizeHandle;
-        rightHandle->right = true;
-        this->rightHandle = rightHandle;
-        rightHandle->module = module;
-        addChild(rightHandle);
-    }
-
-    void step() override {
-        PhotronPanel *module = dynamic_cast<PhotronPanel *>(this->module);
-        if (module) {
-            box.size.x = module->width * RACK_GRID_WIDTH;
-        }
-
-        display->box.size = box.size;
-        rightHandle->box.pos.x = box.size.x - rightHandle->box.size.x;
-        ModuleWidget::step();
     }
 
     void appendContextMenu(Menu *menu) override {
-        PhotronPanel *module = dynamic_cast<PhotronPanel*>(this->module);
-        menu->addChild(new MenuEntry);
+        PhotronStrip *module = dynamic_cast<PhotronStrip *>(this->module);
 
-        PhotronPanelNS::HzModeItem *hzModeItem = new PhotronPanelNS::HzModeItem;
-        hzModeItem->text = "Processing rate";
-        hzModeItem->rightText = string::f("%d Hz ", module->internalHz) + RIGHT_ARROW; 
-        hzModeItem->module = module;
-        menu->addChild(hzModeItem);
+        menu->addChild(new MenuSeparator);
 
-        // PhotronPanelNS::ColorModeItem *colorModeItem = new PhotronPanelNS::ColorModeItem;
-        // colorModeItem->text = "Mode";
-        // if (module->isColor) colorModeItem->rightText = std::string("color ") + " " + RIGHT_ARROW;
-        // else colorModeItem->rightText = std::string("black & white ") + " " + RIGHT_ARROW;
-        // colorModeItem->module = module;
-        // menu->addChild(colorModeItem);
+        menu->addChild(createIndexSubmenuItem("Processing rate", 
+            {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"}, 
+            [=]() {
+                return module->getHz();
+            },
+            [=](int hz) {
+                module->setHz(hz);
+            }));
 
         menu->addChild(createIndexPtrSubmenuItem("Mode", {"color", "black & white", "solid color", "strip color"}, &module->colorMode));
 
@@ -765,4 +642,4 @@ struct PhotronPanelWidget : ModuleWidget {
     }
 };
 
-Model *modelPhotronPanel = createModel<PhotronPanel, PhotronPanelWidget>("PhotronPanel");
+Model *modelPhotronStrip = createModel<PhotronStrip, PhotronStripWidget>("PhotronStrip");
