@@ -5,12 +5,6 @@
 #define CELL_SIZE 5 // 5? or 10?
 #define NUM_OF_MARCHING_CIRCLES 5
 
-struct BlockMessage {
-    Block block;
-    int internalHz = 30;
-    int colorMode = 0;
-};
-
 struct PhotronPanel : Module {
     enum ModeIds {
         COLOR,
@@ -44,6 +38,8 @@ struct PhotronPanel : Module {
     // float pulseHz[8] = {0.0, 0.1, 0.2, 0.25, 0.33, 0.4, 0.5, 1.0};
     float pulseHz = 0.5;
     // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
+    int hertzIndex = 2;
+    int hertz[7] = {60, 45, 30, 20, 15, 12, 10};
     int internalHz = 30;
     float srIncrement = APP->engine->getSampleTime() * internalHz;
     float sr = 0;
@@ -108,8 +104,13 @@ struct PhotronPanel : Module {
     }
 
     void setHz(int hz) {
-        internalHz = hz;
+        hertzIndex = hz;
+        internalHz = hertz[hertzIndex];
         srIncrement = APP->engine->getSampleTime() * internalHz;
+    }
+
+    int getHz() {
+        return hertzIndex;
     }
 
     void incrementColorMode() {
@@ -152,7 +153,8 @@ struct PhotronPanel : Module {
             }
         }
 
-        json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
+        // json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
+        json_object_set_new(rootJ, "hertzIndex", json_integer(getHz()));
         json_object_set_new(rootJ, "blobs", json_boolean(darkRoomBlobs));
         json_object_set_new(rootJ, "width", json_integer(width));
         json_object_set_new(rootJ, "color", json_integer(colorMode));
@@ -164,8 +166,8 @@ struct PhotronPanel : Module {
     }
 
     void dataFromJson(json_t *rootJ) override {
-        json_t *internalHzJ = json_object_get(rootJ, "internalHz");
-        if (internalHzJ) setHz(json_integer_value(internalHzJ));
+        json_t *hertzIndexJ = json_object_get(rootJ, "hertzIndex");
+        if (hertzIndexJ) setHz(json_integer_value(hertzIndexJ));
 
         json_t *pulsePhaseJ = json_object_get(rootJ, "pulsePhase");
         if (pulsePhaseJ) pulsePhase = json_real_value(pulsePhaseJ);
@@ -208,16 +210,16 @@ struct PhotronPanel : Module {
 
         if (sr == 0) {
 
-            bool isParent = (leftExpander.module && leftExpander.module->model == modelPhotronPanel);
+            bool isParent = (leftExpander.module && (leftExpander.module->model == modelPhotronPanel || leftExpander.module->model == modelPhotronStrip));
             if (isParent) {
                 BlockMessage *outputFromParent = (BlockMessage *)(leftExpander.consumerMessage);
                 memcpy(outputValues, outputFromParent, sizeof(BlockMessage) * rows);
 
-                internalHz = outputValues[0].internalHz;
+                setHz(outputValues[0].hertzIndex);
                 colorMode = (ModeIds)outputValues[0].colorMode;
             }
 
-            bool isRightExpander = (rightExpander.module && rightExpander.module->model == modelPhotronPanel);
+            bool isRightExpander = (rightExpander.module && (rightExpander.module->model == modelPhotronPanel || rightExpander.module->model == modelPhotronStrip));
             if (isRightExpander) {
                 Block *outputFromRight = (Block *)(rightExpander.consumerMessage);
                 memcpy(rightOutputValues, outputFromRight, sizeof(Block) * rows);
@@ -288,12 +290,12 @@ struct PhotronPanel : Module {
             }
 
             // to expander (right side)
-            if (rightExpander.module && (rightExpander.module->model == modelPhotronPanel)) {
+            if (rightExpander.module && (rightExpander.module->model == modelPhotronPanel || rightExpander.module->model == modelPhotronStrip)) {
                 BlockMessage *messageToExpander = (BlockMessage *)(rightExpander.module->leftExpander.producerMessage);
 
                 // int edge = width * RACK_GRID_WIDTH / CELL_SIZE;
 
-                messageToExpander[0].internalHz = internalHz;
+                messageToExpander[0].hertzIndex = getHz();
                 messageToExpander[0].colorMode = (int)colorMode;
 
                 for (int y = 0; y < rows; y++) {
@@ -304,7 +306,7 @@ struct PhotronPanel : Module {
             }
 
             // to expander (left side to parent)
-            if (leftExpander.module && (leftExpander.module->model == modelPhotronPanel)) {
+            if (leftExpander.module && (leftExpander.module->model == modelPhotronPanel || leftExpander.module->model == modelPhotronStrip)) {
                 Block *messageToExpander = (Block *)(leftExpander.module->rightExpander.producerMessage);
 
                 for (int y = 0; y < rows; y++) {
@@ -374,60 +376,6 @@ struct PhotronPanel : Module {
         }
     }
 };
-
-namespace PhotronPanelNS {
-    struct HzModeValueItem : MenuItem {
-        PhotronPanel *module;
-        int hz;
-        void onAction(const event::Action &e) override {
-            module->setHz(hz);
-        }
-    };
-
-    struct HzModeItem : MenuItem {
-        PhotronPanel *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> hzModes = {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"};
-            int hertz[] = {60, 45, 30, 20, 15, 12, 10};
-            for (int i = 0; i < 7; i++) {
-                HzModeValueItem *item = new HzModeValueItem;
-                item->text = hzModes[i];
-                item->rightText = CHECKMARK(module->internalHz == hertz[i]);
-                item->module = module;
-                item->hz = hertz[i];
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-
-    struct ColorModeValueItem : MenuItem {
-        PhotronPanel *module;
-        bool isColor;
-        void onAction(const event::Action &e) override {
-            module->isColor = isColor;
-        }
-    };
-
-    struct ColorModeItem : MenuItem {
-        PhotronPanel *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> colorModes = {"color", "black & white"};
-            for (int i = 0; i < 2; i++) {
-                ColorModeValueItem *item = new ColorModeValueItem;
-                item->text = colorModes[i];
-                bool isColor = (i == 0) ? true : false;
-                item->rightText = CHECKMARK(module->isColor == isColor);
-                item->module = module;
-                item->isColor = isColor;
-                menu->addChild(item);
-            }
-            return menu;
-        }
-    };
-}
 
 struct PhotronPanelDisplay : Widget {
     PhotronPanel *module;
@@ -736,22 +684,20 @@ struct PhotronPanelWidget : ModuleWidget {
 
     void appendContextMenu(Menu *menu) override {
         PhotronPanel *module = dynamic_cast<PhotronPanel*>(this->module);
-        menu->addChild(new MenuEntry);
+        // menu->addChild(new MenuEntry);
+        menu->addChild(new MenuSeparator);
 
-        PhotronPanelNS::HzModeItem *hzModeItem = new PhotronPanelNS::HzModeItem;
-        hzModeItem->text = "Processing rate";
-        hzModeItem->rightText = string::f("%d Hz ", module->internalHz) + RIGHT_ARROW; 
-        hzModeItem->module = module;
-        menu->addChild(hzModeItem);
+        menu->addChild(createIndexSubmenuItem(
+            "Processing rate",
+            {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"},
+            [=]() {
+                return module->getHz();
+            },
+            [=](int hz) {
+                module->setHz(hz);
+            }));
 
-        // PhotronPanelNS::ColorModeItem *colorModeItem = new PhotronPanelNS::ColorModeItem;
-        // colorModeItem->text = "Mode";
-        // if (module->isColor) colorModeItem->rightText = std::string("color ") + " " + RIGHT_ARROW;
-        // else colorModeItem->rightText = std::string("black & white ") + " " + RIGHT_ARROW;
-        // colorModeItem->module = module;
-        // menu->addChild(colorModeItem);
-
-        menu->addChild(createIndexPtrSubmenuItem("Mode", {"color", "black & white", "solid color", "strip color"}, &module->colorMode));
+        menu->addChild(createIndexPtrSubmenuItem("Mode", {"color", "black & white", "solid color", "strip"}, &module->colorMode));
 
         // menu->addChild(createIndexPtrSubmenuItem("Light pulse", {"Off", "0.1 Hz", "0.2 Hz", "0.25 Hz", "0.33 Hz", "0.4 Hz", "0.5 Hz", "1 Hz"}, &module->pulseHzIndex));
 

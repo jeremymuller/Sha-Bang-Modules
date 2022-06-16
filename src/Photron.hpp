@@ -267,3 +267,9 @@ struct MarchingCircle {
         //     pos.y = -radius;
     }
 };
+
+struct BlockMessage {
+    Block block;
+    int hertzIndex = 2;
+    int colorMode = 0;
+};

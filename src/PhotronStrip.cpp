@@ -5,12 +5,6 @@
 #define CELL_SIZE 5
 #define NUM_OF_MARCHING_CIRCLES 4
 
-struct BlockMessage {
-    Block block;
-    int hertzIndex = 2;
-    int colorMode = 0;
-};
-
 struct PhotronStrip : Module {
     enum ModeIds {
         COLOR,
@@ -196,22 +190,21 @@ struct PhotronStrip : Module {
 
         if (sr == 0) {
 
-            bool isParent = (leftExpander.module && leftExpander.module->model == modelPhotronStrip);
+            // receiving messages from expander
+            bool isParent = (leftExpander.module && (leftExpander.module->model == modelPhotronStrip || leftExpander.module->model == modelPhotronPanel));
             if (isParent) {
-                Block *outputFromParent = (Block *)(leftExpander.consumerMessage);
-                memcpy(outputValues, outputFromParent, sizeof(Block) * rows);
+                BlockMessage *outputFromParent = (BlockMessage *)(leftExpander.consumerMessage);
+                memcpy(outputValues, outputFromParent, sizeof(BlockMessage) * rows);
 
                 setHz(outputValues[0].hertzIndex);
                 colorMode = (ModeIds)outputValues[0].colorMode;
             }
 
-            bool isRightExpander = (rightExpander.module && rightExpander.module->model == modelPhotronStrip);
+            bool isRightExpander = (rightExpander.module && (rightExpander.module->model == modelPhotronStrip || rightExpander.module->model == modelPhotronPanel));
             if (isRightExpander) {
                 Block *outputFromRight = (Block *)(rightExpander.consumerMessage);
                 memcpy(rightOutputValues, outputFromRight, sizeof(Block) * rows);
             }
-
-            // bool isParent = false;
 
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
@@ -274,8 +267,8 @@ struct PhotronStrip : Module {
                 circles[i].update();
             }
 
-            // to expander
-            if (rightExpander.module && (rightExpander.module->model == modelPhotronStrip)) {
+            // to expander (right side)
+            if (rightExpander.module && (rightExpander.module->model == modelPhotronStrip || rightExpander.module->model == modelPhotronPanel)) {
                 BlockMessage *messageToExpander = (BlockMessage *)(rightExpander.module->leftExpander.producerMessage);
 
                 messageToExpander[0].hertzIndex = getHz();
@@ -289,7 +282,7 @@ struct PhotronStrip : Module {
             }
 
             // to expander (left side to parent)
-            if (leftExpander.module && (leftExpander.module->model == modelPhotronStrip)) {
+            if (leftExpander.module && (leftExpander.module->model == modelPhotronStrip || leftExpander.module->model == modelPhotronPanel)) {
                 Block *messageToExpander = (Block *)(leftExpander.module->rightExpander.producerMessage);
 
                 for (int y = 0; y < rows; y++) {
@@ -628,9 +621,7 @@ struct PhotronStripWidget : ModuleWidget {
                 module->setHz(hz);
             }));
 
-        menu->addChild(createIndexPtrSubmenuItem("Mode", {"color", "black & white", "solid color", "strip color"}, &module->colorMode));
-
-        // menu->addChild(createIndexPtrSubmenuItem("Light pulse", {"Off", "0.1 Hz", "0.2 Hz", "0.25 Hz", "0.33 Hz", "0.4 Hz", "0.5 Hz", "1 Hz"}, &module->pulseHzIndex));
+        menu->addChild(createIndexPtrSubmenuItem("Mode", {"color", "black & white", "solid color", "strip"}, &module->colorMode));
 
         LightMenuItem *lightPulse = createMenuItem<LightMenuItem>("Light", RIGHT_ARROW);
         lightPulse->module = module;
