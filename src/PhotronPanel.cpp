@@ -379,6 +379,11 @@ struct PhotronPanel : Module {
 
 struct PhotronPanelDisplay : Widget {
     PhotronPanel *module;
+    float initX = 0;
+    float initY = 0;
+    float dragX = 0;
+    float dragY = 0;
+    bool shiftClick = false;
 
     void onButton(const event::Button &e) override {
         if (module == NULL) return;
@@ -386,9 +391,42 @@ struct PhotronPanelDisplay : Widget {
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
             if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
                 e.consume(this);
-                module->incrementColorMode();
+                shiftClick = true;
+                // module->incrementColorMode();
+                initX = e.pos.x;
+                initY = e.pos.y;
+            } else {
+                shiftClick = false;
             }
         }
+    }
+
+    void onDragStart(const event::DragStart &e) override {
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
+    }
+
+    void onDragMove(const event::DragMove &e) override {
+    	if (shiftClick) {
+            float newDragX = APP->scene->rack->getMousePos().x;
+            float newDragY = APP->scene->rack->getMousePos().y;
+            // TODO
+            drawRandoms(initX + (newDragX - dragX), initY + (newDragY - dragY));
+        }
+    }
+
+    void drawRandoms(float mX, float mY) {
+        int x = static_cast<int>(mX / CELL_SIZE);
+        int y = static_cast<int>(mY / CELL_SIZE);
+
+        module->blocks[y][x].reset();
+
+        int edge = module->width * RACK_GRID_WIDTH / CELL_SIZE;
+
+        if (x > 0) module->blocks[y][x-1].reset();
+        if (x < edge-1) module->blocks[y][x+1].reset();
+        if (y > 0) module->blocks[y-1][x].reset();
+        if (x < module->cols-1) module->blocks[y+1][x].reset();
     }
 
     void drawSingleColor(const DrawArgs &args) {

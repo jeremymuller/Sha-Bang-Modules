@@ -63,6 +63,8 @@ struct Photron : Module {
     int resetIndex = 0;
     int checkParams = 0;
     // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
+    int hertzIndex = 2;
+    int hertz[7] = {60, 45, 30, 20, 15, 12, 10};
     int internalHz = 30;
     float srIncrement = APP->engine->getSampleTime() * internalHz;
     float sr = 0;
@@ -73,6 +75,12 @@ struct Photron : Module {
     int blockAlpha[rows][cols];
 
     MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
+
+    // expander stuff
+    BlockMessage outputValues[rows];
+    BlockMessage leftMessages[2][rows];
+    Block rightOutputValues[rows];
+    Block rightMessages[2][rows];
 
     Photron() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -110,6 +118,12 @@ struct Photron : Module {
             MarchingCircle c(randRange(DISPLAY_SIZE_WIDTH), randRange(DISPLAY_SIZE_HEIGHT));
             circles[i] = c;
         }
+
+        leftExpander.producerMessage = leftMessages[0];
+        leftExpander.consumerMessage = leftMessages[1];
+
+        rightExpander.producerMessage = rightMessages[0];
+        rightExpander.consumerMessage = rightMessages[1];
     }
 
     void onSampleRateChange() override {
@@ -125,8 +139,13 @@ struct Photron : Module {
     }
 
     void setHz(int hz) {
-        internalHz = hz;
+        hertzIndex = hz;
+        internalHz = hertz[hertzIndex];
         srIncrement = APP->engine->getSampleTime() * internalHz;
+    }
+
+    int getHz() {
+        return hertzIndex;
     }
 
     json_t *dataToJson() override {
@@ -152,7 +171,8 @@ struct Photron : Module {
             }
         }
 
-        json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
+        // json_object_set_new(rootJ, "internalHz", json_integer(internalHz));
+        json_object_set_new(rootJ, "hertzIndex", json_integer(getHz()));
         json_object_set_new(rootJ, "background", json_integer(background));
         json_object_set_new(rootJ, "waveform", json_integer(waveform));
         json_object_set_new(rootJ, "lissajous", json_boolean(lissajous));
@@ -161,8 +181,8 @@ struct Photron : Module {
     }
 
     void dataFromJson(json_t *rootJ) override {
-        json_t *internalHzJ = json_object_get(rootJ, "internalHz");
-        if (internalHzJ) setHz(json_integer_value(internalHzJ));
+        json_t *hertzIndexJ = json_object_get(rootJ, "hertzIndex");
+        if (hertzIndexJ) setHz(json_integer_value(hertzIndexJ));
 
         json_t *backgroundJ = json_object_get(rootJ, "background");
         if (backgroundJ) background = json_integer_value(backgroundJ);
@@ -208,6 +228,22 @@ struct Photron : Module {
         checkParams = (checkParams+1) % 4;
 
         if (sr == 0) {
+
+            bool isParent = (leftExpander.module && (leftExpander.module->model == modelPhotron));
+            if (isParent) {
+                BlockMessage *outputFromParent = (BlockMessage *)(leftExpander.consumerMessage);
+                memcpy(outputValues, outputFromParent, sizeof(BlockMessage) * rows);
+
+                setHz(outputValues[0].hertzIndex);
+                background = (BackgroundIds)outputValues[0].colorMode;
+            }
+
+            bool isRightExpander = (rightExpander.module && (rightExpander.module->model == modelPhotron));
+            if (isRightExpander) {
+                Block *outputFromRight = (Block *)(rightExpander.consumerMessage);
+                memcpy(rightOutputValues, outputFromRight, sizeof(Block) * rows);
+            } 
+
             bool isTargetConnected = inputs[TARGET_INPUT].isConnected();
 
             for (int y = 0; y < rows; y++) {
@@ -222,8 +258,16 @@ struct Photron : Module {
                     Block east;
                     Block north;
                     Block south;
-                    if (x > 0) west = blocks[y][x-1];
-                    if (x < cols-1) east = blocks[y][x+1];
+                    if (isParent && x == 0)
+                        west = outputValues[y].block;
+                    else if (x > 0)
+                        west = blocks[y][x-1];
+
+                    if (isRightExpander && x == cols - 1)
+                        east = rightOutputValues[y];
+                    else if (x < cols - 1)
+                        east = blocks[y][x + 1];
+
                     if (y > 0) north = blocks[y-1][x];
                     if (y < rows-1) south = blocks[y+1][x];
 
@@ -232,10 +276,26 @@ struct Photron : Module {
                     Block northeast;
                     Block southwest;
                     Block southeast;
-                    if ((x > 0) && (y > 0)) northwest = blocks[y-1][x-1]; 
-                    if ((x < cols-1) && (y > 0)) northeast = blocks[y-1][x+1];
-                    if ((y < rows-1) && (x > 0)) southwest = blocks[y+1][x-1];
-                    if ((y < rows-1) && (x < cols-1)) southeast = blocks[y+1][x+1];
+
+                    if (isParent && (x == 0) && (y > 0))
+                        northwest = outputValues[y - 1].block;
+                    else if ((x > 0) && (y > 0)) 
+                        northwest = blocks[y-1][x-1];
+
+                    if (isRightExpander && (x == cols - 1) && (y > 0))
+                        northeast = rightOutputValues[y - 1];
+                    else if ((x < cols - 1) && (y > 0))
+                        northeast = blocks[y - 1][x + 1];
+
+                    if (isParent && (x == 0) && (y < rows-1))
+                        southwest = outputValues[y+1].block;
+                    else if ((y < rows-1) && (x > 0)) 
+                        southwest = blocks[y+1][x-1];
+
+                    if (isRightExpander && (x == cols - 1) && (y < rows - 1))
+                        southeast = rightOutputValues[y + 1];
+                    else if ((y < rows - 1) && (x < cols - 1))
+                        southeast = blocks[y + 1][x + 1];
 
                     Block b[8] = {west, east, north, south, northwest, northeast, southwest, southeast};
                     blocks[y][x].flock(b, 8);
@@ -257,6 +317,31 @@ struct Photron : Module {
 
             for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
                 circles[i].update();
+            }
+
+            // to expander (right side)
+            if (rightExpander.module && (rightExpander.module->model == modelPhotron)) {
+                BlockMessage *messageToExpander = (BlockMessage *)(rightExpander.module->leftExpander.producerMessage);
+
+                messageToExpander[0].hertzIndex = getHz();
+                messageToExpander[0].colorMode = (int)background;
+
+                for (int y = 0; y < rows; y++) {
+                    messageToExpander[y].block = blocks[y][cols-1];
+                }
+
+                rightExpander.module->leftExpander.messageFlipRequested = true;
+            }
+
+            // to expander (left side to parent)
+            if (leftExpander.module && (leftExpander.module->model == modelPhotron)) {
+                Block *messageToExpander = (Block *)(leftExpander.module->rightExpander.producerMessage);
+
+                for (int y = 0; y < rows; y++) {
+                    messageToExpander[y] = blocks[y][0];
+                }
+
+                leftExpander.module->rightExpander.messageFlipRequested = true;
             }
         }
         sr += srIncrement;
@@ -321,22 +406,31 @@ struct Photron : Module {
                 }
             }
         } else {
+
+            int centerX = (int)rows / 2;
+            int centerY = (int)cols / 2;
+
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
-                    if (x < cols/2.0) {
-                        if (y < rows/2.0)
-                            blocks[y][x].setColor(128, 0, 219); // purple
-                        else
-                            blocks[y][x].setColor(0, 238, 255); // aqua
-                    }
-                    else {
-                        if (y < rows/2.0)
-                            blocks[y][x].setColor(38, 0, 255); // blue
-                        else
-                            blocks[y][x].setColor(255, 0, 0); // red
-                    }
+
                 }
-            }           
+            }
+            // for (int y = 0; y < rows; y++) {
+            //     for (int x = 0; x < cols; x++) {
+            //         if (x < cols/2.0) {
+            //             if (y < rows/2.0)
+            //                 blocks[y][x].setColor(128, 0, 219); // purple
+            //             else
+            //                 blocks[y][x].setColor(0, 238, 255); // aqua
+            //         }
+            //         else {
+            //             if (y < rows/2.0)
+            //                 blocks[y][x].setColor(38, 0, 255); // blue
+            //             else
+            //                 blocks[y][x].setColor(255, 0, 0); // red
+            //         }
+            //     }
+            // }           
         }
 
         resetIndex = (resetIndex+1) % 2;
@@ -402,13 +496,52 @@ namespace PhotronNS {
 
 struct PhotronDisplay : LightWidget {
     Photron *module;
+    float initX = 0;
+    float initY = 0;
+    float dragX = 0;
+    float dragY = 0;
+    bool shiftClick = false;
 
-    // void onButton(const event::Button &e) override {
-    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-    //         e.consume(this);
-            
-    //     }
-    // }
+    void onButton(const event::Button &e) override {
+        if (module == NULL) return;
+
+        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+            if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
+                e.consume(this);
+                shiftClick = true;
+                initX = e.pos.x;
+                initY = e.pos.y;
+            } else {
+                shiftClick = false;
+            }
+        }
+    }
+
+    void onDragStart(const event::DragStart &e) override {
+        dragX = APP->scene->rack->getMousePos().x;
+        dragY = APP->scene->rack->getMousePos().y;
+    }
+
+    void onDragMove(const event::DragMove &e) override {
+    	if (shiftClick) {
+            float newDragX = APP->scene->rack->getMousePos().x;
+            float newDragY = APP->scene->rack->getMousePos().y;
+            drawRandoms(initX + (newDragX - dragX), initY + (newDragY - dragY));
+        }
+    }
+
+    void drawRandoms(float mX, float mY) {
+        int x = static_cast<int>(mX / CELL_SIZE);
+        int y = static_cast<int>(mY / CELL_SIZE);
+
+        module->blocks[y][x].reset();
+
+
+        if (x > 0) module->blocks[y][x-1].reset();
+        if (x < module->rows-1) module->blocks[y][x+1].reset();
+        if (y > 0) module->blocks[y-1][x].reset();
+        if (x < module->cols-1) module->blocks[y+1][x].reset();
+    }
 
 	void drawWaveform(NVGcontext *vg, float *valuesX, float *valuesY) {
 		if (!valuesX)
@@ -665,13 +798,26 @@ struct PhotronWidget : ModuleWidget {
 
     void appendContextMenu(Menu *menu) override {
         Photron *module = dynamic_cast<Photron*>(this->module);
-        menu->addChild(new MenuEntry);
+        // menu->addChild(new MenuEntry);
+        menu->addChild(new MenuSeparator);
 
-        PhotronNS::HzModeItem *hzModeItem = new PhotronNS::HzModeItem;
-        hzModeItem->text = "Processing rate";
-        hzModeItem->rightText = string::f("%d Hz ", module->internalHz) + RIGHT_ARROW; 
-        hzModeItem->module = module;
-        menu->addChild(hzModeItem);
+        // PhotronNS::HzModeItem *hzModeItem = new PhotronNS::HzModeItem;
+        // hzModeItem->text = "Processing rate";
+        // hzModeItem->rightText = string::f("%d Hz ", module->internalHz) + RIGHT_ARROW; 
+        // hzModeItem->module = module;
+        // menu->addChild(hzModeItem);
+
+        menu->addChild(createIndexSubmenuItem(
+            "Processing rate",
+            {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"},
+            [=]()
+            {
+                return module->getHz();
+            },
+            [=](int hz)
+            {
+                module->setHz(hz);
+            }));
 
         menu->addChild(createBoolPtrMenuItem("Lissajous mode", "", &module->lissajous));
     }
