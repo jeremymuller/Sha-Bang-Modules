@@ -47,8 +47,24 @@ struct Block {
         rgb = Vec3(r, g, b);
     }
 
+    void distortColor() {
+        rgb.x = static_cast<int>(rgb.x + randRange(-20, 20)) % 256;
+        rgb.y = static_cast<int>(rgb.y + randRange(-20, 20)) % 256;
+        rgb.z = static_cast<int>(rgb.z + randRange(-20, 20)) % 256;
+    }
+
     void setColor(int r, int g, int b) {
         rgb = Vec3(r, g, b);
+    }
+
+    void setColor(NVGcolor color) {
+        rgb.x = color.r;
+        rgb.y = color.g;
+        rgb.z = color.b;
+    }
+
+    Vec3 getColor() {
+        return rgb;
     }
 
     void flock(Block blocks[], int size) {

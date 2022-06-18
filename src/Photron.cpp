@@ -21,6 +21,9 @@ struct Photron : Module {
         NUM_BG
     };
     enum ParamIds {
+        RANDOMIZE_PARAM,
+        RESET_PARAM,
+        BG_COLOR_PARAM,
         X_POS_PARAM,
         Y_POS_PARAM,
         X_SCALE_PARAM,
@@ -73,6 +76,7 @@ struct Photron : Module {
     Block blocks[rows][cols];
     float field[rows][cols];
     int blockAlpha[rows][cols];
+    json_t *patternsJ;
 
     MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
 
@@ -124,6 +128,20 @@ struct Photron : Module {
 
         rightExpander.producerMessage = rightMessages[0];
         rightExpander.consumerMessage = rightMessages[1];
+
+        // load json pattern (will be moved to other file eventually)
+        std::string pattern = asset::plugin(pluginInstance, "res/invaders.json");
+        
+        FILE *file = fopen(pattern.c_str(), "r");
+        json_error_t error;
+        json_t *patternJson = json_loadf(file, 0, &error);
+        fclose(file);
+
+        patternsJ = json_object_get(patternJson, "large invader");
+    }
+
+    ~Photron() {
+        json_decref(patternsJ);
     }
 
     void onSampleRateChange() override {
@@ -131,11 +149,11 @@ struct Photron : Module {
     }
 
     void onRandomize() override {
-        resetBlocks();
+        resetBlocks(RANDOMIZE_PARAM);
     }
 
     void onReset() override {
-        resetBlocks();
+        resetBlocks(RESET_PARAM);
     }
 
     void setHz(int hz) {
@@ -146,6 +164,23 @@ struct Photron : Module {
 
     int getHz() {
         return hertzIndex;
+    }
+
+    int *getRandomColor(int randNum) {
+        switch (randNum) {
+            case 0:
+                return getRedAsArray();
+                break;
+            case 1:
+                return getBlueAsArray();
+                break;
+            case 2:
+                return getAquaAsArray();
+                break;
+            default:
+                return getPurpleAsArray();
+                break;
+        }
     }
 
     json_t *dataToJson() override {
@@ -398,43 +433,65 @@ struct Photron : Module {
 	}
     }
 
-    void resetBlocks() {
-        if (resetIndex == 0) {
+    void resetBlocks(int param) {
+        if (param == RANDOMIZE_PARAM) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
                     blocks[y][x].reset();
                 }
             }
-        } else {
-
-            int centerX = (int)rows / 2;
-            int centerY = (int)cols / 2;
+        } else if (param == BG_COLOR_PARAM) {
+            int randNum = randRange(4);
 
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
-
+                    int *color = getRandomColor(randNum);
+                    blocks[y][x].setColor(color[0], color[1], color[2]);
                 }
-            }
-            // for (int y = 0; y < rows; y++) {
-            //     for (int x = 0; x < cols; x++) {
-            //         if (x < cols/2.0) {
-            //             if (y < rows/2.0)
-            //                 blocks[y][x].setColor(128, 0, 219); // purple
-            //             else
-            //                 blocks[y][x].setColor(0, 238, 255); // aqua
-            //         }
-            //         else {
-            //             if (y < rows/2.0)
-            //                 blocks[y][x].setColor(38, 0, 255); // blue
-            //             else
-            //                 blocks[y][x].setColor(255, 0, 0); // red
-            //         }
-            //     }
-            // }           
+            }           
+        } else if (param == RESET_PARAM) {
+
+            if (random::uniform() < 0.5)
+                resetBlocks(RANDOMIZE_PARAM);
+            else
+                resetBlocks(BG_COLOR_PARAM);
+
+            if (patternsJ) {
+                json_t *wJ = json_object_get(patternsJ, "width");
+                json_t *hJ = json_object_get(patternsJ, "height");
+                Vec patternCenter = Vec(0, 0);
+                if (wJ && hJ){
+                    int w = json_integer_value(wJ);
+                    int h = json_integer_value(hJ);
+                    patternCenter = Vec((int)w/2, (int)h/2);
+                }
+
+                Vec center = Vec(cols/2, rows/2);
+                int xOffset = center.x - patternCenter.x;
+                int yOffset = center.y - patternCenter.y;
+
+                int randNum = randRange(4);
+
+                for (int y = 0; y < rows; y++) {
+                    for (int x = 0; x < cols; x++) {
+
+                        auto sX = std::to_string(x);
+                        auto sY = std::to_string(y);
+                        std::string s = sX + ", " + sY;
+                        const char *key = s.c_str();
+                        json_t *numJ = json_object_get(patternsJ, key);
+                        if (numJ) {
+                            int *color = getRandomColor(randNum);
+                            if (json_integer_value(numJ) == 1)
+                                blocks[y+yOffset][x+xOffset].setColor(color[0], color[1], color[2]);
+                            else if (json_integer_value(numJ) == 0)
+                                blocks[y+yOffset][x+xOffset].setColor(255, 255, 255);
+                        }
+                    }
+                }
+
+            }       
         }
-
-        resetIndex = (resetIndex+1) % 2;
-
     }
 
     void invertColors() {
@@ -500,19 +557,16 @@ struct PhotronDisplay : LightWidget {
     float initY = 0;
     float dragX = 0;
     float dragY = 0;
-    bool shiftClick = false;
+    bool isDKeyHeld = false;
 
     void onButton(const event::Button &e) override {
         if (module == NULL) return;
 
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-            if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
+            if (isDKeyHeld) {
                 e.consume(this);
-                shiftClick = true;
                 initX = e.pos.x;
                 initY = e.pos.y;
-            } else {
-                shiftClick = false;
             }
         }
     }
@@ -523,24 +577,46 @@ struct PhotronDisplay : LightWidget {
     }
 
     void onDragMove(const event::DragMove &e) override {
-    	if (shiftClick) {
+    	if (isDKeyHeld) {
             float newDragX = APP->scene->rack->getMousePos().x;
             float newDragY = APP->scene->rack->getMousePos().y;
             drawRandoms(initX + (newDragX - dragX), initY + (newDragY - dragY));
         }
     }
 
+    void onDragEnd(const DragEndEvent &e) override {
+        isDKeyHeld = false;
+    }
+
+    void onHoverKey(const event::HoverKey &e) override {
+        if (module == NULL) return;
+
+        if (e.key == GLFW_KEY_D) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT)
+                isDKeyHeld = true;
+            else if (e.action == GLFW_RELEASE)
+                isDKeyHeld = false;
+        }
+        else {
+            e.consume(this);
+            isDKeyHeld = false;
+        }
+
+        // ModuleWidget::onHoverKey(e);
+    }
+
     void drawRandoms(float mX, float mY) {
         int x = static_cast<int>(mX / CELL_SIZE);
         int y = static_cast<int>(mY / CELL_SIZE);
 
-        module->blocks[y][x].reset();
+        // module->blocks[y][x].reset();
+        module->blocks[y][x].distortColor();
 
-
-        if (x > 0) module->blocks[y][x-1].reset();
-        if (x < module->rows-1) module->blocks[y][x+1].reset();
-        if (y > 0) module->blocks[y-1][x].reset();
-        if (x < module->cols-1) module->blocks[y+1][x].reset();
+        if (x > 0) module->blocks[y][x-1].distortColor();
+        if (x < module->rows-1) module->blocks[y][x + 1].distortColor();
+        if (y > 0) module->blocks[y - 1][x].distortColor();
+        if (x < module->cols-1) module->blocks[y + 1][x].distortColor();
     }
 
 	void drawWaveform(NVGcontext *vg, float *valuesX, float *valuesY) {

@@ -383,20 +383,16 @@ struct PhotronPanelDisplay : Widget {
     float initY = 0;
     float dragX = 0;
     float dragY = 0;
-    bool shiftClick = false;
+    bool isDKeyHeld = false;
 
     void onButton(const event::Button &e) override {
         if (module == NULL) return;
 
         if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-            if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
+            if (isDKeyHeld) {
                 e.consume(this);
-                shiftClick = true;
-                // module->incrementColorMode();
                 initX = e.pos.x;
                 initY = e.pos.y;
-            } else {
-                shiftClick = false;
             }
         }
     }
@@ -407,11 +403,29 @@ struct PhotronPanelDisplay : Widget {
     }
 
     void onDragMove(const event::DragMove &e) override {
-    	if (shiftClick) {
+    	if (isDKeyHeld) {
             float newDragX = APP->scene->rack->getMousePos().x;
             float newDragY = APP->scene->rack->getMousePos().y;
-            // TODO
             drawRandoms(initX + (newDragX - dragX), initY + (newDragY - dragY));
+        }
+    }
+
+    void onDragEnd(const DragEndEvent &e) override {
+        isDKeyHeld = false;
+    }
+
+    void onHoverKey(const event::HoverKey &e) override {
+        if (module == NULL) return;
+
+        if (e.key == GLFW_KEY_D) {
+            e.consume(this);
+            if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT)
+                isDKeyHeld = true;
+            else if (e.action == GLFW_RELEASE)
+                isDKeyHeld = false;
+        } else {
+            e.consume(this);
+            isDKeyHeld = false;
         }
     }
 
@@ -419,14 +433,14 @@ struct PhotronPanelDisplay : Widget {
         int x = static_cast<int>(mX / CELL_SIZE);
         int y = static_cast<int>(mY / CELL_SIZE);
 
-        module->blocks[y][x].reset();
+        module->blocks[y][x].distortColor();
 
         int edge = module->width * RACK_GRID_WIDTH / CELL_SIZE;
 
-        if (x > 0) module->blocks[y][x-1].reset();
-        if (x < edge-1) module->blocks[y][x+1].reset();
-        if (y > 0) module->blocks[y-1][x].reset();
-        if (x < module->cols-1) module->blocks[y+1][x].reset();
+        if (x > 0) module->blocks[y][x-1].distortColor();
+        if (x < edge-1) module->blocks[y][x+1].distortColor();
+        if (y > 0) module->blocks[y-1][x].distortColor();
+        if (x < module->cols-1) module->blocks[y+1][x].distortColor();
     }
 
     void drawSingleColor(const DrawArgs &args) {
