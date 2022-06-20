@@ -3,6 +3,7 @@
 
 struct Block {
     bool isSet = false;
+    bool isLocked = false;
     Vec pos;
     Vec3 rgb;
     Vec3 rgbVel = Vec3();
@@ -157,13 +158,15 @@ struct Block {
     }
 
     void update() {
-        rgbVel = rgbVel.plus(rgbAcc);
-        rgbVel = rgbVel.limit(maxspeed);
-        rgb = rgb.plus(rgbVel);
+        if (!isLocked) { // TODO: locked not working
+            rgbVel = rgbVel.plus(rgbAcc);
+            rgbVel = rgbVel.limit(maxspeed);
+            rgb = rgb.plus(rgbVel);
 
-        edges();
+            edges();
 
-        rgbAcc = rgbAcc.mult(0.0); // reset acceleration
+            rgbAcc = rgbAcc.mult(0.0); // reset acceleration
+        }
     }
 
     void applyForce(Vec3 force) {

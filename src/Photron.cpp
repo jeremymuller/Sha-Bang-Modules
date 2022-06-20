@@ -8,6 +8,12 @@
 #define NUM_OF_MARCHING_CIRCLES 5
 
 struct Photron : Module {
+    enum QuadrantIds {
+        NW,
+        NE,
+        SW,
+        SE
+    };
     enum WaveformIds {
         LINES,
         BLOCKS,
@@ -76,7 +82,10 @@ struct Photron : Module {
     Block blocks[rows][cols];
     float field[rows][cols];
     int blockAlpha[rows][cols];
-    json_t *patternsJ;
+    // json_t *patternsJ;
+    json_t *patternsRootJ;
+    int patternIndex = 0;
+    std::vector<std::string> labels;
 
     MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
 
@@ -137,11 +146,30 @@ struct Photron : Module {
         json_t *patternJson = json_loadf(file, 0, &error);
         fclose(file);
 
-        patternsJ = json_object_get(patternJson, "large invader");
+        patternsRootJ = json_object_get(patternJson, "patterns");
+        // patternsJ = json_object_get(patternsRootJ, "XL squid");
+
+        const char *key;
+        void *iter = json_object_iter(patternsRootJ);
+        while (iter) {
+            key = json_object_iter_key(iter);
+            labels.push_back(key);
+            iter = json_object_iter_next(patternsRootJ, iter);
+        }
+
+        // if (json_is_array(patternsJ)) {
+        //     size_t index;
+        //     json_t *value;
+        //     // size_t size = json_array_size(patternsJ);
+        //     json_array_foreach(patternsJ, index, value) {
+        //         json_t *invaderJ = json_array_get(patternsJ, index);
+
+        //     }
+        // }
     }
 
     ~Photron() {
-        json_decref(patternsJ);
+        json_decref(patternsRootJ);
     }
 
     void onSampleRateChange() override {
@@ -164,6 +192,23 @@ struct Photron : Module {
 
     int getHz() {
         return hertzIndex;
+    }
+
+    Vec getCenter() {
+        return Vec(cols/2, rows/2);
+    }
+
+    Vec getQuadrant(QuadrantIds quadrant) {
+        switch (quadrant) {
+        case NW:
+            return Vec(cols/4, rows/4);
+        case NE:
+            return Vec(cols/4 + cols/2, rows/4);
+        case SW:
+            return Vec(cols/4, rows/4 + rows/2);
+        default:
+            return Vec(cols/4 + cols/2, rows/4 + rows/2);
+        }
     }
 
     int *getRandomColor(int randNum) {
@@ -399,38 +444,85 @@ struct Photron : Module {
             }
         }
 
-    // Are we waiting on the next trigger?
-	if (bufferIndex >= BUFFER_SIZE) {
-		// Trigger immediately if external but nothing plugged in, or in Lissajous mode
-		// if (lissajous || (external && !inputs[TRIG_INPUT].isConnected())) {
-        if (lissajous) {
-			bufferIndex = 0;
-			frameIndex = 0;
-			return;
-		}
+        // Are we waiting on the next trigger?
+        if (bufferIndex >= BUFFER_SIZE) {
+            // Trigger immediately if external but nothing plugged in, or in Lissajous mode
+            // if (lissajous || (external && !inputs[TRIG_INPUT].isConnected())) {
+            if (lissajous) {
+                bufferIndex = 0;
+                frameIndex = 0;
+                return;
+            }
 
-		// Reset the Schmitt trigger so we don't trigger immediately if the input is high
-		if (frameIndex == 0) {
-			resetTrigger.reset();
-		}
-		frameIndex++;
+            // Reset the Schmitt trigger so we don't trigger immediately if the input is high
+            if (frameIndex == 0) {
+                resetTrigger.reset();
+            }
+            frameIndex++;
 
-		// Must go below 0.1V to trigger
-		// resetTrigger.setThresholds(params[TRIG_PARAM].getValue() - 0.1, params[TRIG_PARAM].getValue());
-		// float gate = external ? inputs[TRIG_INPUT].getVoltage() : inputs[X_INPUT].getVoltage();
-        float gate = inputs[X_INPUT].getVoltage();
+            // Must go below 0.1V to trigger
+            // resetTrigger.setThresholds(params[TRIG_PARAM].getValue() - 0.1, params[TRIG_PARAM].getValue());
+            // float gate = external ? inputs[TRIG_INPUT].getVoltage() : inputs[X_INPUT].getVoltage();
+            float gate = inputs[X_INPUT].getVoltage();
 
-		// Reset if triggered
-		float holdTime = 0.1;
-		if (resetTrigger.process(gate) || (frameIndex >= args.sampleRate * holdTime)) {
-			bufferIndex = 0; frameIndex = 0; return;
-		}
+            // Reset if triggered
+            float holdTime = 0.1;
+            if (resetTrigger.process(gate) || (frameIndex >= args.sampleRate * holdTime)) {
+                bufferIndex = 0; frameIndex = 0; return;
+            }
 
-		// Reset if we've waited too long
-		if (frameIndex >= args.sampleRate * holdTime) {
-			bufferIndex = 0; frameIndex = 0; return;
-		}
-	}
+            // Reset if we've waited too long
+            if (frameIndex >= args.sampleRate * holdTime) {
+                bufferIndex = 0; frameIndex = 0; return;
+            }
+        }
+    }
+
+    void setPattern(Vec pos) {
+        int *color = getRandomColor(randRange(4));
+        setPattern(pos, color, labels.at(patternIndex).c_str());
+    }
+
+    void setPattern(Vec pos, int *color, const char* key) {
+
+        json_t *patternsJ = json_object_get(patternsRootJ, key);
+
+        if (patternsJ) {
+            json_t *wJ = json_object_get(patternsJ, "width");
+            json_t *hJ = json_object_get(patternsJ, "height");
+            Vec patternCenter = Vec(0, 0);
+            if (wJ && hJ){
+                int w = json_integer_value(wJ);
+                int h = json_integer_value(hJ);
+                patternCenter = Vec((int)w/2, (int)h/2);
+            }
+
+            int xOffset = pos.x - patternCenter.x;
+            int yOffset = pos.y - patternCenter.y;
+
+            // int randNum = randRange(4);
+
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+
+                    auto sX = std::to_string(x);
+                    auto sY = std::to_string(y);
+                    std::string s = sX + ", " + sY;
+                    const char *key = s.c_str();
+                    json_t *numJ = json_object_get(patternsJ, key);
+                    if (numJ) {
+                        // int *color = getRandomColor(randNum);
+                        if (json_integer_value(numJ) == 1)
+                            blocks[y+yOffset][x+xOffset].setColor(color[0], color[1], color[2]);
+                        else if (json_integer_value(numJ) == 0)
+                            blocks[y+yOffset][x+xOffset].setColor(255, 255, 255);
+
+                        blocks[yOffset][xOffset].isLocked = true;
+                    }
+                }
+            }
+
+        }   
     }
 
     void resetBlocks(int param) {
@@ -451,46 +543,18 @@ struct Photron : Module {
             }           
         } else if (param == RESET_PARAM) {
 
-            if (random::uniform() < 0.5)
-                resetBlocks(RANDOMIZE_PARAM);
-            else
-                resetBlocks(BG_COLOR_PARAM);
+            // if (random::uniform() < 0.5)
+            //     resetBlocks(RANDOMIZE_PARAM);
+            // else
+            //     resetBlocks(BG_COLOR_PARAM);
 
-            if (patternsJ) {
-                json_t *wJ = json_object_get(patternsJ, "width");
-                json_t *hJ = json_object_get(patternsJ, "height");
-                Vec patternCenter = Vec(0, 0);
-                if (wJ && hJ){
-                    int w = json_integer_value(wJ);
-                    int h = json_integer_value(hJ);
-                    patternCenter = Vec((int)w/2, (int)h/2);
-                }
+            // setPattern(getQuadrant(NW));
+            // setPattern(getQuadrant(NE));
+            // setPattern(getQuadrant(SW));
+            // setPattern(getQuadrant(SE));
 
-                Vec center = Vec(cols/2, rows/2);
-                int xOffset = center.x - patternCenter.x;
-                int yOffset = center.y - patternCenter.y;
-
-                int randNum = randRange(4);
-
-                for (int y = 0; y < rows; y++) {
-                    for (int x = 0; x < cols; x++) {
-
-                        auto sX = std::to_string(x);
-                        auto sY = std::to_string(y);
-                        std::string s = sX + ", " + sY;
-                        const char *key = s.c_str();
-                        json_t *numJ = json_object_get(patternsJ, key);
-                        if (numJ) {
-                            int *color = getRandomColor(randNum);
-                            if (json_integer_value(numJ) == 1)
-                                blocks[y+yOffset][x+xOffset].setColor(color[0], color[1], color[2]);
-                            else if (json_integer_value(numJ) == 0)
-                                blocks[y+yOffset][x+xOffset].setColor(255, 255, 255);
-                        }
-                    }
-                }
-
-            }       
+            setPattern(getCenter());
+        
         }
     }
 
@@ -896,6 +960,19 @@ struct PhotronWidget : ModuleWidget {
             }));
 
         menu->addChild(createBoolPtrMenuItem("Lissajous mode", "", &module->lissajous));
+
+        menu->addChild(new MenuEntry);
+
+        // std::vector<std::string> labels;
+        // const char *key;
+        // void *iter = json_object_iter(module->patternsRootJ);
+        // while (iter) {
+        //     key = json_object_iter_key(iter);
+        //     labels.push_back(key);
+        //     iter = json_object_iter_next(module->patternsRootJ, iter);
+        // }
+
+        menu->addChild(createIndexPtrSubmenuItem("Pattern", module->labels, &module->patternIndex));
     }
 };
 
