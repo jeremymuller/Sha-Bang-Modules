@@ -46,12 +46,15 @@ struct Block {
         int b = floor(randRange(256));
 
         rgb = Vec3(r, g, b);
+        isLocked = false;
     }
 
     void distortColor() {
         rgb.x = static_cast<int>(rgb.x + randRange(-20, 20)) % 256;
         rgb.y = static_cast<int>(rgb.y + randRange(-20, 20)) % 256;
         rgb.z = static_cast<int>(rgb.z + randRange(-20, 20)) % 256;
+
+        isLocked = false; // unlock after user draws
     }
 
     void setColor(int r, int g, int b) {

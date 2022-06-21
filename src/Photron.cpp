@@ -82,9 +82,9 @@ struct Photron : Module {
     Block blocks[rows][cols];
     float field[rows][cols];
     int blockAlpha[rows][cols];
-    // json_t *patternsJ;
     json_t *patternsRootJ;
     int patternIndex = 0;
+    bool lockPattern = false;
     std::vector<std::string> labels;
 
     MarchingCircle circles[NUM_OF_MARCHING_CIRCLES];
@@ -147,7 +147,6 @@ struct Photron : Module {
         fclose(file);
 
         patternsRootJ = json_object_get(patternJson, "patterns");
-        // patternsJ = json_object_get(patternsRootJ, "XL squid");
 
         const char *key;
         void *iter = json_object_iter(patternsRootJ);
@@ -156,16 +155,6 @@ struct Photron : Module {
             labels.push_back(key);
             iter = json_object_iter_next(patternsRootJ, iter);
         }
-
-        // if (json_is_array(patternsJ)) {
-        //     size_t index;
-        //     json_t *value;
-        //     // size_t size = json_array_size(patternsJ);
-        //     json_array_foreach(patternsJ, index, value) {
-        //         json_t *invaderJ = json_array_get(patternsJ, index);
-
-        //     }
-        // }
     }
 
     ~Photron() {
@@ -257,6 +246,8 @@ struct Photron : Module {
         json_object_set_new(rootJ, "waveform", json_integer(waveform));
         json_object_set_new(rootJ, "lissajous", json_boolean(lissajous));
         json_object_set_new(rootJ, "blocks", blocksJ);
+        json_object_set_new(rootJ, "pattern", json_integer(patternIndex));
+        json_object_set_new(rootJ, "lockPattern", json_boolean(lockPattern));
         return rootJ;
     }
 
@@ -272,6 +263,12 @@ struct Photron : Module {
 
         json_t *lissajousJ = json_object_get(rootJ, "lissajous");
         if (lissajousJ) lissajous = json_boolean_value(lissajousJ);
+
+        json_t *patternJ = json_object_get(rootJ, "pattern");
+        if (patternJ) patternIndex = json_integer_value(patternJ);
+
+        json_t *lockPatternJ = json_object_get(rootJ, "lockPattern");
+        if (lockPatternJ) lockPattern = json_boolean_value(lockPatternJ);
 
         json_t *blocksJ = json_object_get(rootJ, "blocks");
         if (blocksJ) {
@@ -504,12 +501,14 @@ struct Photron : Module {
 
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
+                    // blocks[y][x].isLocked = false;
 
                     auto sX = std::to_string(x);
                     auto sY = std::to_string(y);
                     std::string s = sX + ", " + sY;
                     const char *key = s.c_str();
                     json_t *numJ = json_object_get(patternsJ, key);
+
                     if (numJ) {
                         // int *color = getRandomColor(randNum);
                         if (json_integer_value(numJ) == 1)
@@ -517,7 +516,7 @@ struct Photron : Module {
                         else if (json_integer_value(numJ) == 0)
                             blocks[y+yOffset][x+xOffset].setColor(255, 255, 255);
 
-                        blocks[yOffset][xOffset].isLocked = true;
+                        blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
                     }
                 }
             }
@@ -542,6 +541,11 @@ struct Photron : Module {
                 }
             }           
         } else if (param == RESET_PARAM) {
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+                    blocks[y][x].isLocked = false;
+                }
+            }  
 
             // if (random::uniform() < 0.5)
             //     resetBlocks(RANDOMIZE_PARAM);
@@ -973,6 +977,7 @@ struct PhotronWidget : ModuleWidget {
         // }
 
         menu->addChild(createIndexPtrSubmenuItem("Pattern", module->labels, &module->patternIndex));
+        menu->addChild(createBoolPtrMenuItem("Lock Pattern", "", &module->lockPattern));
     }
 };
 
