@@ -83,7 +83,7 @@ struct Photron : Module {
     float field[rows][cols];
     int blockAlpha[rows][cols];
     json_t *patternsRootJ;
-    int patternIndex = 0;
+    int patternIndex = 3;
     bool lockPattern = false;
     std::vector<std::string> labels;
 
@@ -155,6 +155,8 @@ struct Photron : Module {
             labels.push_back(key);
             iter = json_object_iter_next(patternsRootJ, iter);
         }
+
+        resetBlocks(RESET_PARAM);
     }
 
     ~Photron() {
@@ -197,6 +199,21 @@ struct Photron : Module {
             return Vec(cols/4, rows/4 + rows/2);
         default:
             return Vec(cols/4 + cols/2, rows/4 + rows/2);
+        }
+    }
+
+    bool isPatternLocked() {
+        return lockPattern;
+    }
+
+    void setLockPattern(bool key) {
+        lockPattern = key;
+        if (!lockPattern) {
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+                    blocks[y][x].isLocked = false;
+                }
+            }
         }
     }
 
@@ -694,7 +711,7 @@ struct PhotronDisplay : LightWidget {
 		// Rect b = Rect(Vec(0, 15), box.size.minus(Vec(0, 15*2)));
         // nvgScissor(vg, b.pos.x, b.pos.y, b.size.x, b.size.y);
         Rect b = box;
-        nvgScissor(vg, box.pos.x, box.pos.y, box.size.x, box.size.y); // TODO
+        nvgScissor(vg, box.pos.x, box.pos.y, box.size.x, box.size.y);
         nvgBeginPath(vg);
 		// Draw maximum display left to right
 		for (int i = 0; i < BUFFER_SIZE; i++) {
@@ -977,7 +994,19 @@ struct PhotronWidget : ModuleWidget {
         // }
 
         menu->addChild(createIndexPtrSubmenuItem("Pattern", module->labels, &module->patternIndex));
-        menu->addChild(createBoolPtrMenuItem("Lock Pattern", "", &module->lockPattern));
+
+        // menu->addChild(createBoolPtrMenuItem("Lock Pattern", "", &module->lockPattern));
+
+        menu->addChild(createBoolMenuItem(
+            "Lock Pattern", "",
+            [=]()
+            {
+                return module->isPatternLocked();
+            },
+            [=](bool lock)
+            {
+                module->setLockPattern(lock);
+            }));
     }
 };
 
