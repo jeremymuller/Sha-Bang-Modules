@@ -3,29 +3,23 @@
 #define DISPLAY_SIZE_WIDTH 690
 #define DISPLAY_SIZE_HEIGHT 380
 #define CELL_SIZE 10
-#define BUFFER_SIZE 512 // 512
+#define BUFFER_SIZE 512  // 512
 #define MARGIN 4
 #define NUM_OF_MARCHING_CIRCLES 5
 
 struct Photron : Module {
-    enum QuadrantIds {
-        NW,
-        NE,
-        SW,
-        SE
-    };
-    enum WaveformIds {
-        LINES,
-        BLOCKS,
-        NONE,
-        NUM_WAVEFORMS
-    };
-    enum BackgroundIds {
-        COLOR,
-        B_AND_W,
-        BLACK,
-        NUM_BG
-    };
+    enum QuadrantIds { NW,
+                       NE,
+                       SW,
+                       SE };
+    enum WaveformIds { LINES,
+                       BLOCKS,
+                       NONE,
+                       NUM_WAVEFORMS };
+    enum BackgroundIds { COLOR,
+                         B_AND_W,
+                         BLACK,
+                         NUM_BG };
     enum ParamIds {
         RANDOMIZE_PARAM,
         RESET_PARAM,
@@ -37,9 +31,9 @@ struct Photron : Module {
         COLOR_PARAM,
         TRIG_PARAM,
         WAVEFORM_PARAM,
-		NUM_PARAMS
-	};
-	enum InputIds {
+        NUM_PARAMS
+    };
+    enum InputIds {
         SEPARATE_INPUT,
         ALIGN_INPUT,
         COHESION_INPUT,
@@ -49,14 +43,10 @@ struct Photron : Module {
         INVERT_INPUT,
         X_INPUT,
         Y_INPUT,
-		NUM_INPUTS
-	};
-	enum OutputIds {
-		NUM_OUTPUTS
-	};
-	enum LightIds {
-		NUM_LIGHTS
-	};
+        NUM_INPUTS
+    };
+    enum OutputIds { NUM_OUTPUTS };
+    enum LightIds { NUM_LIGHTS };
 
     float bufferX[BUFFER_SIZE] = {};
     float bufferY[BUFFER_SIZE] = {};
@@ -71,7 +61,8 @@ struct Photron : Module {
     bool lissajous = true;
     int resetIndex = 0;
     int checkParams = 0;
-    // int srIncrement = static_cast<int>(APP->engine->getSampleRate() / INTERNAL_HZ);
+    // int srIncrement = static_cast<int>(APP->engine->getSampleRate() /
+    // INTERNAL_HZ);
     int hertzIndex = 2;
     int hertz[7] = {60, 45, 30, 20, 15, 12, 10};
     int internalHz = 30;
@@ -118,7 +109,7 @@ struct Photron : Module {
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
-                Block b(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE);
+                Block b(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE);
                 blocks[y][x] = b;
                 blocks[y][x].isSet = true;
 
@@ -128,7 +119,8 @@ struct Photron : Module {
         }
 
         for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
-            MarchingCircle c(randRange(DISPLAY_SIZE_WIDTH), randRange(DISPLAY_SIZE_HEIGHT));
+            MarchingCircle c(randRange(DISPLAY_SIZE_WIDTH),
+                             randRange(DISPLAY_SIZE_HEIGHT));
             circles[i] = c;
         }
 
@@ -139,8 +131,9 @@ struct Photron : Module {
         rightExpander.consumerMessage = rightMessages[1];
 
         // load json pattern (will be moved to other file eventually)
-        std::string pattern = asset::plugin(pluginInstance, "res/invaders.json");
-        
+        std::string pattern =
+            asset::plugin(pluginInstance, "res/invaders.json");
+
         FILE *file = fopen(pattern.c_str(), "r");
         json_error_t error;
         json_t *patternJson = json_loadf(file, 0, &error);
@@ -159,9 +152,7 @@ struct Photron : Module {
         resetBlocks(RESET_PARAM);
     }
 
-    ~Photron() {
-        json_decref(patternsRootJ);
-    }
+    ~Photron() { json_decref(patternsRootJ); }
 
     void onSampleRateChange() override {
         srIncrement = APP->engine->getSampleTime() * internalHz;
@@ -186,19 +177,19 @@ struct Photron : Module {
     }
 
     Vec getCenter() {
-        return Vec(cols/2, rows/2);
+        return Vec(cols / 2, rows / 2);
     }
 
     Vec getQuadrant(QuadrantIds quadrant) {
         switch (quadrant) {
-        case NW:
-            return Vec(cols/4, rows/4);
-        case NE:
-            return Vec(cols/4 + cols/2, rows/4);
-        case SW:
-            return Vec(cols/4, rows/4 + rows/2);
-        default:
-            return Vec(cols/4 + cols/2, rows/4 + rows/2);
+            case NW:
+                return Vec(cols / 4, rows / 4);
+            case NE:
+                return Vec(cols / 4 + cols / 2, rows / 4);
+            case SW:
+                return Vec(cols / 4, rows / 4 + rows / 2);
+            default:
+                return Vec(cols / 4 + cols / 2, rows / 4 + rows / 2);
         }
     }
 
@@ -298,8 +289,10 @@ struct Photron : Module {
                         json_t *greenJ = json_array_get(rgbJ, 1);
                         json_t *blueJ = json_array_get(rgbJ, 2);
                         if (redJ) blocks[y][x].rgb.x = json_integer_value(redJ);
-                        if (greenJ) blocks[y][x].rgb.y = json_integer_value(greenJ);
-                        if (blueJ) blocks[y][x].rgb.z = json_integer_value(blueJ);
+                        if (greenJ)
+                            blocks[y][x].rgb.y = json_integer_value(greenJ);
+                        if (blueJ)
+                            blocks[y][x].rgb.z = json_integer_value(blueJ);
                     }
                 }
             }
@@ -308,35 +301,43 @@ struct Photron : Module {
 
     void process(const ProcessArgs &args) override {
         if (checkParams == 0) {
-            if (waveTrig.process(params[WAVEFORM_PARAM].getValue() + inputs[WAVEFORM_INPUT].getVoltage())) {
+            if (waveTrig.process(params[WAVEFORM_PARAM].getValue() +
+                                 inputs[WAVEFORM_INPUT].getVoltage())) {
                 waveformLines = !waveformLines;
                 waveform = (waveform + 1) % NUM_WAVEFORMS;
             }
-            if (colorTrig.process(params[COLOR_PARAM].getValue() + inputs[COLOR_TRIGGER_INPUT].getVoltage())) {
+            if (colorTrig.process(params[COLOR_PARAM].getValue() +
+                                  inputs[COLOR_TRIGGER_INPUT].getVoltage())) {
                 background = (background + 1) % NUM_BG;
             }
             if (invertTrig.process(inputs[INVERT_INPUT].getVoltage())) {
                 invertColors();
             }
         }
-        checkParams = (checkParams+1) % 4;
+        checkParams = (checkParams + 1) % 4;
 
         if (sr == 0) {
-
-            bool isParent = (leftExpander.module && (leftExpander.module->model == modelPhotron));
+            bool isParent = (leftExpander.module &&
+                             (leftExpander.module->model == modelPhotron));
             if (isParent) {
-                BlockMessage *outputFromParent = (BlockMessage *)(leftExpander.consumerMessage);
-                memcpy(outputValues, outputFromParent, sizeof(BlockMessage) * rows);
+                BlockMessage *outputFromParent =
+                    (BlockMessage *)(leftExpander.consumerMessage);
+                memcpy(outputValues, outputFromParent,
+                       sizeof(BlockMessage) * rows);
 
                 setHz(outputValues[0].hertzIndex);
                 background = (BackgroundIds)outputValues[0].colorMode;
             }
 
-            bool isRightExpander = (rightExpander.module && (rightExpander.module->model == modelPhotron));
+            bool isRightExpander =
+                (rightExpander.module &&
+                 (rightExpander.module->model == modelPhotron));
             if (isRightExpander) {
-                Block *outputFromRight = (Block *)(rightExpander.consumerMessage);
-                memcpy(rightOutputValues, outputFromRight, sizeof(Block) * rows);
-            } 
+                Block *outputFromRight =
+                    (Block *)(rightExpander.consumerMessage);
+                memcpy(rightOutputValues, outputFromRight,
+                       sizeof(Block) * rows);
+            }
 
             bool isTargetConnected = inputs[TARGET_INPUT].isConnected();
 
@@ -355,15 +356,15 @@ struct Photron : Module {
                     if (isParent && x == 0)
                         west = outputValues[y].block;
                     else if (x > 0)
-                        west = blocks[y][x-1];
+                        west = blocks[y][x - 1];
 
                     if (isRightExpander && x == cols - 1)
                         east = rightOutputValues[y];
                     else if (x < cols - 1)
                         east = blocks[y][x + 1];
 
-                    if (y > 0) north = blocks[y-1][x];
-                    if (y < rows-1) south = blocks[y+1][x];
+                    if (y > 0) north = blocks[y - 1][x];
+                    if (y < rows - 1) south = blocks[y + 1][x];
 
                     // corners
                     Block northwest;
@@ -373,28 +374,30 @@ struct Photron : Module {
 
                     if (isParent && (x == 0) && (y > 0))
                         northwest = outputValues[y - 1].block;
-                    else if ((x > 0) && (y > 0)) 
-                        northwest = blocks[y-1][x-1];
+                    else if ((x > 0) && (y > 0))
+                        northwest = blocks[y - 1][x - 1];
 
                     if (isRightExpander && (x == cols - 1) && (y > 0))
                         northeast = rightOutputValues[y - 1];
                     else if ((x < cols - 1) && (y > 0))
                         northeast = blocks[y - 1][x + 1];
 
-                    if (isParent && (x == 0) && (y < rows-1))
-                        southwest = outputValues[y+1].block;
-                    else if ((y < rows-1) && (x > 0)) 
-                        southwest = blocks[y+1][x-1];
+                    if (isParent && (x == 0) && (y < rows - 1))
+                        southwest = outputValues[y + 1].block;
+                    else if ((y < rows - 1) && (x > 0))
+                        southwest = blocks[y + 1][x - 1];
 
                     if (isRightExpander && (x == cols - 1) && (y < rows - 1))
                         southeast = rightOutputValues[y + 1];
                     else if ((y < rows - 1) && (x < cols - 1))
                         southeast = blocks[y + 1][x + 1];
 
-                    Block b[8] = {west, east, north, south, northwest, northeast, southwest, southeast};
+                    Block b[8] = {west, east, north, south,
+                                  northwest, northeast, southwest, southeast};
                     blocks[y][x].flock(b, 8);
                     if (isTargetConnected) {
-                        NVGcolor rgbColor = nvgHSL(inputs[TARGET_INPUT].getVoltage(), 1.0, 0.5);
+                        NVGcolor rgbColor =
+                            nvgHSL(inputs[TARGET_INPUT].getVoltage(), 1.0, 0.5);
                         Vec3 color = Vec3(rgbColor.r, rgbColor.g, rgbColor.b);
                         Vec3 target = blocks[y][x].seek(color.mult(255.0));
                         target = target.mult(0.7);
@@ -405,7 +408,6 @@ struct Photron : Module {
 
                     // layer 1 marching stuff
                     blockAlpha[y][x] = calculateCell(blocks[y][x].getCenter());
-
                 }
             }
 
@@ -414,22 +416,28 @@ struct Photron : Module {
             }
 
             // to expander (right side)
-            if (rightExpander.module && (rightExpander.module->model == modelPhotron)) {
-                BlockMessage *messageToExpander = (BlockMessage *)(rightExpander.module->leftExpander.producerMessage);
+            if (rightExpander.module &&
+                (rightExpander.module->model == modelPhotron)) {
+                BlockMessage *messageToExpander =
+                    (BlockMessage *)(rightExpander.module->leftExpander
+                                         .producerMessage);
 
                 messageToExpander[0].hertzIndex = getHz();
                 messageToExpander[0].colorMode = (int)background;
 
                 for (int y = 0; y < rows; y++) {
-                    messageToExpander[y].block = blocks[y][cols-1];
+                    messageToExpander[y].block = blocks[y][cols - 1];
                 }
 
                 rightExpander.module->leftExpander.messageFlipRequested = true;
             }
 
             // to expander (left side to parent)
-            if (leftExpander.module && (leftExpander.module->model == modelPhotron)) {
-                Block *messageToExpander = (Block *)(leftExpander.module->rightExpander.producerMessage);
+            if (leftExpander.module &&
+                (leftExpander.module->model == modelPhotron)) {
+                Block *messageToExpander =
+                    (Block *)(leftExpander.module->rightExpander
+                                  .producerMessage);
 
                 for (int y = 0; y < rows; y++) {
                     messageToExpander[y] = blocks[y][0];
@@ -445,7 +453,8 @@ struct Photron : Module {
 
         /************ SCOPE STUFF ************/
         // Compute time
-        float deltaTime = powf(2.0, -14.0); // powf(2.0, params[TIME_PARAM].value);
+        float deltaTime =
+            powf(2.0, -14.0);  // powf(2.0, params[TIME_PARAM].value);
         int frameCount = (int)ceilf(deltaTime * args.sampleRate);
 
         // Add frame to buffer
@@ -460,34 +469,97 @@ struct Photron : Module {
 
         // Are we waiting on the next trigger?
         if (bufferIndex >= BUFFER_SIZE) {
-            // Trigger immediately if external but nothing plugged in, or in Lissajous mode
-            // if (lissajous || (external && !inputs[TRIG_INPUT].isConnected())) {
+            // Trigger immediately if external but nothing plugged in, or in
+            // Lissajous mode if (lissajous || (external &&
+            // !inputs[TRIG_INPUT].isConnected())) {
             if (lissajous) {
                 bufferIndex = 0;
                 frameIndex = 0;
                 return;
             }
 
-            // Reset the Schmitt trigger so we don't trigger immediately if the input is high
+            // Reset the Schmitt trigger so we don't trigger immediately if the
+            // input is high
             if (frameIndex == 0) {
                 resetTrigger.reset();
             }
             frameIndex++;
 
             // Must go below 0.1V to trigger
-            // resetTrigger.setThresholds(params[TRIG_PARAM].getValue() - 0.1, params[TRIG_PARAM].getValue());
-            // float gate = external ? inputs[TRIG_INPUT].getVoltage() : inputs[X_INPUT].getVoltage();
+            // resetTrigger.setThresholds(params[TRIG_PARAM].getValue() - 0.1,
+            // params[TRIG_PARAM].getValue()); float gate = external ?
+            // inputs[TRIG_INPUT].getVoltage() : inputs[X_INPUT].getVoltage();
             float gate = inputs[X_INPUT].getVoltage();
 
             // Reset if triggered
             float holdTime = 0.1;
-            if (resetTrigger.process(gate) || (frameIndex >= args.sampleRate * holdTime)) {
-                bufferIndex = 0; frameIndex = 0; return;
+            if (resetTrigger.process(gate) ||
+                (frameIndex >= args.sampleRate * holdTime)) {
+                bufferIndex = 0;
+                frameIndex = 0;
+                return;
             }
 
             // Reset if we've waited too long
             if (frameIndex >= args.sampleRate * holdTime) {
-                bufferIndex = 0; frameIndex = 0; return;
+                bufferIndex = 0;
+                frameIndex = 0;
+                return;
+            }
+        }
+    }
+
+    void generatePattern(Vec pos, int w, int h) {
+        int half = static_cast<int>(w / 2);
+
+        Vec patternCenter = Vec(w / 2, h / 2);
+
+        int values[w][h];
+        int xOffset = pos.x - patternCenter.x;
+        int yOffset = pos.y - patternCenter.y;
+
+        for (int x = 1; x < w; x += 3) {
+            for (int y = 1; y < h; y += 3) {
+                if (x <= half) {
+                    int r = random::uniform() < 0.75 ? 1 : 0;
+                    if (random::uniform() < 0.05) r = 2;
+                    
+                    values[x][y] = r;
+                    values[x + 1][y] = r;
+                    values[x + 1][y + 1] = r;
+                    values[x][y + 1] = r;
+                    values[x - 1][y + 1] = r;
+                    values[x - 1][y] = r;
+                    values[x - 1][y - 1] = r;
+                    values[x][y - 1] = r;
+                    values[x + 1][y - 1] = r;
+                } else {
+                    int index = x - (x - half) * 2;
+                    int n = values[index][y];
+                    values[x][y] = n;
+                    values[x + 1][y] = n;
+                    values[x + 1][y + 1] = n;
+                    values[x][y + 1] = n;
+                    values[x - 1][y + 1] = n;
+                    values[x - 1][y] = n;
+                    values[x - 1][y - 1] = n;
+                    values[x][y - 1] = n;
+                    values[x + 1][y - 1] = n;
+                }
+            }
+        }
+
+        int *color = getRandomColor(randRange(4));
+
+        for (int x = 0; x < w; x++) {
+            for (int y = 0; y < h; y++) {
+                if (values[x][y] == 1) {
+                    blocks[y+yOffset][x+xOffset].setColor(color[0], color[1], color[2]);
+                    blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
+                } else if (values[x][y] == 2) {
+                    blocks[y + yOffset][x + xOffset].setColor(255, 255, 255);
+                    blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
+                }
             }
         }
     }
@@ -497,48 +569,82 @@ struct Photron : Module {
         setPattern(pos, color, labels.at(patternIndex).c_str());
     }
 
-    void setPattern(Vec pos, int *color, const char* key) {
-
+    void setPattern(Vec pos, int *color, const char *key) {
         json_t *patternsJ = json_object_get(patternsRootJ, key);
 
         if (patternsJ) {
-            json_t *wJ = json_object_get(patternsJ, "width");
-            json_t *hJ = json_object_get(patternsJ, "height");
-            Vec patternCenter = Vec(0, 0);
-            if (wJ && hJ){
-                int w = json_integer_value(wJ);
-                int h = json_integer_value(hJ);
-                patternCenter = Vec((int)w/2, (int)h/2);
-            }
+            int isGen = strcmp(key, "Generate");
+            if (isGen == 0) {
+                json_t *wJ = json_object_get(patternsJ, "width");
+                json_t *hJ = json_object_get(patternsJ, "height");
 
-            int xOffset = pos.x - patternCenter.x;
-            int yOffset = pos.y - patternCenter.y;
+                if (wJ && hJ) {
+                    int w = json_integer_value(wJ);
+                    int h = json_integer_value(hJ);
+                    generatePattern(pos, w, h);
+                }
 
-            // int randNum = randRange(4);
+            } else {
+                json_t *wJ = json_object_get(patternsJ, "width");
+                json_t *hJ = json_object_get(patternsJ, "height");
+                Vec patternCenter = Vec(0, 0);
+                if (wJ && hJ) {
+                    int w = json_integer_value(wJ);
+                    int h = json_integer_value(hJ);
+                    patternCenter = Vec((int)w / 2, (int)h / 2);
+                }
 
-            for (int y = 0; y < rows; y++) {
-                for (int x = 0; x < cols; x++) {
-                    // blocks[y][x].isLocked = false;
+                int xOffset = pos.x - patternCenter.x;
+                int yOffset = pos.y - patternCenter.y;
 
-                    auto sX = std::to_string(x);
-                    auto sY = std::to_string(y);
-                    std::string s = sX + ", " + sY;
-                    const char *key = s.c_str();
-                    json_t *numJ = json_object_get(patternsJ, key);
+                // int randNum = randRange(4);
 
-                    if (numJ) {
-                        // int *color = getRandomColor(randNum);
-                        if (json_integer_value(numJ) == 1)
-                            blocks[y+yOffset][x+xOffset].setColor(color[0], color[1], color[2]);
-                        else if (json_integer_value(numJ) == 0)
-                            blocks[y+yOffset][x+xOffset].setColor(255, 255, 255);
+                for (int y = 0; y < rows; y++) {
+                    for (int x = 0; x < cols; x++) {
+                        // blocks[y][x].isLocked = false;
 
-                        blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
+                        auto sX = std::to_string(x);
+                        auto sY = std::to_string(y);
+                        std::string s = sX + ", " + sY;
+                        const char *key = s.c_str();
+                        json_t *numJ = json_object_get(patternsJ, key);
+
+                        if (numJ) {
+                            // int *color = getRandomColor(randNum);
+                            // 0 = white, 1 = black, 2 = random color, 3 =
+                            // another color?
+                            int n = json_integer_value(numJ);
+                            switch (n) {
+                                case 0:
+                                    blocks[y + yOffset][x + xOffset].setColor(255, 255, 255);
+                                    break;
+                                case 1:
+                                    blocks[y + yOffset][x + xOffset].setColor(0, 0, 0);
+                                    break;
+                                case 2:
+                                    blocks[y + yOffset][x + xOffset].setColor(color[0], color[1], color[2]);
+                                    break;
+                                default:
+                                    blocks[y + yOffset][x + xOffset].setColor(255, 255, 255);
+                                    break;
+                            }
+
+                            // if (json_integer_value(numJ) == 1)
+                            //     blocks[y+yOffset][x+xOffset].setColor(color[0],
+                            //     color[1], color[2]);
+                            // else if (json_integer_value(numJ) == 0)
+                            //     blocks[y+yOffset][x+xOffset].setColor(255,
+                            //     255, 255);
+                            // else if (json_integer_value(numJ) == 2)
+                            //     blocks[y+yOffset][x+xOffset].setColor(0, 0,
+                            //     0);
+
+                            blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
+                        }
                     }
                 }
             }
-
-        }   
+        }
     }
 
     void resetBlocks(int param) {
@@ -556,13 +662,13 @@ struct Photron : Module {
                     int *color = getRandomColor(randNum);
                     blocks[y][x].setColor(color[0], color[1], color[2]);
                 }
-            }           
+            }
         } else if (param == RESET_PARAM) {
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
                     blocks[y][x].isLocked = false;
                 }
-            }  
+            }
 
             // if (random::uniform() < 0.5)
             //     resetBlocks(RANDOMIZE_PARAM);
@@ -575,7 +681,6 @@ struct Photron : Module {
             // setPattern(getQuadrant(SE));
 
             setPattern(getCenter());
-        
         }
     }
 
@@ -583,7 +688,7 @@ struct Photron : Module {
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
                 Vec3 rgb = blocks[y][x].rgb;
-                blocks[y][x].rgb = Vec3(255-rgb.x, 255-rgb.y, 255-rgb.z);
+                blocks[y][x].rgb = Vec3(255 - rgb.x, 255 - rgb.y, 255 - rgb.z);
             }
         }
     }
@@ -593,7 +698,7 @@ struct Photron : Module {
         for (int i = 0; i < NUM_OF_MARCHING_CIRCLES; i++) {
             float r = circles[i].radius * 0.9;
             float d = (blockPos.x - circles[i].pos.x) * (blockPos.x - circles[i].pos.x) + (blockPos.y - circles[i].pos.y) * (blockPos.y - circles[i].pos.y);
-            d = std::fmax(d, 0.001); // to prevent dividing by zero
+            d = std::fmax(d, 0.001);  // to prevent dividing by zero
             sum += (r * r) / d;
         }
 
@@ -609,32 +714,32 @@ struct Photron : Module {
 };
 
 namespace PhotronNS {
-    struct HzModeValueItem : MenuItem {
-        Photron *module;
-        int hz;
-        void onAction(const event::Action &e) override {
-            module->setHz(hz);
-        }
-    };
+struct HzModeValueItem : MenuItem {
+    Photron *module;
+    int hz;
+    void onAction(const event::Action &e) override {
+        module->setHz(hz);
+    }
+};
 
-    struct HzModeItem : MenuItem {
-        Photron *module;
-        Menu *createChildMenu() override {
-            Menu *menu = new Menu;
-            std::vector<std::string> hzModes = {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"};
-            int hertz[] = {60, 45, 30, 20, 15, 12, 10};
-            for (int i = 0; i < 7; i++) {
-                HzModeValueItem *item = new HzModeValueItem;
-                item->text = hzModes[i];
-                item->rightText = CHECKMARK(module->internalHz == hertz[i]);
-                item->module = module;
-                item->hz = hertz[i];
-                menu->addChild(item);
-            }
-            return menu;
+struct HzModeItem : MenuItem {
+    Photron *module;
+    Menu *createChildMenu() override {
+        Menu *menu = new Menu;
+        std::vector<std::string> hzModes = {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"};
+        int hertz[] = {60, 45, 30, 20, 15, 12, 10};
+        for (int i = 0; i < 7; i++) {
+            HzModeValueItem *item = new HzModeValueItem;
+            item->text = hzModes[i];
+            item->rightText = CHECKMARK(module->internalHz == hertz[i]);
+            item->module = module;
+            item->hz = hertz[i];
+            menu->addChild(item);
         }
-    };
-}
+        return menu;
+    }
+};
+}  // namespace PhotronNS
 
 struct PhotronDisplay : LightWidget {
     Photron *module;
@@ -662,16 +767,14 @@ struct PhotronDisplay : LightWidget {
     }
 
     void onDragMove(const event::DragMove &e) override {
-    	if (isDKeyHeld) {
+        if (isDKeyHeld) {
             float newDragX = APP->scene->rack->getMousePos().x;
             float newDragY = APP->scene->rack->getMousePos().y;
             drawRandoms(initX + (newDragX - dragX), initY + (newDragY - dragY));
         }
     }
 
-    void onDragEnd(const DragEndEvent &e) override {
-        isDKeyHeld = false;
-    }
+    void onDragEnd(const DragEndEvent &e) override { isDKeyHeld = false; }
 
     void onHoverKey(const event::HoverKey &e) override {
         if (module == NULL) return;
@@ -682,8 +785,7 @@ struct PhotronDisplay : LightWidget {
                 isDKeyHeld = true;
             else if (e.action == GLFW_RELEASE)
                 isDKeyHeld = false;
-        }
-        else {
+        } else {
             e.consume(this);
             isDKeyHeld = false;
         }
@@ -698,37 +800,35 @@ struct PhotronDisplay : LightWidget {
         // module->blocks[y][x].reset();
         module->blocks[y][x].distortColor();
 
-        if (x > 0) module->blocks[y][x-1].distortColor();
-        if (x < module->rows-1) module->blocks[y][x + 1].distortColor();
+        if (x > 0) module->blocks[y][x - 1].distortColor();
+        if (x < module->rows - 1) module->blocks[y][x + 1].distortColor();
         if (y > 0) module->blocks[y - 1][x].distortColor();
-        if (x < module->cols-1) module->blocks[y + 1][x].distortColor();
+        if (x < module->cols - 1) module->blocks[y + 1][x].distortColor();
     }
 
-	void drawWaveform(NVGcontext *vg, float *valuesX, float *valuesY) {
-		if (!valuesX)
-			return;
-		nvgSave(vg);
-		// Rect b = Rect(Vec(0, 15), box.size.minus(Vec(0, 15*2)));
+    void drawWaveform(NVGcontext *vg, float *valuesX, float *valuesY) {
+        if (!valuesX) return;
+        nvgSave(vg);
+        // Rect b = Rect(Vec(0, 15), box.size.minus(Vec(0, 15*2)));
         // nvgScissor(vg, b.pos.x, b.pos.y, b.size.x, b.size.y);
         Rect b = box;
         nvgScissor(vg, box.pos.x, box.pos.y, box.size.x, box.size.y);
         nvgBeginPath(vg);
-		// Draw maximum display left to right
-		for (int i = 0; i < BUFFER_SIZE; i++) {
-			float x, y;
-			if (valuesY) {
-				x = valuesX[i] / 2.0 + 0.5;
-				y = valuesY[i] / 2.0 + 0.5;
-			}
-			else {
-				x = (float)i / (BUFFER_SIZE - 1);
-				y = valuesX[i] / 2.0 + 0.5;
-			}
-			Vec p;
-			p.x = b.pos.x + b.size.x * x;
-			p.y = b.pos.y + b.size.y * (1.0 - y);
-            int col = clamp((int)(p.x / CELL_SIZE), 0, module->cols-1);
-            int row = clamp((int)(p.y / CELL_SIZE), 0, module->rows-1);
+        // Draw maximum display left to right
+        for (int i = 0; i < BUFFER_SIZE; i++) {
+            float x, y;
+            if (valuesY) {
+                x = valuesX[i] / 2.0 + 0.5;
+                y = valuesY[i] / 2.0 + 0.5;
+            } else {
+                x = (float)i / (BUFFER_SIZE - 1);
+                y = valuesX[i] / 2.0 + 0.5;
+            }
+            Vec p;
+            p.x = b.pos.x + b.size.x * x;
+            p.y = b.pos.y + b.size.y * (1.0 - y);
+            int col = clamp((int)(p.x / CELL_SIZE), 0, module->cols - 1);
+            int row = clamp((int)(p.y / CELL_SIZE), 0, module->rows - 1);
             Vec3 rgb = module->blocks[0][0].rgb;
             if (module->waveform == Photron::LINES) {
                 if (i == 0)
@@ -741,30 +841,30 @@ struct PhotronDisplay : LightWidget {
 
                     // nvgBeginPath(vg);
                     // nvgStrokeColor(vg, nvgRGBA(0x9f, 0xe4, 0x36, 0xc0));
-
                 }
             } else if (module->waveform == Photron::BLOCKS) {
                 nvgFillColor(vg, nvgRGB(rgb.x, rgb.y, rgb.z));
                 // nvgFillColor(vg, nvgRGBA(rgb.x, rgb.x, rgb.x, rgb.y));
                 nvgBeginPath(vg);
-                nvgRect(vg, module->blocks[row][col].pos.x, module->blocks[row][col].pos.y, CELL_SIZE, CELL_SIZE);
+                nvgRect(vg, module->blocks[row][col].pos.x,
+                        module->blocks[row][col].pos.y, CELL_SIZE, CELL_SIZE);
                 nvgFill(vg);
             }
         }
-		nvgLineCap(vg, NVG_ROUND);
-		nvgMiterLimit(vg, 2.0);
-		nvgStrokeWidth(vg, 1.5); // 1.5
-		nvgGlobalCompositeOperation(vg, NVG_LIGHTER);
-		if (module->waveform == Photron::LINES) nvgStroke(vg);
-		nvgResetScissor(vg);
-		nvgRestore(vg);
-	}
+        nvgLineCap(vg, NVG_ROUND);
+        nvgMiterLimit(vg, 2.0);
+        nvgStrokeWidth(vg, 1.5);  // 1.5
+        nvgGlobalCompositeOperation(vg, NVG_LIGHTER);
+        if (module->waveform == Photron::LINES) nvgStroke(vg);
+        nvgResetScissor(vg);
+        nvgRestore(vg);
+    }
 
     void draw(const DrawArgs &args) override {
         if (module == NULL) return;
 
-        //background
-        // nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+        // background
+        //  nvgFillColor(args.vg, nvgRGB(40, 40, 40));
         nvgFillColor(args.vg, nvgRGB(255, 255, 255));
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
@@ -777,9 +877,8 @@ struct PhotronDisplay : LightWidget {
             nvgRect(args.vg, 0, 0, DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
             nvgFill(args.vg);
         } else {
-            for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-                for (int x = 0; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
-
+            for (int y = 0; y < DISPLAY_SIZE_HEIGHT / CELL_SIZE; y++) {
+                for (int x = 0; x < DISPLAY_SIZE_WIDTH / CELL_SIZE; x++) {
                     Vec3 rgb = module->blocks[y][x].rgb;
                     if (module->background == Photron::COLOR) {
                         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
@@ -794,40 +893,41 @@ struct PhotronDisplay : LightWidget {
                     nvgFill(args.vg);
 
                     // bool topEdge = y < MARGIN;
-                    // bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE - MARGIN;
-                    // bool leftEdge = x < MARGIN;
-                    // bool rightEdge = x >= DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
+                    // bool bottomEdge = y >= DISPLAY_SIZE_HEIGHT/CELL_SIZE -
+                    // MARGIN; bool leftEdge = x < MARGIN; bool rightEdge = x >=
+                    // DISPLAY_SIZE_WIDTH/CELL_SIZE - MARGIN;
 
                     // if (topEdge || bottomEdge || leftEdge || rightEdge) {
                     //     Vec3 rgb = module->blocks[y][x].rgb;
                     //     if (module->background == Photron::COLOR) {
-                    //         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    //         nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y,
+                    //         rgb.z));
                     //     } else {
                     //         NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                    //         nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    //         nvgFillColor(args.vg, nvgTransRGBA(color,
+                    //         rgb.y));
                     //     }
 
                     //     // if (module->isColor) {
-                    //     //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y, rgb.z));
+                    //     //     nvgFillColor(args.vg, nvgRGB(rgb.x, rgb.y,
+                    //     rgb.z));
                     //     // } else {
                     //     //     NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                    //     //     nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                    //     //     nvgFillColor(args.vg, nvgTransRGBA(color,
+                    //     rgb.y));
                     //     // }
 
                     //     nvgBeginPath(args.vg);
-                    //     nvgRect(args.vg, module->blocks[y][x].pos.x, module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
+                    //     nvgRect(args.vg, module->blocks[y][x].pos.x,
+                    //     module->blocks[y][x].pos.y, CELL_SIZE, CELL_SIZE);
                     //     nvgFill(args.vg);
                     // }
-
                 }
             }
         }
-
-
     }
 
     void drawLayer(const DrawArgs &args, int layer) override {
-
         if (module == NULL) return;
 
         if (layer == 1) {
@@ -840,14 +940,15 @@ struct PhotronDisplay : LightWidget {
 
             // /************ COLOR FLOCKING STUFF ************/
             if (module->background != Photron::BLACK) {
-                for (int y = 0; y < DISPLAY_SIZE_HEIGHT/CELL_SIZE; y++) {
-                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH/CELL_SIZE; x++) {
+                for (int y = 0; y < DISPLAY_SIZE_HEIGHT / CELL_SIZE; y++) {
+                    for (int x = MARGIN; x < DISPLAY_SIZE_WIDTH / CELL_SIZE; x++) {
                         Vec3 rgb = module->blocks[y][x].rgb;
                         if (module->background == Photron::COLOR) {
                             nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.y, rgb.z, module->blockAlpha[y][x]));
                         } else {
                             // NVGcolor color = nvgRGB(rgb.x, rgb.x, rgb.x);
-                            // nvgFillColor(args.vg, nvgTransRGBA(color, rgb.y));
+                            // nvgFillColor(args.vg, nvgTransRGBA(color,
+                            // rgb.y));
                             nvgFillColor(args.vg, nvgRGBA(rgb.x, rgb.x, rgb.x, module->blockAlpha[y][x]));
                         }
 
@@ -867,12 +968,11 @@ struct PhotronDisplay : LightWidget {
                 //     nvgCircle(args.vg, circle.x, circle.y, cRadius);
                 //     nvgStroke(args.vg);
                 // }
-
             }
 
-
             /************ SCOPE STUFF ************/
-            // code modified from: https://github.com/VCVRack/Fundamental/blob/v0.4.0/src/Scope.cpp
+            // code modified from:
+            // https://github.com/VCVRack/Fundamental/blob/v0.4.0/src/Scope.cpp
             float gainX = powf(2.0, module->params[Photron::X_SCALE_PARAM].value);
             float gainY = powf(2.0, module->params[Photron::Y_SCALE_PARAM].value);
             float offsetX = module->params[Photron::X_POS_PARAM].value;
@@ -890,7 +990,7 @@ struct PhotronDisplay : LightWidget {
             }
 
             // Draw waveforms
-            if (module->lissajous) { // module->lissajous
+            if (module->lissajous) {  // module->lissajous
                 // X x Y
                 if (module->inputs[Photron::X_INPUT].active || module->inputs[Photron::Y_INPUT].active) {
                     Vec3 rgb = module->blocks[0][0].rgb;
@@ -898,8 +998,7 @@ struct PhotronDisplay : LightWidget {
                     // nvgStrokeColor(args.vg, nvgRGBA(0x9f, 0xe4, 0x36, 0xc0));
                     drawWaveform(args.vg, valuesX, valuesY);
                 }
-            }
-            else {
+            } else {
                 // Y
                 if (module->inputs[Photron::Y_INPUT].active) {
                     Vec3 rgb = module->blocks[0][0].rgb;
@@ -916,13 +1015,11 @@ struct PhotronDisplay : LightWidget {
                     drawWaveform(args.vg, valuesX, NULL);
                 }
 
-                // float valueTrig = (module->params[Photron::TRIG_PARAM].value + offsetX) * gainX / 10.0;
-                // drawTrig(args.vg, valueTrig);
+                // float valueTrig = (module->params[Photron::TRIG_PARAM].value
+                // + offsetX) * gainX / 10.0; drawTrig(args.vg, valueTrig);
             }
-
         }
         Widget::drawLayer(args, layer);
-
     }
 };
 
@@ -958,27 +1055,20 @@ struct PhotronWidget : ModuleWidget {
     }
 
     void appendContextMenu(Menu *menu) override {
-        Photron *module = dynamic_cast<Photron*>(this->module);
+        Photron *module = dynamic_cast<Photron *>(this->module);
         // menu->addChild(new MenuEntry);
         menu->addChild(new MenuSeparator);
 
         // PhotronNS::HzModeItem *hzModeItem = new PhotronNS::HzModeItem;
         // hzModeItem->text = "Processing rate";
-        // hzModeItem->rightText = string::f("%d Hz ", module->internalHz) + RIGHT_ARROW; 
-        // hzModeItem->module = module;
-        // menu->addChild(hzModeItem);
+        // hzModeItem->rightText = string::f("%d Hz ", module->internalHz) +
+        // RIGHT_ARROW; hzModeItem->module = module; menu->addChild(hzModeItem);
 
         menu->addChild(createIndexSubmenuItem(
             "Processing rate",
             {"60 Hz", "45 Hz", "30 Hz", "20 Hz", "15 Hz", "12 Hz", "10 Hz"},
-            [=]()
-            {
-                return module->getHz();
-            },
-            [=](int hz)
-            {
-                module->setHz(hz);
-            }));
+            [=]() { return module->getHz(); },
+            [=](int hz) { module->setHz(hz); }));
 
         menu->addChild(createBoolPtrMenuItem("Lissajous mode", "", &module->lissajous));
 
@@ -995,16 +1085,13 @@ struct PhotronWidget : ModuleWidget {
 
         menu->addChild(createIndexPtrSubmenuItem("Pattern", module->labels, &module->patternIndex));
 
-        // menu->addChild(createBoolPtrMenuItem("Lock Pattern", "", &module->lockPattern));
+        // menu->addChild(createBoolPtrMenuItem("Lock Pattern", "",
+        // &module->lockPattern));
 
         menu->addChild(createBoolMenuItem(
             "Lock Pattern", "",
-            [=]()
-            {
-                return module->isPatternLocked();
-            },
-            [=](bool lock)
-            {
+            [=]() { return module->isPatternLocked(); },
+            [=](bool lock) {
                 module->setLockPattern(lock);
             }));
     }
