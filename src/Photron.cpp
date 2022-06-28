@@ -40,7 +40,7 @@ struct Photron : Module {
         TARGET_INPUT,
         WAVEFORM_INPUT,
         COLOR_TRIGGER_INPUT,
-        INVERT_INPUT,
+        PATTERN_INPUT,
         X_INPUT,
         Y_INPUT,
         NUM_INPUTS
@@ -54,7 +54,7 @@ struct Photron : Module {
     float frameIndex = 0;
     dsp::SchmittTrigger resetTrigger;
 
-    dsp::SchmittTrigger waveTrig, colorTrig, invertTrig, resetTrig, velTrig;
+    dsp::SchmittTrigger waveTrig, colorTrig, patternTrig, invertTrig, resetTrig, velTrig;
     int background = COLOR;
     bool waveformLines = true;
     int waveform = LINES;
@@ -105,7 +105,7 @@ struct Photron : Module {
 
         configInput(WAVEFORM_INPUT, "Waveform CV");
         configInput(COLOR_TRIGGER_INPUT, "Background CV");
-        configInput(INVERT_INPUT, "Invert background CV");
+        configInput(PATTERN_INPUT, "Draw Pattern CV");
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
@@ -310,8 +310,9 @@ struct Photron : Module {
                                   inputs[COLOR_TRIGGER_INPUT].getVoltage())) {
                 background = (background + 1) % NUM_BG;
             }
-            if (invertTrig.process(inputs[INVERT_INPUT].getVoltage())) {
-                invertColors();
+            if (patternTrig.process(inputs[PATTERN_INPUT].getVoltage())) {
+                // invertColors();
+                resetBlocks(RESET_PARAM);
             }
         }
         checkParams = (checkParams + 1) % 4;
@@ -509,7 +510,7 @@ struct Photron : Module {
         }
     }
 
-    void generatePattern(Vec pos, int w, int h) {
+    void generatePattern(Vec pos, int w, int h, float probability) {
         int half = static_cast<int>(w / 2);
 
         Vec patternCenter = Vec(w / 2, h / 2);
@@ -521,8 +522,10 @@ struct Photron : Module {
         for (int x = 1; x < w; x += 3) {
             for (int y = 1; y < h; y += 3) {
                 if (x <= half) {
-                    int r = random::uniform() < 0.75 ? 1 : 0;
+
+                    int r = random::uniform() < probability ? 1 : 0;
                     if (random::uniform() < 0.05) r = 2;
+
 
                     values[x][y] = r;
                     values[x + 1][y] = r;
@@ -586,10 +589,11 @@ struct Photron : Module {
             setPattern(getQuadrant(SE), getRedAsArray(), labels.at(patternIndex).c_str());
         } else if (strcmp(key, "Ghosts") == 0) {
             int spacing = 8;
-            setPattern(Vec(pos.x + 2 - spacing * 2 - spacing, pos.y), getPurpleAsArray(), labels.at(patternIndex).c_str());
-            setPattern(Vec(pos.x + 2 - spacing, pos.y), getBlueAsArray(), labels.at(patternIndex).c_str());
-            setPattern(Vec(pos.x + 2 + spacing, pos.y), getAquaAsArray(), labels.at(patternIndex).c_str());
-            setPattern(Vec(pos.x + 2 + spacing * 2 + spacing, pos.y), getRedAsArray(), labels.at(patternIndex).c_str());
+            int offset = 2;
+            setPattern(Vec(pos.x + offset - spacing * 2 - spacing, pos.y), getPurpleAsArray(), labels.at(patternIndex).c_str());
+            setPattern(Vec(pos.x + offset - spacing, pos.y), getBlueAsArray(), labels.at(patternIndex).c_str());
+            setPattern(Vec(pos.x + offset + spacing, pos.y), getAquaAsArray(), labels.at(patternIndex).c_str());
+            setPattern(Vec(pos.x + offset + spacing * 2 + spacing, pos.y), getRedAsArray(), labels.at(patternIndex).c_str());
         } else {
             setPattern(pos, color, labels.at(patternIndex).c_str());
         }
@@ -599,7 +603,6 @@ struct Photron : Module {
         json_t *patternsJ = json_object_get(patternsRootJ, key);
 
         if (patternsJ) {
-            int isGen = strcmp(key, "Generate");
             if (strcmp(key, "Generate") == 0) {
                 json_t *wJ = json_object_get(patternsJ, "width");
                 json_t *hJ = json_object_get(patternsJ, "height");
@@ -607,7 +610,7 @@ struct Photron : Module {
                 if (wJ && hJ) {
                     int w = json_integer_value(wJ);
                     int h = json_integer_value(hJ);
-                    generatePattern(pos, w, h);
+                    generatePattern(pos, w, h, 0.75);
                 }
 
             } else if (strcmp(key, "Generate Grid") == 0) {
@@ -617,10 +620,10 @@ struct Photron : Module {
                 if (wJ && hJ) {
                     int w = json_integer_value(wJ);
                     int h = json_integer_value(hJ);
-                    generatePattern(getQuadrant(NW), w, h);
-                    generatePattern(getQuadrant(NE), w, h);
-                    generatePattern(getQuadrant(SW), w, h);
-                    generatePattern(getQuadrant(SE), w, h);
+                    generatePattern(getQuadrant(NW), w, h, 0.5);
+                    generatePattern(getQuadrant(NE), w, h, 0.5);
+                    generatePattern(getQuadrant(SW), w, h, 0.5);
+                    generatePattern(getQuadrant(SE), w, h, 0.5);
                 }
             } else {
                 json_t *wJ = json_object_get(patternsJ, "width");
@@ -1079,7 +1082,7 @@ struct PhotronWidget : ModuleWidget {
 
         addInput(createInputCentered<TinyPJ301MAqua>(Vec(9.7, 333.8), module, Photron::WAVEFORM_INPUT));
         addInput(createInputCentered<TinyPJ301MRed>(Vec(9.7, 352.1), module, Photron::COLOR_TRIGGER_INPUT));
-        addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 370.3), module, Photron::INVERT_INPUT));
+        addInput(createInputCentered<TinyPJ301M>(Vec(9.7, 370.3), module, Photron::PATTERN_INPUT));
     }
 
     void appendContextMenu(Menu *menu) override {
