@@ -523,7 +523,7 @@ struct Photron : Module {
                 if (x <= half) {
                     int r = random::uniform() < 0.75 ? 1 : 0;
                     if (random::uniform() < 0.05) r = 2;
-                    
+
                     values[x][y] = r;
                     values[x + 1][y] = r;
                     values[x + 1][y + 1] = r;
@@ -554,7 +554,7 @@ struct Photron : Module {
         for (int x = 0; x < w; x++) {
             for (int y = 0; y < h; y++) {
                 if (values[x][y] == 1) {
-                    blocks[y+yOffset][x+xOffset].setColor(color[0], color[1], color[2]);
+                    blocks[y + yOffset][x + xOffset].setColor(color[0], color[1], color[2]);
                     blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
                 } else if (values[x][y] == 2) {
                     blocks[y + yOffset][x + xOffset].setColor(255, 255, 255);
@@ -566,7 +566,33 @@ struct Photron : Module {
 
     void setPattern(Vec pos) {
         int *color = getRandomColor(randRange(4));
-        setPattern(pos, color, labels.at(patternIndex).c_str());
+
+        const char *key = labels.at(patternIndex).c_str();
+
+        const char *keys[] = {"Small Crab", "Medium Crab", "Small Squid", "Medium Squid", "Small Octopus", "Medium Octopus", "Mushrooms"};
+        bool doGrid = false;
+        int length = sizeof(keys) / sizeof(char *);
+        for (int i = 0; i < length; i++) {
+            if (strcmp(key, keys[i]) == 0) {
+                doGrid = true;
+                break;
+            }
+        }
+
+        if (doGrid) {
+            setPattern(getQuadrant(NW), getPurpleAsArray(), labels.at(patternIndex).c_str());
+            setPattern(getQuadrant(NE), getBlueAsArray(), labels.at(patternIndex).c_str());
+            setPattern(getQuadrant(SW), getAquaAsArray(), labels.at(patternIndex).c_str());
+            setPattern(getQuadrant(SE), getRedAsArray(), labels.at(patternIndex).c_str());
+        } else if (strcmp(key, "Ghosts") == 0) {
+            int spacing = 8;
+            setPattern(Vec(pos.x + 2 - spacing * 2 - spacing, pos.y), getPurpleAsArray(), labels.at(patternIndex).c_str());
+            setPattern(Vec(pos.x + 2 - spacing, pos.y), getBlueAsArray(), labels.at(patternIndex).c_str());
+            setPattern(Vec(pos.x + 2 + spacing, pos.y), getAquaAsArray(), labels.at(patternIndex).c_str());
+            setPattern(Vec(pos.x + 2 + spacing * 2 + spacing, pos.y), getRedAsArray(), labels.at(patternIndex).c_str());
+        } else {
+            setPattern(pos, color, labels.at(patternIndex).c_str());
+        }
     }
 
     void setPattern(Vec pos, int *color, const char *key) {
@@ -574,7 +600,7 @@ struct Photron : Module {
 
         if (patternsJ) {
             int isGen = strcmp(key, "Generate");
-            if (isGen == 0) {
+            if (strcmp(key, "Generate") == 0) {
                 json_t *wJ = json_object_get(patternsJ, "width");
                 json_t *hJ = json_object_get(patternsJ, "height");
 
@@ -584,6 +610,18 @@ struct Photron : Module {
                     generatePattern(pos, w, h);
                 }
 
+            } else if (strcmp(key, "Generate Grid") == 0) {
+                json_t *wJ = json_object_get(patternsJ, "width");
+                json_t *hJ = json_object_get(patternsJ, "height");
+
+                if (wJ && hJ) {
+                    int w = json_integer_value(wJ);
+                    int h = json_integer_value(hJ);
+                    generatePattern(getQuadrant(NW), w, h);
+                    generatePattern(getQuadrant(NE), w, h);
+                    generatePattern(getQuadrant(SW), w, h);
+                    generatePattern(getQuadrant(SE), w, h);
+                }
             } else {
                 json_t *wJ = json_object_get(patternsJ, "width");
                 json_t *hJ = json_object_get(patternsJ, "height");
@@ -628,16 +666,6 @@ struct Photron : Module {
                                     blocks[y + yOffset][x + xOffset].setColor(255, 255, 255);
                                     break;
                             }
-
-                            // if (json_integer_value(numJ) == 1)
-                            //     blocks[y+yOffset][x+xOffset].setColor(color[0],
-                            //     color[1], color[2]);
-                            // else if (json_integer_value(numJ) == 0)
-                            //     blocks[y+yOffset][x+xOffset].setColor(255,
-                            //     255, 255);
-                            // else if (json_integer_value(numJ) == 2)
-                            //     blocks[y+yOffset][x+xOffset].setColor(0, 0,
-                            //     0);
 
                             blocks[y + yOffset][x + xOffset].isLocked = lockPattern;
                         }
