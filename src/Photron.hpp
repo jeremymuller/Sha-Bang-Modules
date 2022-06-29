@@ -3,6 +3,7 @@
 
 struct Block {
     bool isSet = false;
+    bool isLocked = false;
     Vec pos;
     Vec3 rgb;
     Vec3 rgbVel = Vec3();
@@ -45,10 +46,29 @@ struct Block {
         int b = floor(randRange(256));
 
         rgb = Vec3(r, g, b);
+        isLocked = false;
+    }
+
+    void distortColor() {
+        rgb.x = static_cast<int>(rgb.x + randRange(-25, 25)) % 256;
+        rgb.y = static_cast<int>(rgb.y + randRange(-25, 25)) % 256;
+        rgb.z = static_cast<int>(rgb.z + randRange(-25, 25)) % 256;
+
+        isLocked = false; // unlock after user draws
     }
 
     void setColor(int r, int g, int b) {
         rgb = Vec3(r, g, b);
+    }
+
+    void setColor(NVGcolor color) {
+        rgb.x = color.r;
+        rgb.y = color.g;
+        rgb.z = color.b;
+    }
+
+    Vec3 getColor() {
+        return rgb;
     }
 
     void flock(Block blocks[], int size) {
@@ -141,13 +161,15 @@ struct Block {
     }
 
     void update() {
-        rgbVel = rgbVel.plus(rgbAcc);
-        rgbVel = rgbVel.limit(maxspeed);
-        rgb = rgb.plus(rgbVel);
+        if (!isLocked) {
+            rgbVel = rgbVel.plus(rgbAcc);
+            rgbVel = rgbVel.limit(maxspeed);
+            rgb = rgb.plus(rgbVel);
 
-        edges();
+            edges();
 
-        rgbAcc = rgbAcc.mult(0.0); // reset acceleration
+            rgbAcc = rgbAcc.mult(0.0); // reset acceleration
+        }
     }
 
     void applyForce(Vec3 force) {
@@ -266,4 +288,10 @@ struct MarchingCircle {
         // else if (pos.y - radius > displayHeight)
         //     pos.y = -radius;
     }
+};
+
+struct BlockMessage {
+    Block block;
+    int hertzIndex = 2;
+    int colorMode = 0;
 };

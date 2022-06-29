@@ -2,6 +2,7 @@
 #include <rack.hpp>
 #include "Quantize.cpp"
 #include "Constellations.cpp"
+// #include "Vec3.cpp";
 
 using namespace rack;
 
@@ -20,6 +21,7 @@ extern Model *modelJeremyBlankPanel;
 extern Model *modelQubitCrusher;
 extern Model *modelPhotron;
 extern Model *modelPhotronPanel;
+extern Model *modelPhotronStrip;
 extern Model *modelOrbitones;
 extern Model *modelAbsorptionSpectrum;
 extern Model *modelTalea;
@@ -28,6 +30,10 @@ extern Model *modelStochSeq4X;
 extern Model *modelStochSeqGrid;
 
 /************************** INLINE FUNCTIONS **************************/
+
+inline float toRadians(float degrees) {
+    return degrees * (M_PI / 180.0);
+}
 
 inline float modNeg(float num, int mod) {
     return num - floorf(num / mod) * mod;
@@ -86,6 +92,25 @@ inline NVGcolor getRed() {
     return nvgRGB(255, 0, 0);
 }
 
+inline int *getPurpleAsArray() {
+    static int a[] = {128, 0, 219};
+    return a;
+}
+
+inline int *getBlueAsArray() {
+    static int a[] = {38, 0, 255};
+    return a;
+}
+
+inline int *getAquaAsArray() {
+    static int a[] = {0, 238, 255};
+    return a;
+}
+
+inline int *getRedAsArray() {
+    static int a[] = {255, 0, 0};
+    return a;
+}
 /************************** LABEL **************************/
 
 struct LeftAlignedLabel : Widget {

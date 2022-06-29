@@ -58,4 +58,17 @@ struct Vec3 : Vec {
         return norm;
     }
 
+    float dist(Vec3 b) {
+        float dx = x - b.x;
+        float dy = y - b.y;
+        float dz = z - b.z;
+        return std::sqrt(dx*dx + dy*dy + dz*dz);
+    }
+
+    float dist(Vec3 a, Vec3 b) {
+        float dx = a.x - b.x;
+        float dy = a.y - b.y;
+        float dz = a.z - b.z;
+        return std::sqrt(dx*dx + dy*dy + dz*dz);
+    }
 };
