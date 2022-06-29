@@ -358,26 +358,15 @@ struct PhotronStripDisplay : Widget {
     float initY = 0;
     float dragY = 0;
 
-    void onButton(const event::Button &e) override {
-        if (module == NULL) return;
-        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
-            if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
-                e.consume(this);
-                module->incrementColorMode();
-            }
-        }
-    }
-
-	// void onDragStart(const event::DragStart &e) override {
-	// 	dragY = APP->scene->rack->getMousePos().y;
-	// }
-
-	// void onDragMove(const event::DragMove &e) override {
-	// 	if (isCClick) {
-	// 		float newDragY = APP->scene->rack->getMousePos().y;
-    //         module->hue = (initY + (newDragY - dragY)) / DISPLAY_SIZE_HEIGHT;
+    // void onButton(const event::Button &e) override {
+    //     if (module == NULL) return;
+    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
+    //         if ((e.mods & RACK_MOD_MASK) == GLFW_MOD_SHIFT) {
+    //             e.consume(this);
+    //             module->incrementColorMode();
+    //         }
     //     }
-	// }
+    // }
 
     void drawSingleColor(const DrawArgs &args) {
         nvgFillColor(args.vg, nvgHSL(module->hue, 1.0, module->getPulsePhase() * 0.5));
@@ -603,8 +592,6 @@ struct PhotronStripWidget : ModuleWidget {
         display->box.pos = Vec(0.0, 0.0);
         display->box.size = Vec(DISPLAY_SIZE_WIDTH, DISPLAY_SIZE_HEIGHT);
         addChild(display);
-
-
     }
 
     void appendContextMenu(Menu *menu) override {

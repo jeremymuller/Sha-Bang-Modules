@@ -50,9 +50,9 @@ struct Block {
     }
 
     void distortColor() {
-        rgb.x = static_cast<int>(rgb.x + randRange(-20, 20)) % 256;
-        rgb.y = static_cast<int>(rgb.y + randRange(-20, 20)) % 256;
-        rgb.z = static_cast<int>(rgb.z + randRange(-20, 20)) % 256;
+        rgb.x = static_cast<int>(rgb.x + randRange(-25, 25)) % 256;
+        rgb.y = static_cast<int>(rgb.y + randRange(-25, 25)) % 256;
+        rgb.z = static_cast<int>(rgb.z + randRange(-25, 25)) % 256;
 
         isLocked = false; // unlock after user draws
     }
@@ -161,7 +161,7 @@ struct Block {
     }
 
     void update() {
-        if (!isLocked) { // TODO: locked not working
+        if (!isLocked) {
             rgbVel = rgbVel.plus(rgbAcc);
             rgbVel = rgbVel.limit(maxspeed);
             rgb = rgb.plus(rgbVel);

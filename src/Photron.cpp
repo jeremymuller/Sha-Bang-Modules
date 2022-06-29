@@ -8,18 +8,24 @@
 #define NUM_OF_MARCHING_CIRCLES 5
 
 struct Photron : Module {
-    enum QuadrantIds { NW,
-                       NE,
-                       SW,
-                       SE };
-    enum WaveformIds { LINES,
-                       BLOCKS,
-                       NONE,
-                       NUM_WAVEFORMS };
-    enum BackgroundIds { COLOR,
-                         B_AND_W,
-                         BLACK,
-                         NUM_BG };
+    enum QuadrantIds {
+        NW,
+        NE,
+        SW,
+        SE
+    };
+    enum WaveformIds {
+        LINES,
+        BLOCKS,
+        NONE,
+        NUM_WAVEFORMS
+    };
+    enum BackgroundIds {
+        COLOR,
+        B_AND_W,
+        BLACK,
+        NUM_BG
+    };
     enum ParamIds {
         RANDOMIZE_PARAM,
         RESET_PARAM,
@@ -74,7 +80,7 @@ struct Photron : Module {
     float field[rows][cols];
     int blockAlpha[rows][cols];
     json_t *patternsRootJ;
-    int patternIndex = 3;
+    int patternIndex = 5;
     bool lockPattern = false;
     std::vector<std::string> labels;
 
@@ -510,6 +516,10 @@ struct Photron : Module {
         }
     }
 
+    void generatePattern(Vec pos, int w, int h) {
+        generatePattern(pos, w, h, 0.5);
+    }
+
     void generatePattern(Vec pos, int w, int h, float probability) {
         int half = static_cast<int>(w / 2);
 
@@ -522,10 +532,8 @@ struct Photron : Module {
         for (int x = 1; x < w; x += 3) {
             for (int y = 1; y < h; y += 3) {
                 if (x <= half) {
-
                     int r = random::uniform() < probability ? 1 : 0;
                     if (random::uniform() < 0.05) r = 2;
-
 
                     values[x][y] = r;
                     values[x + 1][y] = r;
@@ -620,10 +628,10 @@ struct Photron : Module {
                 if (wJ && hJ) {
                     int w = json_integer_value(wJ);
                     int h = json_integer_value(hJ);
-                    generatePattern(getQuadrant(NW), w, h, 0.5);
-                    generatePattern(getQuadrant(NE), w, h, 0.5);
-                    generatePattern(getQuadrant(SW), w, h, 0.5);
-                    generatePattern(getQuadrant(SE), w, h, 0.5);
+                    generatePattern(getQuadrant(NW), w, h);
+                    generatePattern(getQuadrant(NE), w, h);
+                    generatePattern(getQuadrant(SW), w, h);
+                    generatePattern(getQuadrant(SE), w, h);
                 }
             } else {
                 json_t *wJ = json_object_get(patternsJ, "width");

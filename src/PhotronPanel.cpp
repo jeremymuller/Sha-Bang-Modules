@@ -751,8 +751,6 @@ struct PhotronPanelWidget : ModuleWidget {
 
         menu->addChild(createIndexPtrSubmenuItem("Mode", {"color", "black & white", "solid color", "strip"}, &module->colorMode));
 
-        // menu->addChild(createIndexPtrSubmenuItem("Light pulse", {"Off", "0.1 Hz", "0.2 Hz", "0.25 Hz", "0.33 Hz", "0.4 Hz", "0.5 Hz", "1 Hz"}, &module->pulseHzIndex));
-
         LightMenuItem *lightPulse = createMenuItem<LightMenuItem>("Light", RIGHT_ARROW);
         lightPulse->module = module;
         lightPulse->pulseHz = &module->pulseHz;
