@@ -1,4 +1,4 @@
-v2.1.2 (??-??-2022)
+v2.2.1 (06-29-2022)
 - Added new module PhotronStrip
 - Photron modules can be placed adjacent to each other to blend patterns
 - Photron can generate pixel-style patterns
