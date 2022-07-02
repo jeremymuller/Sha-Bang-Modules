@@ -13,7 +13,8 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [Neutrinode](#neutrinode) :tv:
 * [Orbitones](#orbitones) :tv:
 * [Photron](#photron)
-* [PhotronPanel](#photron-panel)
+* [PhotronPanel](#photron-panel--photron-strip)
+* [PhotronStrip](#photron-panel--photron-strip)
 * [PolyrhythmClock](#polyrhythm-clock) :tv:
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates) :tv:
@@ -201,6 +202,8 @@ Watch the tutorial:
 ##### RIGHT-CLICK MENU:
 - Processing rate (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
 - Lissajous mode on or off.
+- 
+- Lock pattern
 ##### BUTTONS:
 - Waveform mode: lines, blocks, or off.
 - Background mode: color, black & white, or black.
@@ -220,22 +223,28 @@ Watch the tutorial:
 - BOTTOM 3 inputs are triggers:
   - Waveform mode: lines, blocks, or off.
   - Background mode: color, black & white, or black.
-  - invert colors.
+  - Draw the pixelated pattern.
 
 ---
 
-### Photron Panel
+### Photron Panel & Photron Strip
 
-![PhotronPanel](/docs/PhotronPanel.png)
+![PhotronPanel](/docs/PhotronPanel.png) &nbsp;&nbsp;&nbsp;&nbsp; ![PhotronStrip](/docs/PhotronStrip.png)
 
-*An animated panel visualizer. Small panel version of Photron.*
+![PhotronPanelStrip](/docs/PhotronPanelStrip.gif)
 
-- `Initialize` will set the colors in a quadrant of Purple, Blue, Aqua, and Red.
+*An animated panel visualizer. Small panel & strip version of Photron.*
+
+- `Initialize` will set the colors top to bottom: Purple, Blue, Aqua, and Red.
 - `Randomize` will randomize all colors.
 
 ##### RIGHT-CLICK MENU:
 - `Processing rate` (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
-- `Mode` color or black & white.
+- `Mode` color, black & white, solid color, or strip color.
+- `Light` (only effects solid color or strip color mode) one slider to set the pulse speed - in Hz, 0 Hz will be fully on - the second slider will set the hue 0 to 360 degrees.
+- `Dark Room Blobs` on or off.
+##### KEYBOARD SHORTCUTS:
+- `D+Click` draw on Photron Panel.
 
 ---
 
