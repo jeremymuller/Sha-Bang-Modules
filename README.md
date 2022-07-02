@@ -12,9 +12,9 @@ Add these modules to VCVRack through the [Rack library](https://library.vcvrack.
 * [Cosmosis](#cosmosis) :tv:
 * [Neutrinode](#neutrinode) :tv:
 * [Orbitones](#orbitones) :tv:
-* [Photron](#photron)
-* [PhotronPanel](#photron-panel--photron-strip)
-* [PhotronStrip](#photron-panel--photron-strip)
+* [Photron](#photron--photron-panel--photron-strip)
+* [PhotronPanel](#photron--photron-panel--photron-strip)
+* [PhotronStrip](#photron--photron-panel--photron-strip)
 * [PolyrhythmClock](#polyrhythm-clock) :tv:
 * [QubitCrusher](#qubit-crusher)
 * [RandGates](#randgates) :tv:
@@ -193,17 +193,19 @@ Watch the tutorial:
 
 ---
 
-### Photron
+### Photron | Photron Panel | Photron Strip
 
-![Photron](/docs/Photron.png)
+![Photron](/docs/Photron-Panel-Strip.png)
 
-*An animated visualizer with inputs. Uses color flocking based on the Craig Reynolds boids flocking algorithm.*
+*Animated visualizers that uses color flocking based on the Craig Reynolds boids flocking algorithm.*
+
+#### Photron
 
 ##### RIGHT-CLICK MENU:
-- Processing rate (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
-- Lissajous mode on or off.
-- 
-- Lock pattern
+- `Processing rate` (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
+- `Lissajous mode` on or off.
+- `Pattern` select from a list of 8-bit retro characters and others.
+- `Lock pattern` lock the pattern or let it blend.
 ##### BUTTONS:
 - Waveform mode: lines, blocks, or off.
 - Background mode: color, black & white, or black.
@@ -216,6 +218,8 @@ Watch the tutorial:
   - CV controls the alignment of block colors which is their rate of change. Higher voltage = more alignment and thus their color velocities will become the same.
   - CV controls the cohesion of block colors which is converging on a single color. Higher voltage = more cohesion and thus their colors will quickly become the same and Photron will look like one color.
   - V/OCT controls the target color for Photron. Blocks will drift towards the target color and hover around it. See the image below for corresponding notes & colors:
+ ##### KEYBOARD SHORTCUTS:
+- `D+Click` draw with the mouse.
 
 ![notes_spectrum](/docs/Notes_Spectrum.png)
 - MIDDLE 2 inputs are the X and Y waveforms.
@@ -225,19 +229,12 @@ Watch the tutorial:
   - Background mode: color, black & white, or black.
   - Draw the pixelated pattern.
 
----
-
-### Photron Panel & Photron Strip
-
-![PhotronPanel](/docs/PhotronPanel.png) &nbsp;&nbsp;&nbsp;&nbsp; ![PhotronStrip](/docs/PhotronStrip.png)
+#### Photron Panel & Photron Strip
 
 ![PhotronPanelStrip](/docs/PhotronPanelStrip.gif)
 
-*An animated panel visualizer. Small panel & strip version of Photron.*
-
 - `Initialize` will set the colors top to bottom: Purple, Blue, Aqua, and Red.
 - `Randomize` will randomize all colors.
-
 ##### RIGHT-CLICK MENU:
 - `Processing rate` (for those with slower CPUs). Keep in mind, if you slow the processing rate down, it'll help your CPU but the animation will also slow down.
 - `Mode` color, black & white, solid color, or strip color.
