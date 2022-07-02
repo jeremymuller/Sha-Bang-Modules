@@ -199,6 +199,8 @@ Watch the tutorial:
 
 *Animated visualizers that uses color flocking based on the Craig Reynolds boids flocking algorithm.*
 
+Placing modules adjacent to each other will cause them to blend colors. `PhotronPanel` and `PhotronStrip` will work together, however `Photron` only will blend with another `Photron`.
+
 #### Photron
 
 ##### RIGHT-CLICK MENU:
@@ -232,6 +234,8 @@ Watch the tutorial:
 #### Photron Panel & Photron Strip
 
 ![PhotronPanelStrip](/docs/PhotronPanelStrip.gif)
+
+***NEW!*** *Photron Panel is now resizable*
 
 - `Initialize` will set the colors top to bottom: Purple, Blue, Aqua, and Red.
 - `Randomize` will randomize all colors.
