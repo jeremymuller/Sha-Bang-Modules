@@ -28,6 +28,17 @@ struct Sequencer {
         }
     }
 
+    // TODO: this section
+    void updateVolts(float voltScaled, int voltRange) {
+        float prob = gateProbabilities[std::max(gateIndex, 0)];
+
+        // pitch
+        float voltShift = voltRange == 0 ? -5.0 : 0.0;
+        prob *= 10.0;  // scale up to 10V
+        volts = (prob + voltShift) * voltScaled;
+        invVolts = ((10.0 - prob) + voltShift) * voltScaled;
+    }
+
     void clockStep(int l, float voltScaled, int voltRange) {
         // increment index
         seqLength = l;
@@ -45,11 +56,13 @@ struct Sequencer {
             notGateOn = true;
         }
 
-        // pitch
-        float voltShift = voltRange == 0? -5.0 : 0.0;
-        prob *= 10.0; // scale up to 10V
-        volts = (prob + voltShift) * voltScaled;
-        invVolts = ((10.0 - prob) + voltShift) * voltScaled;
+        updateVolts(voltScaled, voltRange);
+
+        // // pitch
+        // float voltShift = voltRange == 0 ? -5.0 : 0.0;
+        // prob *= 10.0; // scale up to 10V
+        // volts = (prob + voltShift) * voltScaled;
+        // invVolts = ((10.0 - prob) + voltShift) * voltScaled;
     }
 };
 
@@ -316,6 +329,9 @@ struct StochSeq4 : Module, Quantize {
         bool orGate = false;
         int xorGate = 0;
         for (int i = 0; i < NUM_SEQS; i++) {
+
+            seqs[i].updateVolts(params[SPREAD_PARAM+i].getValue(), voltRange);
+
             float pitchVoltage = Quantize::quantizeRawVoltage(seqs[i].volts, rootNote, scale);
             float invPitchVoltage = Quantize::quantizeRawVoltage(seqs[i].invVolts, rootNote, scale);
 
@@ -365,7 +381,7 @@ struct StochSeq4 : Module, Quantize {
         for (int i = 0; i < NUM_SEQS; i++) {
             int l = (int)params[LENGTH_PARAM+i].getValue();
             float spread = params[SPREAD_PARAM+i].getValue();
-            seqs[i].clockStep(l, spread, voltRange);    
+            seqs[i].clockStep(l, spread, voltRange);
         }
     }
 
