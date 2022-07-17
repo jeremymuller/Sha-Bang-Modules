@@ -1,13 +1,14 @@
 #pragma once
 #include <rack.hpp>
-#include "Quantize.cpp"
+
 #include "Constellations.cpp"
+#include "Quantize.cpp"
 // #include "Vec3.cpp";
 
 using namespace rack;
 
 // Declare the Plugin, defined in plugin.cpp
-extern Plugin* pluginInstance;
+extern Plugin *pluginInstance;
 
 // Declare each Model, defined in each module source file
 extern Model *modelStochSeq;
@@ -28,10 +29,12 @@ extern Model *modelTalea;
 extern Model *modelCollider;
 extern Model *modelStochSeq4X;
 extern Model *modelStochSeqGrid;
+extern Model *modelMorpho;
 
 /************************** INLINE FUNCTIONS **************************/
 
-inline float toRadians(float degrees) {
+inline float
+toRadians(float degrees) {
     return degrees * (M_PI / 180.0);
 }
 
@@ -39,20 +42,20 @@ inline float modNeg(float num, int mod) {
     return num - floorf(num / mod) * mod;
 }
 
-inline float dist(Vec a, Vec b) { // returns distance between two points
-    return std::sqrt(std::pow((a.x-b.x), 2) + std::pow((a.y-b.y), 2));
+inline float dist(Vec a, Vec b) {  // returns distance between two points
+    return std::sqrt(std::pow((a.x - b.x), 2) + std::pow((a.y - b.y), 2));
 }
 
-inline Vec limit(Vec a, float max) { // returns vec with limit
-    float magSq = a.x*a.x + a.y*a.y;
-    if (magSq > max*max) {
+inline Vec limit(Vec a, float max) {  // returns vec with limit
+    float magSq = a.x * a.x + a.y * a.y;
+    if (magSq > max * max) {
         Vec n = a.normalize();
         return n.mult(max);
     }
     return a;
 }
 
-inline float mag(Vec a) { // returns magnitude of vector
+inline float mag(Vec a) {  // returns magnitude of vector
     return std::sqrt(a.x * a.x + a.y * a.y);
 }
 
@@ -64,12 +67,12 @@ inline float freqToVolts(float freq) {
     return log2(freq / dsp::FREQ_C4);
 }
 
-inline float randRange(float max) { // returns random float up to max
+inline float randRange(float max) {  // returns random float up to max
     return random::uniform() * max;
 }
 
-inline float randRange(float min, float max) { // returns random float within min/max range
-    return random::uniform() * fabs(max-min) + min;
+inline float randRange(float min, float max) {  // returns random float within min/max range
+    return random::uniform() * fabs(max - min) + min;
 }
 
 inline int randRange(int max) {
@@ -115,19 +118,19 @@ inline int *getRedAsArray() {
 
 struct LeftAlignedLabel : Widget {
     std::string text;
-	int fontSize;
+    int fontSize;
     NVGcolor color;
-	LeftAlignedLabel(int _fontSize = 13) {
-		fontSize = _fontSize;
-		box.size.y = BND_WIDGET_HEIGHT;
-	}
-	void draw(const DrawArgs &args) override {
-		nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
+    LeftAlignedLabel(int _fontSize = 13) {
+        fontSize = _fontSize;
+        box.size.y = BND_WIDGET_HEIGHT;
+    }
+    void draw(const DrawArgs &args) override {
+        nvgTextAlign(args.vg, NVG_ALIGN_LEFT);
         nvgFillColor(args.vg, color);
         // nvgFillColor(args.vg, nvgRGB(128, 0, 219));
         nvgFontSize(args.vg, fontSize);
-		nvgText(args.vg, 0, 0, text.c_str(), NULL);
-	}
+        nvgText(args.vg, 0, 0, text.c_str(), NULL);
+    }
 };
 
 struct CenterAlignedLabel : Widget {
@@ -715,8 +718,8 @@ struct PurpleNoteKnob : PurpleInvertKnobLabel {
 
 struct PurpleScaleKnob : PurpleInvertKnobLabel {
     Quantize *quantize;
-    PurpleScaleKnob() {}  
-    
+    PurpleScaleKnob() {}
+
     std::string formatCurrentValue() override {
         if (getParamQuantity() != NULL) {
             return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
@@ -740,8 +743,8 @@ struct PurpleNoteKnobCentered : PurpleInvertKnobLabelCentered {
 
 struct PurpleScaleKnobCentered : PurpleInvertKnobLabelCentered {
     Quantize *quantize;
-    PurpleScaleKnobCentered() {}  
-    
+    PurpleScaleKnobCentered() {}
+
     std::string formatCurrentValue() override {
         if (getParamQuantity() != NULL) {
             return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
@@ -776,8 +779,8 @@ struct BlueNoteKnob : BlueInvertKnobLabel {
 
 struct BlueScaleKnob : BlueInvertKnobLabel {
     Quantize *quantize;
-    BlueScaleKnob() {}  
-    
+    BlueScaleKnob() {}
+
     std::string formatCurrentValue() override {
         if (getParamQuantity() != NULL) {
             return quantize->scaleName(static_cast<unsigned int>(getParamQuantity()->getValue()));
@@ -803,7 +806,6 @@ struct JeremyBlueLight : ModuleLightWidget {
         // this->bgColor = nvgRGBA(0x55, 0x55, 0x55, 0xff);
         // this->bgColor = nvgRGBA(0, 0, 255, 0);
         addBaseColor(nvgRGB(0, 0, 255));
-
     }
 };
 
@@ -865,8 +867,8 @@ struct DisplayRedLight : ModuleLightWidget {
 /************************** SCREWS **************************/
 
 struct JeremyScrew : SvgScrew {
-	JeremyScrew() {
-		sw->setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/screw.svg")));
-		box.size = sw->box.size;
-	}
+    JeremyScrew() {
+        sw->setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/screw.svg")));
+        box.size = sw->box.size;
+    }
 };

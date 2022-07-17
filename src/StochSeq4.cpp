@@ -28,7 +28,6 @@ struct Sequencer {
         }
     }
 
-    // TODO: this section
     void updateVolts(float voltScaled, int voltRange) {
         float prob = gateProbabilities[std::max(gateIndex, 0)];
 

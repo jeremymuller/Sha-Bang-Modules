@@ -39,8 +39,8 @@ struct PitchSet {
     }
 
     ~PitchSet() {
-        delete [] sortedNotes;
-        delete [] notesAsPlayed;
+        delete[] sortedNotes;
+        delete[] notesAsPlayed;
     }
 
     void resetSortedNotes(int index) {
@@ -64,14 +64,14 @@ struct PitchSet {
         } else {
             // find insertion index
             int insertIndex = 0;
-            while (_pitch >= sortedNotes[insertIndex].pitch && insertIndex < noteCount-1) {
+            while (_pitch >= sortedNotes[insertIndex].pitch && insertIndex < noteCount - 1) {
                 insertIndex++;
             }
             for (int i = noteCount; i > insertIndex; i--) {
-                sortedNotes[i] = sortedNotes[i-1];
+                sortedNotes[i] = sortedNotes[i - 1];
             }
             sortedNotes[insertIndex] = n;
-            notesAsPlayed[noteCount-1] = n;
+            notesAsPlayed[noteCount - 1] = n;
         }
     }
 
@@ -84,10 +84,10 @@ struct PitchSet {
         while (sortedNotes[removeIndex].channel != _channel && removeIndex < noteCount) {
             removeIndex++;
         }
-        for (int i = noteCount+1; removeIndex < i; removeIndex++) {
-            sortedNotes[removeIndex] = sortedNotes[removeIndex+1];
+        for (int i = noteCount + 1; removeIndex < i; removeIndex++) {
+            sortedNotes[removeIndex] = sortedNotes[removeIndex + 1];
         }
-        for (int i = noteCount+1; i < MAX_CHANNELS; i++) {
+        for (int i = noteCount + 1; i < MAX_CHANNELS; i++) {
             resetSortedNotes(i);
         }
 
@@ -96,10 +96,10 @@ struct PitchSet {
         while (notesAsPlayed[removeIndex].channel != _channel && removeIndex < noteCount) {
             removeIndex++;
         }
-        for (int i = noteCount+1; removeIndex < i; removeIndex++) {
-            notesAsPlayed[removeIndex] = notesAsPlayed[removeIndex+1];
+        for (int i = noteCount + 1; removeIndex < i; removeIndex++) {
+            notesAsPlayed[removeIndex] = notesAsPlayed[removeIndex + 1];
         }
-        for (int i = noteCount+1; i < MAX_CHANNELS; i++) {
+        for (int i = noteCount + 1; i < MAX_CHANNELS; i++) {
             resetNotesAsPlayed(i);
         }
     }
@@ -164,9 +164,12 @@ struct Talea : Module {
     };
     enum BPMModes {
         BPM_CV,
-        BPM_P2,
-        BPM_P4,
-        BPM_P8,
+        BPM_WHOLE_NOTE,
+        BPM_HALF_NOTE,
+        BPM_QUARTER_NOTE,
+        BPM_8TH,
+        BPM_16TH,
+        BPM_32ND,
         BPM_P12,
         BPM_P24,
         NUM_BPM_MODES
@@ -212,11 +215,12 @@ struct Talea : Module {
     dsp::SchmittTrigger gateTriggers[MAX_CHANNELS];
     bool clockOn = true;
     bool anyGateOn = false;
-    int bpmInputMode = BPM_P24;
+    int bpmInputMode = BPM_QUARTER_NOTE;
     int ppqn = 0;
+    float noteDur = 1.0;
     float period = 0.0;
     float gateLength = 0.5;
-    int timeOut = 2; // seconds
+    int timeOut = 2;  // seconds
     int extPulseIndex = 0;
     int currentPitch = 0;
     int playIndex = 0;
@@ -224,7 +228,7 @@ struct Talea : Module {
     int octaveCount = 1;
     int arpMode = Talea::UP;
     int checkParams = 0;
-    float clockFreq = 2.0; // Hz
+    float clockFreq = 2.0;  // Hz
     bool holdPattern = false;
     bool polyrhythmMode = false;
     bool fixedMode = true;
@@ -260,6 +264,14 @@ struct Talea : Module {
         }
     }
 
+    int getPolyrhythmMode() {
+        return fixedMode ? 0 : 1;
+    }
+
+    void setPolyrhthmMode(int mode) {
+        fixedMode = (mode == 0);
+    }
+
     void incPlayIndex() {
         bool incrementOct = false;
         if (pitchSet.noteCount < 1) {
@@ -268,18 +280,18 @@ struct Talea : Module {
         } else {
             switch (arpMode) {
                 case Talea::AS_PLAYED:
-                case Talea::UP:     
-                    playIndex = (playIndex + 1) % pitchSet.noteCount;     
+                case Talea::UP:
+                    playIndex = (playIndex + 1) % pitchSet.noteCount;
                     incrementOct = (playIndex == 0);
                     break;
                 case Talea::DOWN:
                     playIndex = (playIndex + (pitchSet.noteCount - 1)) % pitchSet.noteCount;
-                    incrementOct = (playIndex == (pitchSet.noteCount-1));
+                    incrementOct = (playIndex == (pitchSet.noteCount - 1));
                     break;
                 case Talea::DOUBLE:
                     if (playIndexDouble % 2 == 1) playIndex = (playIndex + 1) % pitchSet.noteCount;
                     incrementOct = (playIndex == 0 && playIndexDouble == 1);
-                    playIndexDouble = (playIndexDouble+1) % 2;
+                    playIndexDouble = (playIndexDouble + 1) % 2;
                     break;
                 case Talea::RANDOM:
                     playIndex = static_cast<int>(random::uniform() * pitchSet.noteCount);
@@ -344,7 +356,7 @@ struct Talea : Module {
         return ratios[index] * std::pow(2.0, octave);
     }
 
-    void checkPhases(int _index) { // (overloaded for polyrhythm stuff)
+    void checkPhases(int _index) {  // (overloaded for polyrhythm stuff)
         if (phases[_index] >= 1.0) {
             phases[_index] -= 1.0;
 
@@ -356,7 +368,7 @@ struct Talea : Module {
                         if (n.pitch == pitchSet.sortedNotes[j].pitch)
                             newNote = false;
                     }
-                    if (newNote) 
+                    if (newNote)
                         pitchSet.addNote(n.pitch, n.channel);
                 }
                 pitchSet.notesQueue.clear();
@@ -409,7 +421,6 @@ struct Talea : Module {
     }
 
     void process(const ProcessArgs &args) override {
-
         if (checkParams == 0) {
             // if (octTrig.process(params[OCT_PARAM].getValue())) {
             //     octaveCount = octaveCount < 5 ? (octaveCount + 1) : 1;
@@ -431,19 +442,19 @@ struct Talea : Module {
             // }
 
             gateLength = params[GATE_LENGTH_PARAM].getValue();
-            
+
             arpMode = static_cast<int>(params[MODE_PARAM].getValue());
         }
-        checkParams = (checkParams+1) % 4;
+        checkParams = (checkParams + 1) % 4;
 
         lights[TOGGLE_LIGHT].setBrightness(clockOn ? 1.0 : 0.0);
         lights[HOLD_LIGHT].setBrightness(holdPattern ? 1.0 : 0.0);
         lights[POLYRHYTHM_MODE_LIGHT].setBrightness(polyrhythmMode ? 1.0 : 0.0);
 
-        lights[OCT_LIGHT+PURPLE].setBrightness((octaveCount == PURPLE) ? 1.0 : 0.0);
-        lights[OCT_LIGHT+BLUE].setBrightness((octaveCount == BLUE) ? 1.0 : 0.0);
-        lights[OCT_LIGHT+AQUA].setBrightness((octaveCount == AQUA) ? 1.0 : 0.0);
-        lights[OCT_LIGHT+RED].setBrightness((octaveCount == RED) ? 1.0 : 0.0);
+        lights[OCT_LIGHT + PURPLE].setBrightness((octaveCount == PURPLE) ? 1.0 : 0.0);
+        lights[OCT_LIGHT + BLUE].setBrightness((octaveCount == BLUE) ? 1.0 : 0.0);
+        lights[OCT_LIGHT + AQUA].setBrightness((octaveCount == AQUA) ? 1.0 : 0.0);
+        lights[OCT_LIGHT + RED].setBrightness((octaveCount == RED) ? 1.0 : 0.0);
 
         bool bpmDetect = false;
         if (inputs[EXT_CLOCK_INPUT].isConnected()) {
@@ -453,15 +464,24 @@ struct Talea : Module {
                 bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
                 if (bpmDetect)
                     clockOn = true;
-                switch(bpmInputMode) {
-                    case BPM_P2:
-                        ppqn = 2;
+                switch (bpmInputMode) {
+                    case BPM_WHOLE_NOTE:
+                        noteDur = 0.25;
                         break;
-                    case BPM_P4:
-                        ppqn = 4;
+                    case BPM_HALF_NOTE:
+                        noteDur = 0.5;
                         break;
-                    case BPM_P8:
-                        ppqn = 8;
+                    case BPM_QUARTER_NOTE:
+                        noteDur = 1.0;
+                        break;
+                    case BPM_8TH:
+                        noteDur = 2.0;
+                        break;
+                    case BPM_16TH:
+                        noteDur = 4.0;
+                        break;
+                    case BPM_32ND:
+                        noteDur = 8.0;
                         break;
                     case BPM_P12:
                         ppqn = 12;
@@ -471,19 +491,8 @@ struct Talea : Module {
                         break;
                 }
             }
-            
-            // else if (bpmInputMode == BPM_P12) {
-            //     ppqn = 12; 
-            //     bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
-            //     if (bpmDetect)
-            //         clockOn = true;
-            // } else {
-            //     ppqn = 24;
-            //     bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
-            //     if (bpmDetect)
-            //         clockOn = true;
-            // }
-        } else {
+
+        } else { // if no ext clock input then use the bpm knob
             float bpmParam = params[BPM_PARAM].getValue();
             clockFreq = std::pow(2.0, bpmParam);
         }
@@ -491,20 +500,30 @@ struct Talea : Module {
         if (inputs[VOLTS_INPUT].isConnected() && inputs[GATES_INPUT].isConnected()) {
             int channels = inputs[VOLTS_INPUT].getChannels();
             if (clockOn) {
-                if (bpmInputMode != BPM_CV && inputs[EXT_CLOCK_INPUT].isConnected()) {
-                    period += args.sampleTime;
-                    if (period > timeOut) clockOn = false;
-                    if (bpmDetect) {
-                        if (extPulseIndex > 0) {
-                            clockFreq = (1.0 / period) / (float)ppqn;
-                        }
+                if (inputs[EXT_CLOCK_INPUT].isConnected()) {
+                    if (bpmInputMode > BPM_32ND) {
+                        period += args.sampleTime;
+                        if (bpmDetect) {
+                            if (extPulseIndex > 0) {
+                                clockFreq = (1.0 / period) / (float)ppqn;
+                            }
 
-                        extPulseIndex++;
-                        if (extPulseIndex >= ppqn) extPulseIndex = 0;
-                        period = 0.0;
+                            extPulseIndex++;
+                            if (extPulseIndex >= ppqn) extPulseIndex = 0;
+                            period = 0.0;
+                        }
+                    } else if (bpmInputMode != BPM_CV) {
+                        period += args.sampleTime;
+                        if (bpmDetect) {
+                            if (period > 0.0) {
+                                clockFreq = 1.0 / period * noteDur;
+                            }
+                            period = 0.0;
+                        }
                     }
+                    if (period > timeOut) clockOn = false;
                 }
-            
+
                 // code inspired from
                 // https://github.com/bogaudio/BogaudioModules/blob/master/src/Arp.cpp
                 bool wasGateOn = anyGateOn;
@@ -559,8 +578,10 @@ struct Talea : Module {
                             outputs[VOLTS_OUTPUT].setChannels(channels);
                             outputs[GATES_OUTPUT].setChannels(channels);
                             float note = 0.0;
-                            if (arpMode == AS_PLAYED) note = pitchSet.getAsPlayedPitch(playIndex);
-                            else note = pitchSet.getNextPitch(playIndex);
+                            if (arpMode == AS_PLAYED)
+                                note = pitchSet.getAsPlayedPitch(playIndex);
+                            else
+                                note = pitchSet.getNextPitch(playIndex);
 
                             outputs[VOLTS_OUTPUT].setVoltage(note, 0);
                             outputs[GATES_OUTPUT].setVoltage(gates[0] ? 5.0 : 0.0, 0);
@@ -581,76 +602,30 @@ struct Talea : Module {
 };
 
 namespace TaleaNS {
-    
+
 struct TaleaModeKnob : BlueInvertKnobLabelCentered {
-    TaleaModeKnob(){}
+    TaleaModeKnob() {}
     std::string formatCurrentValue() override {
         if (getParamQuantity() != NULL) {
-            switch(int(getParamQuantity()->getValue())) {
-                case Talea::UP:         return "↑";
-                case Talea::DOWN:       return "↓";
-                case Talea::DOUBLE:     return "2x";
-                case Talea::AS_PLAYED:  return "⚡︎";
+            switch (int(getParamQuantity()->getValue())) {
+                case Talea::UP:
+                    return "↑";
+                case Talea::DOWN:
+                    return "↓";
+                case Talea::DOUBLE:
+                    return "2x";
+                case Talea::AS_PLAYED:
+                    return "⚡︎";
                 // case Talea::AS_PLAYED:  return "→";
-                case Talea::RANDOM:     return "R";
+                case Talea::RANDOM:
+                    return "R";
             }
         }
         return "";
     }
 };
 
-struct ExternalClockModeValueItem : MenuItem {
-    Talea *module;
-    Talea::BPMModes bpmMode;
-    void onAction(const event::Action &e) override {
-        module->bpmInputMode = bpmMode;
-    }
-};
-
-struct ExternalClockModeItem : MenuItem {
-    Talea *module;
-    Menu *createChildMenu() override {
-        Menu *menu = new Menu;
-        std::vector<std::string> bpmModeNames = {"CV (0V = 120 bpm)", "2 PPQN", "4 PPQN", "8 PPQN", "12 PPQN", "24 PPQN"};
-        for (int i = 0; i < Talea::NUM_BPM_MODES; i++) {
-            Talea::BPMModes bpmMode = (Talea::BPMModes) i;
-            ExternalClockModeValueItem *item = new ExternalClockModeValueItem;
-            item->text = bpmModeNames[i];
-            item->rightText = CHECKMARK(module->bpmInputMode == bpmMode);
-            item->module = module;
-            item->bpmMode = bpmMode;
-            menu->addChild(item);
-        }
-        return menu;
-    }
-};
-
-struct PolyrhythmModeValueItem : MenuItem {
-    Talea *module;
-    bool fixedMode;
-    void onAction(const event::Action &e) override {
-        module->fixedMode = fixedMode;
-    }
-};
-
-struct PolyrhythmModeItem : MenuItem {
-    Talea *module;
-    Menu *createChildMenu() override {
-        Menu *menu = new Menu;
-        for (int i = 0; i < 2; i++) {
-            bool fixedMode = i == 0 ? true : false;
-            PolyrhythmModeValueItem *item = new PolyrhythmModeValueItem;
-            item->text = i == 0 ? "fixed " : "movable ";
-            item->rightText = CHECKMARK(module->fixedMode == fixedMode);
-            item->module = module;
-            item->fixedMode = fixedMode;
-            menu->addChild(item);
-        }
-        return menu;
-    }
-};
-
-}
+}  // namespace TaleaNS
 
 struct TaleaWidget : ModuleWidget {
     TaleaWidget(Talea *module) {
@@ -661,7 +636,7 @@ struct TaleaWidget : ModuleWidget {
         addChild(createWidget<JeremyScrew>(Vec(16.5, box.size.y - 14)));
         // light
         // addChild(createLight<SmallLight<DisplayAquaLight> >(Vec(34 - 3, 40.3 - 3), module, Talea::TOGGLE_LIGHT));
-        addChild(createLight<SmallLight<DisplayAquaLight> >(Vec(34 - 3, 54 - 3), module, Talea::TOGGLE_LIGHT));
+        addChild(createLight<SmallLight<DisplayAquaLight>>(Vec(34 - 3, 54 - 3), module, Talea::TOGGLE_LIGHT));
 
         addParam(createParamCentered<TinyBlueButton>(Vec(34, 54), module, Talea::CLOCK_TOGGLE_PARAM));
         addParam(createParamCentered<BlueKnob>(Vec(21.9, 76.7), module, Talea::BPM_PARAM));
@@ -703,23 +678,18 @@ struct TaleaWidget : ModuleWidget {
     }
 
     void appendContextMenu(Menu *menu) override {
-        Talea *module = dynamic_cast<Talea*>(this->module);
+        Talea *module = dynamic_cast<Talea *>(this->module);
         menu->addChild(new MenuEntry);
 
-        TaleaNS::ExternalClockModeItem *extClockModeItem = new TaleaNS::ExternalClockModeItem;
-        extClockModeItem->text = "External Clock Mode";
-        extClockModeItem->rightText = RIGHT_ARROW;
-        extClockModeItem->module = module;
-        menu->addChild(extClockModeItem);
+        menu->addChild(createIndexPtrSubmenuItem("External Clock Mode", {"CV (0V = 120 bpm)", "Whole note", "Half note", "Quarter note", "8th note", "16th note", "32nd note", "12 PPQN", "24 PPQN"}, &module->bpmInputMode));
 
-        TaleaNS::PolyrhythmModeItem *polyModeItem = new TaleaNS::PolyrhythmModeItem;
-        polyModeItem->text = "Polyrhythm Mode";
-        polyModeItem->rightText = RIGHT_ARROW;
-        polyModeItem->module = module;
-        menu->addChild(polyModeItem);
+        menu->addChild(createIndexSubmenuItem(
+            "Polyrhythm Mode", {"fixed", "movable"},
+            [=]() { return module->getPolyrhythmMode(); },
+            [=](int mode) {
+                module->setPolyrhthmMode(mode);
+            }));
     }
-
 };
 
 Model *modelTalea = createModel<Talea, TaleaWidget>("Talea");
-
