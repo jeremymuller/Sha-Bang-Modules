@@ -213,12 +213,14 @@ struct Talea : Module {
 
     dsp::SchmittTrigger toggleTrig, bpmInputTrig, octTrig, holdTrig, polyrhythmModeTrig;
     dsp::SchmittTrigger gateTriggers[MAX_CHANNELS];
+    dsp::PulseGenerator gatePulses[MAX_CHANNELS];
     bool clockOn = true;
     bool anyGateOn = false;
+    // bool isFirstGate = true;
     int bpmInputMode = BPM_QUARTER_NOTE;
     int ppqn = 0;
     float noteDur = 1.0;
-    float period = 0.0;
+    float period = -1.0;
     float gateLength = 0.5;
     int timeOut = 2;  // seconds
     int extPulseIndex = 0;
@@ -232,6 +234,7 @@ struct Talea : Module {
     bool holdPattern = false;
     bool polyrhythmMode = false;
     bool fixedMode = true;
+    bool isFirstGate[MAX_CHANNELS] = {};
     float phases[MAX_CHANNELS] = {};
     float volts[MAX_CHANNELS] = {};
     bool gates[MAX_CHANNELS];
@@ -258,6 +261,7 @@ struct Talea : Module {
         configOutput(GATES_OUTPUT, "Gate");
 
         for (int i = 0; i < MAX_CHANNELS; i++) {
+            isFirstGate[i] = true;
             phases[i] = 0.0;
             gates[i] = false;
             gatesHigh[i] = false;
@@ -314,16 +318,25 @@ struct Talea : Module {
     //     }
     // }
 
-    void checkPhases(int index, int channels) {
-        if (pitchSet.notesQueue.size() > 0) {
-            for (unsigned int i = 0; i < pitchSet.notesQueue.size(); i++) {
+    void checkNotesToAdd() {
+        unsigned int queueSize = pitchSet.notesQueue.size();
+
+        if (queueSize > 0) {
+            for (unsigned int i = 0; i < queueSize; i++) {
                 PitchSet::Note n = pitchSet.notesQueue[i];
                 pitchSet.addNote(n.pitch, n.channel);
             }
             pitchSet.notesQueue.clear();
         }
+    }
+
+    void checkPhases(int index, int channels) {
+
         if (phases[index] >= 1.0) {
             phases[index] -= 1.0;
+
+            checkNotesToAdd();
+
             // phases[index] = 0.0;
             // if (pitchSet.notesQueue.size() > 0) {
             //     for (unsigned int i = 0; i < pitchSet.notesQueue.size(); i++) {
@@ -391,6 +404,79 @@ struct Talea : Module {
         playIndexDouble = 0;
     }
 
+    bool configClockFreq(const ProcessArgs &args) {
+        bool bpmDetect = false;
+        bool triggerNext = false;
+        bool extClockConnected = inputs[EXT_CLOCK_INPUT].isConnected();
+        if (extClockConnected) {
+            if (bpmInputMode == BPM_CV) {
+                clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
+            } else {
+                bpmDetect = bpmInputTrig.process(inputs[EXT_CLOCK_INPUT].getVoltage());
+                if (bpmDetect)
+                    clockOn = true;
+                switch (bpmInputMode) {
+                    case BPM_WHOLE_NOTE:
+                        noteDur = 0.25;
+                        break;
+                    case BPM_HALF_NOTE:
+                        noteDur = 0.5;
+                        break;
+                    case BPM_QUARTER_NOTE:
+                        noteDur = 1.0;
+                        break;
+                    case BPM_8TH:
+                        noteDur = 2.0;
+                        break;
+                    case BPM_16TH:
+                        noteDur = 4.0;
+                        break;
+                    case BPM_32ND:
+                        noteDur = 8.0;
+                        break;
+                    case BPM_P12:
+                        ppqn = 12;
+                        break;
+                    case BPM_P24:
+                        ppqn = 24;
+                        break;
+                }
+            }
+
+        } else {  // if no ext clock input then use the bpm knob
+            float bpmParam = params[BPM_PARAM].getValue();
+            clockFreq = std::pow(2.0, bpmParam);
+        }
+
+        if (clockOn && extClockConnected) {
+            if (bpmInputMode == BPM_P12 || bpmInputMode == BPM_P24) {
+                period += args.sampleTime;
+                if (bpmDetect) {
+                    if (extPulseIndex > 0) {
+                        clockFreq = (1.0 / period) / (float)ppqn;
+                        triggerNext = true;
+                    }
+
+                    extPulseIndex++;
+                    if (extPulseIndex >= ppqn) extPulseIndex = 0;
+                    period = 0.0;
+                }
+            } else if (bpmInputMode != BPM_CV) {
+                if (bpmDetect) {
+                    if (period > 0.0) {
+                        clockFreq = 1.0 / period * noteDur;
+                    }
+                    period = 0.0;
+                    triggerNext = true;
+                }
+                period += args.sampleTime;
+            }
+            if (period > timeOut) clockOn = false;
+        }
+
+        return triggerNext;
+    }
+
     json_t *dataToJson() override {
         json_t *rootJ = json_object();
 
@@ -441,7 +527,7 @@ struct Talea : Module {
             //     polyrhythmMode = !polyrhythmMode;
             // }
 
-            gateLength = params[GATE_LENGTH_PARAM].getValue();
+            gateLength = std::max(1e-3f, params[GATE_LENGTH_PARAM].getValue());
 
             arpMode = static_cast<int>(params[MODE_PARAM].getValue());
         }
@@ -456,8 +542,74 @@ struct Talea : Module {
         lights[OCT_LIGHT + AQUA].setBrightness((octaveCount == AQUA) ? 1.0 : 0.0);
         lights[OCT_LIGHT + RED].setBrightness((octaveCount == RED) ? 1.0 : 0.0);
 
+        // int channels = inputs[VOLTS_INPUT].getChannels();
+
+        // code inspired from
+        // https://github.com/bogaudio/BogaudioModules/blob/master/src/Arp.cpp
+        // bool wasGateOn = anyGateOn;
+        // anyGateOn = false;
+        // bool firstNote = true;
+        // for (int c = 0; c < channels; c++) {
+        //     if (gateTriggers[c].process(inputs[GATES_INPUT].getPolyVoltage(c))) {
+        //         if (firstNote && holdPattern && !wasGateOn) {
+        //             removeAllNotes(channels);
+        //         }
+        //         PitchSet::Note n(inputs[VOLTS_INPUT].getPolyVoltage(c), c);
+        //         pitchSet.notesQueue.push_back(n);
+        //         gatesHigh[c] = true;
+        //         anyGateOn = true;
+        //         firstNote = false;
+        //     } else if (gatesHigh[c]) {
+        //         if (!gateTriggers[c].isHigh()) {
+        //             gatesHigh[c] = false;
+        //             if (!holdPattern) {
+        //                 pitchSet.removeNote(c);
+        //             }
+        //         } else {
+        //             anyGateOn = true;
+        //         }
+        //     }
+        // }
+
+        // if (anyGateOn || holdPattern) {
+        //     if (pitchSet.noteCount > 0 || pitchSet.notesQueue.size() > 0) {
+        //         bool clockDetected = configClockFreq(args);
+
+        //         if (polyrhythmMode) {  // polyrhythm mode
+        //             // TODO
+        //         } else {  // regular arpeggiator mode
+
+        //             outputs[VOLTS_OUTPUT].setChannels(channels);
+        //             outputs[GATES_OUTPUT].setChannels(channels);
+
+        //             if (clockDetected) {
+        //                 gatePulses[0].reset();
+        //                 gatePulses[0].trigger(1.0 / clockFreq * gateLength);
+        //                 nextPitch();
+
+        //                 float note = 0.0;
+        //                 if (arpMode == AS_PLAYED)
+        //                     note = pitchSet.getAsPlayedPitch(playIndex);
+        //                 else
+        //                     note = pitchSet.getNextPitch(playIndex);
+
+        //                 outputs[VOLTS_OUTPUT].setVoltage(note, 0);
+        //             }
+
+        //             outputs[GATES_OUTPUT].setVoltage(gatePulses[0].process(args.sampleTime) ? 5.0 : 0.0);
+        //         }
+        //     }
+        // } else {
+        //     removeAllNotes(channels);
+        //     for (int c = 0; c < channels; c++) {
+        //         outputs[GATES_OUTPUT].setVoltage(0.0, c);
+        //     }
+        // }
+
+        /************ ORIGINAL ************/
         bool bpmDetect = false;
-        if (inputs[EXT_CLOCK_INPUT].isConnected()) {
+        bool extClockConnected = inputs[EXT_CLOCK_INPUT].isConnected();
+        if (extClockConnected) {
             if (bpmInputMode == BPM_CV) {
                 clockFreq = 2.0 * std::pow(2.0, inputs[EXT_CLOCK_INPUT].getVoltage());
             } else {
@@ -500,8 +652,8 @@ struct Talea : Module {
         if (inputs[VOLTS_INPUT].isConnected() && inputs[GATES_INPUT].isConnected()) {
             int channels = inputs[VOLTS_INPUT].getChannels();
             if (clockOn) {
-                if (inputs[EXT_CLOCK_INPUT].isConnected()) {
-                    if (bpmInputMode > BPM_32ND) {
+                if (extClockConnected) {
+                    if (bpmInputMode == BPM_P12 || bpmInputMode == BPM_P24) {
                         period += args.sampleTime;
                         if (bpmDetect) {
                             if (extPulseIndex > 0) {
@@ -513,13 +665,13 @@ struct Talea : Module {
                             period = 0.0;
                         }
                     } else if (bpmInputMode != BPM_CV) {
-                        period += args.sampleTime;
                         if (bpmDetect) {
                             if (period > 0.0) {
                                 clockFreq = 1.0 / period * noteDur;
                             }
                             period = 0.0;
                         }
+                        period += args.sampleTime;
                     }
                     if (period > timeOut) clockOn = false;
                 }
@@ -544,15 +696,17 @@ struct Talea : Module {
                             gatesHigh[c] = false;
                             if (!holdPattern) {
                                 pitchSet.removeNote(c);
+                                isFirstGate[c] = true;
                             }
                         } else {
                             anyGateOn = true;
                         }
                     }
                 }
+
                 if (anyGateOn || holdPattern) {
                     if (pitchSet.noteCount > 0 || pitchSet.notesQueue.size() > 0) {
-                        if (polyrhythmMode) {
+                        if (polyrhythmMode) { // polyrhythm mode
                             outputs[VOLTS_OUTPUT].setChannels(channels);
                             outputs[GATES_OUTPUT].setChannels(channels);
                             for (int c = 0; c < channels; c++) {
@@ -570,28 +724,43 @@ struct Talea : Module {
                                     outputs[GATES_OUTPUT].setVoltage(0.0, c);
                                 }
 
-                                phases[c] += clockFreq * args.sampleTime * fractionRhythm;
-
-                                checkPhases(c);
+                                if (!isFirstGate[c]) {
+                                    phases[c] += clockFreq * args.sampleTime * fractionRhythm;
+                                    checkPhases(c);
+                                } else if (bpmDetect) {
+                                    isFirstGate[c] = false;
+                                    phases[c] = 1.0;
+                                }
                             }
-                        } else {
+                        } else { // regular arpeggiator mode
+
                             outputs[VOLTS_OUTPUT].setChannels(channels);
                             outputs[GATES_OUTPUT].setChannels(channels);
-                            float note = 0.0;
+
+                            if (!isFirstGate[0]) {
+                                phases[0] += clockFreq * args.sampleTime;
+                                checkPhases(0, channels);
+                            } else if (bpmDetect) {
+                                isFirstGate[0] = false;
+                                phases[0] = 0.0;
+
+                                checkNotesToAdd();
+                            }
+
+                            float note;
                             if (arpMode == AS_PLAYED)
                                 note = pitchSet.getAsPlayedPitch(playIndex);
                             else
                                 note = pitchSet.getNextPitch(playIndex);
 
                             outputs[VOLTS_OUTPUT].setVoltage(note, 0);
-                            outputs[GATES_OUTPUT].setVoltage(gates[0] ? 5.0 : 0.0, 0);
-                            phases[0] += clockFreq * args.sampleTime;
-                            checkPhases(0, channels);
+                            outputs[GATES_OUTPUT].setVoltage(isFirstGate[0] ? 0.0 : gates[0] * 5.0, 0);
                         }
                     }
                 } else {
                     removeAllNotes(channels);
                     for (int c = 0; c < channels; c++) {
+                        isFirstGate[c] = true;
                         phases[c] = 0.0;
                         outputs[GATES_OUTPUT].setVoltage(0.0, c);
                     }
