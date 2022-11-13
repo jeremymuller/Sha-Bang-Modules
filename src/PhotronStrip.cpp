@@ -150,6 +150,7 @@ struct PhotronStrip : Module {
         json_object_set_new(rootJ, "color", json_integer(colorMode));
         json_object_set_new(rootJ, "blobs", json_boolean(darkRoomBlobs));
         json_object_set_new(rootJ, "hue", json_real(hue));
+        json_object_set_new(rootJ, "pulseHz", json_real(pulseHz));
         json_object_set_new(rootJ, "blocks", blocksJ);
         return rootJ;
     }
@@ -166,6 +167,9 @@ struct PhotronStrip : Module {
 
         json_t *hueJ = json_object_get(rootJ, "hue");
         if (hueJ) hue = json_real_value(hueJ);
+
+        json_t *pulseHzJ = json_object_get(rootJ, "pulseHz");
+        if (pulseHzJ) pulseHz = json_real_value(pulseHzJ);
 
         json_t *blocksJ = json_object_get(rootJ, "blocks");  
         if (blocksJ) {

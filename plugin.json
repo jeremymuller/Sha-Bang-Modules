@@ -38,11 +38,6 @@
           "tags": ["Blank", "Visual"]
       },
       {
-          "slug": "Morpho",
-          "name": "Morpho",
-          "tags": ["Visual"]
-      },
-      {
           "slug": "Neutrinode",
           "name": "Neutrinode",
           "description": "Node-based generator with four independent nodes to connected particles",

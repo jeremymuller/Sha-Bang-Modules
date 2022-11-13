@@ -29,7 +29,7 @@ extern Model *modelTalea;
 extern Model *modelCollider;
 extern Model *modelStochSeq4X;
 extern Model *modelStochSeqGrid;
-extern Model *modelMorpho;
+// extern Model *modelMorpho;
 
 /************************** INLINE FUNCTIONS **************************/
 
