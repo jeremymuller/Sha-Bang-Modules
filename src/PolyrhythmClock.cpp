@@ -370,7 +370,6 @@ struct RatioDisplay : Widget {
 	RatioDisplay(int _fontSize = 13) {
 		fontSize = _fontSize;
 		box.size.y = BND_WIDGET_HEIGHT;
-        color = nvgRGB(0, 0, 0);
 	}
 	void draw(const DrawArgs &args) override {
         //background
@@ -379,6 +378,11 @@ struct RatioDisplay : Widget {
         // nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         // nvgFill(args.vg);
         if (module == NULL) return;
+
+        if (!rack::settings::preferDarkPanels)
+            color = nvgRGB(0, 0, 0);
+        else
+            color = nvgRGB(255, 255, 255);
 
         int num1 = (int)module->rhythm1;
         int den1 = (int)module->dur1;
@@ -420,7 +424,7 @@ struct PolyrhythmClockWidget : ModuleWidget {
 
     PolyrhythmClockWidget(PolyrhythmClock *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PolyrhythmClock.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/PolyrhythmClock.svg"), asset::plugin(pluginInstance, "res/PolyrhythmClock-dark.svg")));
 
         // CenteredLabel *const ratioLabel = new CenteredLabel();
         // ratioLabel->box.pos = Vec(60.9, 203.5);

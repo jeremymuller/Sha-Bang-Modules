@@ -117,7 +117,8 @@ struct QubitCrusher : Module {
 struct QubitCrusherWidget : ModuleWidget {
     QubitCrusherWidget(QubitCrusher *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/QubitCrusher.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/QubitCrusher.svg"), asset::plugin(pluginInstance, "res/QubitCrusher-dark.svg")));
+
 
         addChild(createWidget<JeremyScrew>(Vec(16.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(16.5, box.size.y - 14)));

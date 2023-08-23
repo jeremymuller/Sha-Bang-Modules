@@ -1272,7 +1272,15 @@ struct RatioDisplayLabel : Widget {
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT + NVG_ALIGN_TOP);
         // nvgTextAlign(args.vg, NVG_ALIGN_CENTER + NVG_ALIGN_TOP);
         // nvgFillColor(args.vg, nvgRGB(38, 0, 255));
-        nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+
+
+        if (!rack::settings::preferDarkPanels)
+            nvgFillColor(args.vg, nvgRGB(0, 0, 0));
+        else
+            nvgFillColor(args.vg, nvgRGB(255, 255, 255));
+
+
+        // nvgFillColor(args.vg, nvgRGB(0, 0, 0));
         nvgFontSize(args.vg, fontSize);
         nvgText(args.vg, xPos1, 0, text.c_str(), NULL);
     }
@@ -1281,7 +1289,8 @@ struct RatioDisplayLabel : Widget {
 struct StochSeqGridWidget : ModuleWidget {
     StochSeqGridWidget(StochSeqGrid *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/StochSeqGrid.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/StochSeqGrid.svg"), asset::plugin(pluginInstance, "res/StochSeqGrid-dark.svg")));
+
 
         HighlightDisplay *highlight = new HighlightDisplay();
         highlight->module = module;

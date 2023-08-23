@@ -655,7 +655,7 @@ struct PolyrhythmModeItem : MenuItem {
 struct TaleaWidget : ModuleWidget {
     TaleaWidget(Talea *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Talea.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/Talea.svg"), asset::plugin(pluginInstance, "res/Talea-dark.svg")));
 
         addChild(createWidget<JeremyScrew>(Vec(16.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(16.5, box.size.y - 14)));

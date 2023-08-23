@@ -658,7 +658,12 @@ struct CosmosisDisplay : Widget {
         if (module == NULL) return;
 
         // background
-        nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+        if (!rack::settings::preferDarkPanels)
+            nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+        else
+            nvgFillColor(args.vg, nvgRGB(10, 10, 10));
+
+
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
@@ -736,6 +741,13 @@ struct CosmosisDisplay : Widget {
 struct ModeKnob : BlueInvertKnobLabelCentered {
 	ModeKnob(){}
 	std::string formatCurrentValue() override {
+        // TODO: doesn't switch right away
+        if (!rack::settings::preferDarkPanels)
+            linkedLabel->color = nvgRGB(0, 0, 0);
+        else
+            linkedLabel->color = nvgRGB(255, 255, 255);
+
+
 		if(getParamQuantity() != NULL){
 			switch(int(getParamQuantity()->getValue())){
 				case Cosmosis::PURPLE_SEQ:              return "→";
@@ -754,7 +766,8 @@ struct ModeKnob : BlueInvertKnobLabelCentered {
 struct CosmosisWidget : ModuleWidget {
     CosmosisWidget(Cosmosis *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Cosmosis.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/Cosmosis.svg"), asset::plugin(pluginInstance, "res/Cosmosis-dark.svg")));
+
 
         CosmosisDisplay *display = new CosmosisDisplay();
         display->module = module;
@@ -799,7 +812,7 @@ struct CosmosisWidget : ModuleWidget {
 
         ModeKnob *modeKnob = dynamic_cast<ModeKnob *>(createParamCentered<ModeKnob>(Vec(26.4, 249.4), module, Cosmosis::MODE_PARAM));
         CenterAlignedLabel *const modeLabel = new CenterAlignedLabel;
-        modeLabel->box.pos = Vec(26.4, 280.4);
+        modeLabel->box.pos = Vec(26.4, 280.4);        
         modeLabel->text = "";
         modeKnob->connectLabel(modeLabel, module);
         addChild(modeLabel);

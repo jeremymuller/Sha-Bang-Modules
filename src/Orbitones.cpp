@@ -624,7 +624,12 @@ struct OrbitonesDisplay : Widget {
         if (module == NULL) return;
 
         // background
-        nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+		if (!rack::settings::preferDarkPanels)
+			nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+		else
+			nvgFillColor(args.vg, nvgRGB(10, 10, 10));
+        
+
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
         nvgFill(args.vg);
@@ -697,7 +702,7 @@ struct OrbitonesDisplay : Widget {
 struct OrbitonesWidget : ModuleWidget {
     OrbitonesWidget(Orbitones *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Orbitones.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/Orbitones.svg"), asset::plugin(pluginInstance, "res/Orbitones-dark.svg")));
 
         OrbitonesDisplay *display = new OrbitonesDisplay();
         display->module = module;

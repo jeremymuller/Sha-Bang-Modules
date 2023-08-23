@@ -117,7 +117,7 @@ struct RandGates : Module {
 struct RandGatesWidget : ModuleWidget {
     RandGatesWidget(RandGates *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/RandGates.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/RandGates.svg"), asset::plugin(pluginInstance, "res/RandGates-dark.svg")));
 
         addChild(createWidget<JeremyScrew>(Vec(16.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(16.5, box.size.y - 14)));

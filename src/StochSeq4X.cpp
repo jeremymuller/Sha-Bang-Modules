@@ -194,7 +194,7 @@ struct StochSeq4XDisplay : Widget {
 struct StochSeq4XWidget : ModuleWidget {
     StochSeq4XWidget(StochSeq4X *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/StochSeq4X.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/StochSeq4X.svg"), asset::plugin(pluginInstance, "res/StochSeq4X-dark.svg")));
 
         StochSeq4XDisplay *display = new StochSeq4XDisplay();
         display->module = module;

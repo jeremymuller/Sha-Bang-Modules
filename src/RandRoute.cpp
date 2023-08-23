@@ -131,7 +131,8 @@ struct RandRoute : Module {
 struct RandRouteWidget : ModuleWidget {
     RandRouteWidget(RandRoute *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/RandRoute.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/RandRoute.svg"), asset::plugin(pluginInstance, "res/RandRoute-dark.svg")));
+
 
         addChild(createWidget<JeremyScrew>(Vec(16.5, 2)));
         addChild(createWidget<JeremyScrew>(Vec(16.5, box.size.y - 14)));

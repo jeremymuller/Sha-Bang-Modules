@@ -35,7 +35,7 @@ struct JeremyBlankPanel : Module {
 struct JeremyBlankPanelWidget : ModuleWidget {
     JeremyBlankPanelWidget(JeremyBlankPanel *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/JeremyBlankPanel.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/JeremyBlankPanel.svg"), asset::plugin(pluginInstance, "res/JeremyBlankPanel-dark.svg")));
 
         addChild(createWidget<JeremyScrew>(Vec(24, 2)));
         addChild(createWidget<JeremyScrew>(Vec(24, box.size.y - 14)));

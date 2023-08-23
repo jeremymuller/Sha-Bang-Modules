@@ -219,7 +219,8 @@ namespace ColliderNS {
 struct ColliderWidget : ModuleWidget {
     ColliderWidget(Collider *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Collider.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/Collider.svg"), asset::plugin(pluginInstance, "res/Collider-dark.svg")));
+
 
         // screws
         addChild(createWidget<JeremyScrew>(Vec(17.3, 2)));

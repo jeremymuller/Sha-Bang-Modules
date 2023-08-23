@@ -9,7 +9,7 @@ struct AbsorptionSpectrum : Module {
 struct AbsorptionSpectrumWidget : ModuleWidget {
     AbsorptionSpectrumWidget(AbsorptionSpectrum *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AbsorptionSpectrum.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/AbsorptionSpectrum.svg"), asset::plugin(pluginInstance, "res/AbsorptionSpectrum-dark.svg")));
     }
 };
 

@@ -838,9 +838,12 @@ struct NeutrinodeDisplay : Widget {
     void draw(const DrawArgs &args) override {
 
         if (module != NULL) {
+            // background
+            if (!rack::settings::preferDarkPanels)
+                nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+            else
+                nvgFillColor(args.vg, nvgRGB(10, 10, 10));
 
-            //background
-            nvgFillColor(args.vg, nvgRGB(40, 40, 40));
             nvgBeginPath(args.vg);
             nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
             nvgFill(args.vg);
@@ -943,7 +946,8 @@ struct NeutrinodeDisplay : Widget {
 struct NeutrinodeWidget : ModuleWidget {
     NeutrinodeWidget(Neutrinode *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Neutrinode.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/Neutrinode.svg"), asset::plugin(pluginInstance, "res/Neutrinode-dark.svg")));
+
 
         NeutrinodeDisplay *display = new NeutrinodeDisplay();
         display->module = module;

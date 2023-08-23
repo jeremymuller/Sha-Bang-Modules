@@ -605,6 +605,16 @@ struct StochSeq4Display : Widget {
             return;
         }
 
+        // // background
+		// if (!rack::settings::preferDarkPanels)
+		// 	nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+		// else
+		// 	nvgFillColor(args.vg, nvgRGB(10, 10, 10));
+
+		// nvgBeginPath(args.vg);
+		// nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+		// nvgFill(args.vg);
+
         // sliders
         nvgStrokeColor(args.vg, nvgRGB(60, 70, 73));
         int visibleSliders = (int)module->params[StochSeq4::LENGTH_PARAM+seqId].getValue();
@@ -710,7 +720,7 @@ struct StochSeq4Display : Widget {
 struct StochSeq4Widget : ModuleWidget {
     StochSeq4Widget(StochSeq4 *module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/StochSeq4.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/StochSeq4.svg"), asset::plugin(pluginInstance, "res/StochSeq4-dark.svg")));
 
         StochSeq4Display *displayPurple = new StochSeq4Display();
         displayPurple->module = module;

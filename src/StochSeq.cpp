@@ -593,7 +593,11 @@ struct StochSeqDisplay : Widget {
 		}
 
 		//background
-		nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+		if (!rack::settings::preferDarkPanels)
+			nvgFillColor(args.vg, nvgRGB(40, 40, 40));
+		else
+			nvgFillColor(args.vg, nvgRGB(10, 10, 10));
+
 		nvgBeginPath(args.vg);
 		nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
 		nvgFill(args.vg);
@@ -764,7 +768,14 @@ struct MemoryBankDisplay : Widget {
 
 		if (layer == 1) {
 			if (bankId != module->currentMemBank) {
-				nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 120));
+
+				// TODO: do I like this?
+				if (!rack::settings::preferDarkPanels)
+					nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 120));
+				else
+					nvgFillColor(args.vg, nvgRGBA(255, 255, 255, 120));
+
+				// nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 120));
 				nvgBeginPath(args.vg);
 				nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
 				nvgFill(args.vg);
@@ -779,7 +790,7 @@ struct MemoryBankDisplay : Widget {
 struct StochSeqWidget : ModuleWidget {
 	StochSeqWidget(StochSeq* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/StochSeq.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/StochSeq.svg"), asset::plugin(pluginInstance, "res/StochSeq-dark.svg")));
 
 		StochSeqDisplay *display = new StochSeqDisplay();
 		display->module = module;
