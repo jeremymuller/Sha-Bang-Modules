@@ -1,3 +1,6 @@
+v2.2.2 (08-22-2023)
+- Added dark skins
+
 v2.2.1 (06-29-2022)
 - Added new module PhotronStrip
 - Photron modules can be placed adjacent to each other to blend patterns
