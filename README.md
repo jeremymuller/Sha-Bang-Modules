@@ -4,7 +4,7 @@ A collection of innovative, probabilistic, generative, and rhythmically complex 
 
 Add these modules to VCVRack through the [Rack library](https://library.vcvrack.com/?brand=Sha%23Bang!%20Modules).
 
-![modulesall](/docs/Modules_ALL4.gif)
+![modulesall](/docs/Modules_ALL5.gif)
 
 ## Contents:
 
